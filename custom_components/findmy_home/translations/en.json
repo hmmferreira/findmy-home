@@ -1,5 +1,5 @@
 {
-  "title": "Find My Home (Beta)",
+  "title": "Find My Home",
   "config": {
     "step": {
       "user": {
@@ -12,7 +12,7 @@
       },
       "hassio_confirm": {
         "title": "Connect the Find My Home app",
-        "description": "Add separate Beta tracking entities. Manage your Apple account and select items in the app. Existing trackers are preserved."
+        "description": "Add tracking entities for this app instance. Development devices are marked Edge. Manage your Apple account and select items in the app. Existing trackers are preserved."
       },
       "reauth_confirm": {
         "title": "Reconnect the app",

@@ -5,6 +5,7 @@ import plistlib
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from .storage import atomic_json
+from .descriptions import metadata
 
 
 def normalized_plist(raw: bytes):
@@ -28,7 +29,7 @@ def import_exports(store, directory: Path):
     from findmy import FindMyAccessory
     # Validate every item before writing the inventory. Existing selection survives rediscovery.
     pending = {}
-    for source in sorted(directory.glob("*.plist")):
+    for source in sorted(directory.glob("*.plist"),key=lambda p:(p.stat().st_mtime_ns,p.name)):
         data = normalized_plist(source.read_bytes())
         stable = str(data["identifier"])
         item_id = hashlib.sha256(stable.encode()).hexdigest()[:32]
@@ -37,7 +38,7 @@ def import_exports(store, directory: Path):
         pending[item_id] = {"name": old.get("name", source.stem.replace("_", " ")),
                             "model": str(data.get("model", "")),
                             "enabled": old.get("enabled", False),
-                            "key_file": item_id + ".json"}
+                            "key_file": item_id + ".json", **metadata(data)}
         atomic_json(store.root / "keys" / (item_id + ".json"), accessory.to_json())
     store.items = {**store.items, **pending}
     atomic_json(store.root / "items.json", store.items)

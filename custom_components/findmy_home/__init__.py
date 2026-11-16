@@ -1,4 +1,4 @@
-"""Native beta entities; the existing MQTT deployment is independent."""
+"""Native tracking entities; the existing MQTT deployment is independent."""
 from datetime import timedelta
 import logging
 from homeassistant.exceptions import ConfigEntryAuthFailed
@@ -6,7 +6,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import issue_registry as ir
 from .api import Api, Unauthorized
-from .const import DOMAIN, PLATFORMS
+from .const import DOMAIN, PLATFORMS, normalize_channel, entry_title
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,6 +36,14 @@ class Coordinator(DataUpdateCoordinator):
 async def async_setup_entry(hass, entry):
     coordinator = Coordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
+    channel=normalize_channel(coordinator.data.get("channel"))
+    updates={}
+    if entry.data.get("channel")!=channel:
+        updates["data"]={**entry.data,"channel":channel}
+    if entry.title in ("Find My Home (Beta)","Find My Home (Edge)","Find My Home (Stable)"):
+        updates["title"]=entry_title(channel)
+    if updates:
+        hass.config_entries.async_update_entry(entry,**updates)
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

@@ -46,7 +46,7 @@ a new unauthenticated service to work around it.
 11. In Settings → Devices & services, confirm the discovered Find My Home entry.
     If it has not appeared, wait up to five minutes with both app and Core running.
 
-The app has its own Overview map. The integration creates Beta-suffixed devices
+The app has its own Overview map. The integration creates Edge-suffixed devices
 and native trackers/last-sighting sensors. The old MQTT devices remain separate.
 After selection/login, allow the next 15-minute poll; expensive initial key
 derivation may also take time. A sighting can be days old even after a new poll.

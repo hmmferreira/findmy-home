@@ -1,18 +1,18 @@
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.device_registry import DeviceInfo
-from .const import DOMAIN
+from .const import DOMAIN, normalize_channel
 
 class ItemEntity(CoordinatorEntity):
     _attr_has_entity_name = True
     def __init__(self, coordinator, item, suffix):
         super().__init__(coordinator)
         self.item_id = item["id"]
-        channel=coordinator.entry.data.get("channel",coordinator.data.get("channel","beta"))
-        self.channel=channel if channel in ("edge","stable") else "beta"
+        channel=coordinator.data.get("channel",coordinator.entry.data.get("channel"))
+        self.channel=normalize_channel(channel)
         self._object_suffix=suffix
         self._attr_unique_id = coordinator.entry.unique_id + "_" + self.item_id + suffix
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.entry.unique_id + "_" + self.item_id)},
-            name=item["name"] + " ("+self.channel.title()+")", manufacturer="Apple Find My", model=item.get("model") or "Item")
+            name=item["name"] + " ("+self.channel.title()+")", manufacturer="Apple Find My", model=item.get("model_name") or item.get("model") or "Item")
     @property
     def suggested_object_id(self):
         # New registry IDs explicitly carry their channel; existing registry IDs

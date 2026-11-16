@@ -13,6 +13,7 @@ from .storage import Store
 from .auth import ExportFlow
 from .worker import AppleWorker
 from .importer import import_exports
+from .descriptions import enrich_metadata
 
 STATIC = Path(__file__).parent / "static"
 
@@ -152,6 +153,7 @@ async def main():
     os.umask(0o077)
     logging.disable(logging.CRITICAL)
     store = Store(Path(os.environ.get("FINDMY_HOME_DATA", "/data/findmy_home")))
+    await asyncio.to_thread(enrich_metadata,store)
     flow, worker = ExportFlow(store.root), AppleWorker(store)
     ui = web.AppRunner(make_app(store, management=True, flow=flow, worker=worker), access_log=None)
     api = web.AppRunner(make_app(store), access_log=None)

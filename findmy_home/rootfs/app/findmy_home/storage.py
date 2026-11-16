@@ -51,7 +51,7 @@ class Store:
         self.item_health = {}
         metadata_path = Path(__file__).with_name("channel.json")
         metadata = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
-        self.channel = metadata.get("channel") if metadata.get("channel") in ("edge","stable") else "beta"
+        self.channel = metadata.get("channel") if metadata.get("channel") in ("edge","stable") else "edge"
         identity = read_json(root / "identity.json")
         if identity is None:
             identity = {"instance_id": secrets.token_hex(16),
@@ -67,7 +67,9 @@ class Store:
     def public(self):
         return {"instance_id": self.identity["instance_id"], "channel": self.channel, "health": self.health,
                 "items": [{"id": key, "name": item["name"],
-                           "model": item.get("model"), "enabled": item["enabled"],
+                           "model": item.get("model"), "model_name":item.get("model_name"),
+                           "apple_name":item.get("apple_name"), "paired_at":item.get("paired_at"),
+                           "enabled": item["enabled"],
                            "report": self.reports.get(key), "refresh": self.item_health.get(key,{})}
                           for key, item in self.items.items()]}
 

@@ -64,6 +64,14 @@ UI direction](docs/USABILITY.md).
 Finish an active import before updating the app. Update the companion through
 HACS and restart Core for the new native naming before confirming discovery.
 
+## Identifying items
+
+The chooser and item cards show secondary text with the original Apple name,
+model name/code, pairing date and a short app ID. Existing cached items are
+enriched during upgrade; no new sign-in or key rewrite is needed. Development
+installations use Edge consistently. Existing registry IDs are retained.
+See [known limitations and release readiness](docs/KNOWN_LIMITATIONS.md).
+
 ## Development
 Build from the findmy_home directory using its Dockerfile. It compiles the pinned
 exporter with the known protocol/session fixes and bundles the anisette helper

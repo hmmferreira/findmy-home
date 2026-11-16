@@ -1,4 +1,4 @@
-# Find My Home beta
+# Find My Home
 
 Open Web UI to set up the polling account, discover accessory keys and select
 items. Newly discovered items are unselected. The integration is offered under
@@ -14,5 +14,13 @@ accuracy remain visible. Battery and street address data are not available from
 this source. Core's native zones and Recorder supply integration history.
 Polls run every 15 minutes, with backoff on failure; no laptop is needed.
 
-This is an experimental local beta, not a reviewed public release. Keep the
+Development installations are named Edge. This remains experimental. Keep the
 working baseline while testing. Protect your HA account and encrypted backups.
+
+## Identifying similar items
+
+The chooser and item cards show a secondary line with the original Apple name
+when it differs, a friendly model where known, the exported pairing date and a
+short app-generated ID. Unknown models retain their model code. These details
+are filled from saved private files during an upgrade; no Apple login is needed.
+Hardware serials and key material are not exposed. Missing fields are omitted.

@@ -43,6 +43,10 @@ COPY build/private-recovery-password.pl /tmp/private-recovery-password.pl
 RUN perl /tmp/private-recovery-password.pl /src/src/main.rs \
     && cargo test --release --bin findmy-export dragon_ -j 2 \
     && cargo build --release --locked -j 2
+COPY build/unique-export-names.pl /tmp/unique-export-names.pl
+RUN perl /tmp/unique-export-names.pl /src/src/main.rs \
+    && cargo test --release --locked --bin findmy-export dragon_unique_export_tests -j 2 \
+    && cargo build --release --locked -j 2
 FROM dadoum/anisette-v3-server@sha256:d551c75454bcbee68dc262d4247d5f87fa309dfc8f2125644d333c648596e3c7 AS anisette
 FROM python:3.12-slim-bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libssl3 libstdc++6 curl libplist-dev \
