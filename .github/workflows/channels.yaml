@@ -80,3 +80,16 @@ jobs:
           git add .
           git commit -m "Deliver $CHANNEL $VERSION from $GITHUB_SHA"
           git push origin "HEAD:refs/heads/$CHANNEL"
+      - name: Publish matching integration release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          FLAGS=()
+          if [ "$CHANNEL" = edge ]; then FLAGS+=(--prerelease); fi
+          gh release create "v$VERSION" --target "$(git rev-parse HEAD)" \
+            --title "Find My Home $CHANNEL $VERSION" \
+            --notes "Tested source and companion integration. App repository: https://github.com/$GH_REPO#$CHANNEL. Experimental: review docs/SECURITY.md and docs/RELEASE.md. No public container binary is included." \
+            "${FLAGS[@]}"

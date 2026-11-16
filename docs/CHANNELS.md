@@ -11,7 +11,8 @@ Stable URL (after the first validated promotion):
 https://github.com/hmmferreira/findmy-home#stable
 Run the channel workflow on main, choose stable, and acknowledge completion of
 RELEASE.md checks. Stable versions cannot be overwritten: increase config.yaml's
-version first. Stable is not automatically promoted from Edge.
+version first. Stable is not automatically promoted from Edge. Matching tagged integration
+releases are created only after the channel branch is successfully pushed.
 
 These are source-build channels for now. Home Assistant builds on Install/Update;
 users do not copy source files themselves. Prebuilt public images are deliberately
@@ -41,8 +42,11 @@ to GitHub and never paste credentials into repository URLs.
 Supervisor updates the app, not custom_components. Keep the app without a /config
 write mount. Add this GitHub repository to HACS as category Integration to manage
 its files; approve the required Core restart through HA. During development use
-HACS Redownload and select edge. Stable HACS updates require a reviewed GitHub
-release/tag and matching integration manifest version; none is published yet.
+HACS Redownload and select edge. The delivery workflow creates a matching GitHub release/tag for each channel
+(Edge is a prerelease; stable requires the live-validation gate). In HACS,
+enable beta/prerelease versions once to receive tagged Edge integration updates.
+Stable users leave prereleases disabled. App and integration updates remain
+separate UI actions; custom integration code activation needs a Core restart.
 The integration reads snapshots every 60 seconds, not Apple itself. Version/API
 compatibility must be checked before each stable release.
 
