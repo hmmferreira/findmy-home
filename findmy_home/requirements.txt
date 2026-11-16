@@ -1,3 +1,4 @@
+# Direct dependency intent. Production and CI install requirements.lock.
 aiohttp==3.13.2
 FindMy==0.10.2
 pexpect==4.9.0

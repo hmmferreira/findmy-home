@@ -54,8 +54,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 RUN useradd --uid 1000 --home-dir /data/findmy_home/home --no-create-home findmy
 COPY --from=build /src/target/release/findmy-export /usr/local/bin/findmy-export
 COPY --from=anisette /opt/ /opt/
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+COPY requirements.lock /app/requirements.lock
+RUN pip install --no-cache-dir --require-hashes --only-binary=:all: -r /app/requirements.lock \
+    && pip check
 COPY rootfs/app /app
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1

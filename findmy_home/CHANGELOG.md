@@ -1,3 +1,10 @@
+# 0.1.9 — Hash-checked runtime dependency lock
+
+- Pin all 30 Python runtime dependencies to versions from the tested image.
+- Require committed SHA-256 hashes and wheels in production and CI installs.
+- Check dependency consistency in both environments; preserve direct dependency
+  intent separately. This is not a vulnerability audit or image signature.
+
 # 0.1.8 — Durable state and restore regression coverage
 
 - Publish selection, metadata, imports and sightings to memory only after their
