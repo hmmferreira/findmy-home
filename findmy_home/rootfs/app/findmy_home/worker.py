@@ -1,0 +1,260 @@
+"""Single-flight polling; passwords discarded after authentication."""
+import asyncio
+from datetime import datetime, timezone, timedelta
+import math
+import os
+import sys
+import json
+import time
+from .storage import atomic_json, read_json, token_only
+
+
+class AppleWorker:
+    def __init__(self, store):
+        self.store = store
+        self.lock = asyncio.Lock()
+        self.poll_lock = asyncio.Lock()
+        self.pending = None
+        self.owner = None
+        self.methods = []
+        self.auth_task = None
+        self.failures = 0
+        self.wake = asyncio.Event()
+        self.last_attempt = None
+
+    def request_poll(self):
+        self.wake.set()
+
+    def _session(self, account):
+        atomic_json(self.store.root / "account.json", token_only(account))
+
+    async def _clear_pending(self):
+        if self.pending:
+            await self.pending.close()
+        self.pending, self.owner, self.methods = None, None, []
+        if self.auth_task and self.auth_task is not asyncio.current_task():
+            self.auth_task.cancel()
+        self.auth_task = None
+
+    async def _expire(self):
+        await asyncio.sleep(600)
+        async with self.lock:
+            await self._clear_pending()
+
+    async def login(self, owner, email, password):
+        from findmy import AsyncAppleAccount, LocalAnisetteProvider, LoginState
+        async with self.lock:
+            if self.pending:
+                raise ValueError("Finish or cancel the current sign-in")
+            account = AsyncAppleAccount(LocalAnisetteProvider(libs_path=str(self.store.root / "ani_libs.bin")))
+            self.pending, self.owner = account, owner
+            self.auth_task = asyncio.create_task(self._expire())
+            try:
+                async with asyncio.timeout(90):
+                    state = await account.login(email, password)
+                    if state == LoginState.REQUIRE_2FA:
+                        self.methods = list(await account.get_2fa_methods())
+                        return {"phase": "choose_method", "methods": [
+                            {"value": n, "label": "SMS" if "Sms" in type(m).__name__ else "Trusted device"}
+                            for n, m in enumerate(self.methods)]}
+                    if state != LoginState.LOGGED_IN:
+                        raise ValueError("Authentication incomplete")
+                    self._session(account)
+                    await self._clear_pending()
+                    self.store.health["status"] = "ready"
+                    self.request_poll()
+                    return {"phase": "complete"}
+            except Exception:
+                await self._clear_pending()
+                raise
+
+    async def factor(self, owner, index, code=None):
+        from findmy import LoginState
+        async with self.lock:
+            if not self.pending or self.owner != owner:
+                raise ValueError("No active sign-in for this user")
+            if not isinstance(index, int) or index < 0 or index >= len(self.methods):
+                raise ValueError("Invalid verification method")
+            try:
+                async with asyncio.timeout(90):
+                    method = self.methods[index]
+                    if code is None:
+                        await method.request()
+                        return {"phase": "verification_code", "method": index}
+                    await method.submit(code)
+                    if self.pending.login_state != LoginState.LOGGED_IN:
+                        raise ValueError("Verification incomplete")
+                    self._session(self.pending)
+                    await self._clear_pending()
+                    self.store.health["status"] = "ready"
+                    self.request_poll()
+                    return {"phase": "complete"}
+            except Exception:
+                await self._clear_pending()
+                raise
+
+    async def cancel(self, owner):
+        async with self.lock:
+            if self.owner and self.owner != owner:
+                raise ValueError("Sign-in belongs to another user")
+            await self._clear_pending()
+
+    CONCURRENCY = 2
+    START_SPACING = 1.0
+    ITEM_TIMEOUT = 120
+    ALLOWED_ERRORS = {"apple_empty_response","authentication_required","poll_failed","item_timeout","rate_limited"}
+
+    async def _query_item(self, item_id):
+        command=getattr(self,"_item_command",[sys.executable,"-m","findmy_home.poll_item"])
+        env={key:os.environ[key] for key in
+            ("PATH","LANG","LC_ALL","SSL_CERT_FILE","SSL_CERT_DIR","XDG_CONFIG_HOME")
+            if key in os.environ}
+        env["FINDMY_HOME_DATA"]=str(self.store.root)
+        process=await asyncio.create_subprocess_exec(*command,
+            stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,env=env)
+        try:
+            try:
+                output,_=await asyncio.wait_for(
+                    process.communicate(json.dumps({"id":item_id}).encode()),
+                    timeout=self.ITEM_TIMEOUT)
+            except TimeoutError:
+                process.kill()
+                await process.communicate()
+                return {"ok":False,"error":"item_timeout"}
+            if process.returncode or len(output)>8192:
+                return {"ok":False,"error":"poll_failed"}
+            result=json.loads(output)
+            if not isinstance(result,dict) or not isinstance(result.get("ok"),bool):
+                return {"ok":False,"error":"poll_failed"}
+            if result.get("error") not in self.ALLOWED_ERRORS and not result["ok"]:
+                return {"ok":False,"error":"poll_failed"}
+            return result
+        finally:
+            if process.returncode is None:
+                process.kill()
+                await process.communicate()
+
+    def _accept_report(self,key,report):
+        if not isinstance(report,dict):
+            return False
+        try:
+            lat,lon,accuracy=report["latitude"],report["longitude"],report["accuracy"]
+            if not all(isinstance(v,(int,float)) and math.isfinite(v) for v in (lat,lon,accuracy)):
+                return False
+            if not (-90<=lat<=90 and -180<=lon<=180 and accuracy>=0):
+                return False
+            timestamp=datetime.fromisoformat(report["timestamp"])
+            if timestamp.tzinfo is None or timestamp>datetime.now(timezone.utc)+timedelta(minutes=5):
+                return False
+            previous=self.store.reports.get(key)
+            if previous and timestamp<datetime.fromisoformat(previous["timestamp"]):
+                return False
+            self.store.reports[key]={"latitude":lat,"longitude":lon,"accuracy":accuracy,
+                                     "timestamp":timestamp.astimezone(timezone.utc).isoformat()}
+            atomic_json(self.store.root/"reports.json",self.store.reports)
+            return True
+        except (KeyError,TypeError,ValueError):
+            return False
+
+    def _summary(self,event):
+        allowed=("status","selected_count","reports_received","items_with_locations",
+                 "items_completed","items_failed","error_code")
+        print("Find My Home "+event+": "+json.dumps(
+            {key:self.store.health.get(key) for key in allowed}),flush=True)
+
+    async def poll(self):
+        if self.poll_lock.locked():
+            return
+        async with self.poll_lock:
+            await self._poll()
+
+    async def _poll(self):
+        if self.pending:
+            return
+        selected={key:item for key,item in self.store.items.items() if item["enabled"]}
+        if read_json(self.store.root/"account.json") is None:
+            self.store.health["status"]="reauth_required"
+            return
+        if not selected:
+            self.store.health["status"]="select_items"
+            return
+        self.last_attempt=time.monotonic()
+        self.store.health.update(status="polling",last_attempt=datetime.now(timezone.utc).isoformat(),
+            selected_count=len(selected),reports_received=0,items_completed=0,items_failed=0,
+            items_with_locations=sum(key in self.store.reports for key in selected),
+            error_code=None,next_poll=datetime.fromtimestamp(time.time()+900,timezone.utc).isoformat())
+        self._summary("poll started")
+        failures=[]
+        queue=asyncio.Queue()
+        for key in selected:
+            queue.put_nowait(key)
+        start_lock=asyncio.Lock()
+        next_start=0.0
+        stop=asyncio.Event()
+
+        async def update_items():
+            nonlocal next_start
+            while not queue.empty() and not stop.is_set():
+                key=queue.get_nowait()
+                if self.pending or not self.store.items.get(key,{}).get("enabled"):
+                    continue
+                # Stagger process starts rather than bursting all devices at Apple.
+                async with start_lock:
+                    await asyncio.sleep(max(0,next_start-time.monotonic()))
+                    next_start=time.monotonic()+self.START_SPACING
+                if stop.is_set() or self.pending:
+                    return
+                try:
+                    result=await self._query_item(key)
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    result={"ok":False,"error":"poll_failed"}
+                if not result["ok"]:
+                    error=result.get("error","poll_failed")
+                    failures.append(error)
+                    self.store.health["items_failed"]+=1
+                    self.store.health["error_code"]=error
+                    if error in ("authentication_required","rate_limited"):
+                        stop.set()
+                elif self.store.items.get(key,{}).get("enabled") and self._accept_report(key,result.get("report")):
+                    self.store.health["reports_received"]+=1
+                self.store.health["items_completed"]+=1
+                self.store.health["items_with_locations"]=sum(k in self.store.reports for k in selected)
+                self._summary("item completed")
+
+        # Only two live workers; each publishes before taking another device.
+        async with asyncio.TaskGroup() as group:
+            for _ in range(min(self.CONCURRENCY,len(selected))):
+                group.create_task(update_items())
+        received=self.store.health["reports_received"]
+        if "authentication_required" in failures:
+            status="reauth_required"
+        elif received:
+            status="partial_results" if failures else "ok"
+        else:
+            status="error" if failures else "no_reports"
+        self.failures=self.failures+1 if failures else 0
+        self.store.health.update(status=status,last_poll=datetime.now(timezone.utc).isoformat())
+        self._summary("poll completed")
+
+    async def run(self):
+        while True:
+            self.wake.clear()
+            remaining=0 if self.last_attempt is None else max(0,self.last_attempt+900-time.monotonic())
+            if not remaining:
+                try:
+                    await self.poll()
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    self.failures+=1
+                    self.store.health.update(status="error",error_code="poll_failed")
+                    self._summary("poll failed")
+                remaining=min(3600,900*2**min(self.failures,2))
+            self.store.health["next_poll"]=datetime.fromtimestamp(time.time()+remaining,timezone.utc).isoformat()
+            try:
+                await asyncio.wait_for(self.wake.wait(),timeout=remaining)
+            except TimeoutError:
+                pass
