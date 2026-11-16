@@ -45,8 +45,10 @@ needed after the one-time repository app setup.
 ## Current live evidence — 2026-11-16
 
 Two companion entries are loaded and Edge now receives real reports. Repeated
-polls yield reports for three of five selected items; two time out. This is
-partial live validation, not completion of the checklist. See
+polls initially yielded reports for three of five selected items; two timed out.
+The first bounded-search Edge poll completed all five without failures, with
+three sightings and two continuing older-key searches. This is partial live
+validation, not completion of the checklist. See
 KNOWN_LIMITATIONS.md before deciding between an official preview and Stable.
 The user asked what the limitations are; the release choice remains open.
 No stable_verified assertion or Stable promotion has been made.

@@ -40,6 +40,7 @@ def import_exports(store, directory: Path):
                             "enabled": old.get("enabled", False),
                             "key_file": item_id + ".json", **metadata(data)}
         atomic_json(store.root / "keys" / (item_id + ".json"), accessory.to_json())
-    store.items = {**store.items, **pending}
-    atomic_json(store.root / "items.json", store.items)
+    updated = {**store.items, **pending}
+    atomic_json(store.root / "items.json", updated)
+    store.items = updated
     return len(pending)

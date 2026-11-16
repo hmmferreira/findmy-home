@@ -78,6 +78,7 @@ class Store:
             raise ValueError("Invalid item selection")
         if set(ids) - self.items.keys():
             raise ValueError("Unknown item")
-        for key, item in self.items.items():
-            item["enabled"] = key in ids
-        atomic_json(self.root / "items.json", self.items)
+        selected = set(ids)
+        updated = {key:{**item,"enabled":key in selected} for key,item in self.items.items()}
+        atomic_json(self.root / "items.json", updated)
+        self.items = updated

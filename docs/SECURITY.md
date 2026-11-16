@@ -49,6 +49,8 @@ browser tile requests. No reverse geocoding is done.
 - Audit transitive dependencies, binary provenance and license compatibility.
 - AppArmor testing, dependency locking/SBOM, signed images and CI.
 - Browser tests of TLS ingress, CSRF, recovery ownership and redaction.
-- Backup/restore, disk failures and key deletion/retention policy.
+- Synthetic private-state restore and disk-write failure regression tests pass;
+  live Supervisor backup/restore and key deletion/retention policy remain. See
+  [backup/restore procedure](BACKUP_RESTORE.md).
 - Explicit pairing-token rotation/revocation.
 Focused automated tests do not replace an independent security review.

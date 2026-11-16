@@ -47,8 +47,9 @@ def enrich_metadata(store):
     from .importer import normalized_plist
     import hashlib
     changed=False
+    updated={key:dict(item) for key,item in store.items.items()}
     # SDK key records already contain model and paired_at, even on older installs.
-    for item in store.items.values():
+    for item in updated.values():
         if not isinstance(item.get("key_file"),str): continue
         key_file=store.root/"keys"/item["key_file"]
         if key_file.resolve().parent!=(store.root/"keys").resolve():
@@ -67,13 +68,14 @@ def enrich_metadata(store):
             identifier=data.get("identifier")
             if not isinstance(identifier,str) or not identifier: continue
             item_id=hashlib.sha256(identifier.encode()).hexdigest()[:32]
-            if item_id not in store.items: continue
-            item=store.items[item_id]
+            if item_id not in updated: continue
+            item=updated[item_id]
             for field,value in metadata(data).items():
                 if value and item.get(field)!=value:
                     item[field]=value;changed=True
         except (OSError,ValueError,TypeError,KeyError,AttributeError,ParseError,InvalidFileException):
             continue
     if changed:
-        atomic_json(store.root/"items.json",store.items)
+        atomic_json(store.root/"items.json",updated)
+        store.items=updated
     return changed

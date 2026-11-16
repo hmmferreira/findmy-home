@@ -237,9 +237,10 @@ class AppleWorker:
             previous=self.store.reports.get(key)
             if previous and timestamp<datetime.fromisoformat(previous["timestamp"]):
                 return False
-            self.store.reports[key]={"latitude":lat,"longitude":lon,"accuracy":accuracy,
-                                     "timestamp":timestamp.astimezone(timezone.utc).isoformat()}
-            atomic_json(self.store.root/"reports.json",self.store.reports)
+            updated={**self.store.reports,key:{"latitude":lat,"longitude":lon,"accuracy":accuracy,
+                                     "timestamp":timestamp.astimezone(timezone.utc).isoformat()}}
+            atomic_json(self.store.root/"reports.json",updated)
+            self.store.reports=updated
             return True
         except (KeyError,TypeError,ValueError):
             return False
