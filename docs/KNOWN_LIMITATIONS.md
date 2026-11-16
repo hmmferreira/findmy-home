@@ -3,7 +3,8 @@
 Verified 2026-11-16 against the installed Edge app:
 
 - Repeated polls of five selected items produce three reports; two item queries
-  reach the 120-second limit. Their cause remains unresolved. Other items'
+  reach the 120-second limit. Diagnostics show 46–48 report batches with no reports before the limit;
+  a bounded/resumable search is still needed. Other items'
   completed reports are saved independently.
 - Manual refresh retrieves Apple's stored report; it cannot make an AirTag
   broadcast or make nearby Apple devices relay a new sighting.
@@ -16,7 +17,9 @@ Verified 2026-11-16 against the installed Edge app:
   Public prebuilt container redistribution remains pending dependency licensing
   review, including the pinned exporter with no clear license declaration.
 - Credential isolation, CSRF/read-only API and recovery ownership have automated
-  tests. Independent security review, actual non-admin ingress authorization,
+  tests. Supervisor backend authorization was source-reviewed and the app additionally
+  enforces administrator groups (Supervisor 2026.11.0+). Independent security
+  review, real non-admin browser validation,
   full session-expiry recovery and backup/restore validation are incomplete.
 - Edge, local and future Stable app installations have separate private data.
   Switching installation/channel currently needs one-time account setup.

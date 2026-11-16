@@ -94,23 +94,35 @@ class HttpTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await client.post("/ui/login",headers=auth,json={"password":"fixture"})).status,404)
     async def test_forged_ingress_headers_from_other_peer_are_denied(self):
         client=await self.client(True,peer="172.30.32.2")
-        response=await client.get("/v1/snapshot",headers={"X-Remote-User-Id":"admin","X-Forwarded-For":"172.30.32.2"})
+        response=await client.get("/v1/snapshot",headers={"X-Remote-User-Id":"admin","X-Remote-User-Groups":"system-admin","X-Forwarded-For":"172.30.32.2"})
         self.assertEqual(response.status,403)
     async def test_ingress_missing_user_is_denied(self):
         client=await self.client(True)
         self.assertEqual((await client.get("/v1/snapshot")).status,403)
+    async def test_ingress_requires_exact_administrator_group(self):
+        client=await self.client(True)
+        for groups in (None, "", "system-users", "not-system-admin", "system-admin-extra"):
+            headers={"X-Remote-User-Id":"ordinary-user"}
+            if groups is not None:
+                headers["X-Remote-User-Groups"]=groups
+            for path in ("/", "/v1/snapshot"):
+                self.assertEqual((await client.get(path,headers=headers)).status,403)
+            self.assertEqual((await client.post("/ui/login",headers=headers,json={})).status,403)
+        headers={"X-Remote-User-Id":"owner", "X-Remote-User-Groups":"system-users, system-admin"}
+        self.assertEqual((await client.get("/v1/snapshot",headers=headers)).status,200)
+
     async def test_csrf_is_bound_to_ingress_user(self):
         client=await self.client(True)
-        alice={"X-Remote-User-Id":"alice"}
+        alice={"X-Remote-User-Id":"alice","X-Remote-User-Groups":"system-admin"}
         data=await (await client.get("/v1/snapshot",headers=alice)).json()
         self.assertEqual((await client.post("/ui/select",headers=alice,json={"ids":[]})).status,403)
-        forged={"X-Remote-User-Id":"bob","X-CSRF-Token":data["csrf"]}
+        forged={"X-Remote-User-Id":"bob","X-Remote-User-Groups":"system-admin","X-CSRF-Token":data["csrf"]}
         self.assertEqual((await client.post("/ui/select",headers=forged,json={"ids":[]})).status,403)
         alice["X-CSRF-Token"]=data["csrf"]
         self.assertEqual((await client.post("/ui/select",headers=alice,json={"ids":[]})).status,200)
     async def test_recovery_requires_explicit_consent(self):
         client=await self.client(True)
-        headers={"X-Remote-User-Id":"alice"}
+        headers={"X-Remote-User-Id":"alice","X-Remote-User-Groups":"system-admin"}
         data=await (await client.get("/v1/snapshot",headers=headers)).json()
         headers["X-CSRF-Token"]=data["csrf"]
         self.assertEqual((await client.post("/ui/recovery",headers=headers,json={"action":"start"})).status,400)

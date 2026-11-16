@@ -91,7 +91,7 @@ class ManualRefreshTests(unittest.IsolatedAsyncioTestCase):
         try:
             token={"Authorization":"Bearer "+self.store.identity["read_token"]}
             self.assertEqual((await api.post("/ui/refresh",headers=token,json={"id":"0"})).status,404)
-            owner={"X-Remote-User-Id":"alice"}
+            owner={"X-Remote-User-Id":"alice","X-Remote-User-Groups":"system-admin"}
             self.assertEqual((await ui.post("/ui/refresh",headers=owner,json={"id":"0"})).status,403)
             snapshot=await (await ui.get("/v1/snapshot",headers=owner)).json()
             owner["X-CSRF-Token"]=snapshot["csrf"]

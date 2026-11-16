@@ -30,7 +30,9 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
     @web.middleware
     async def security(request, handler):
         if management:
-            if request.remote != trusted_peer or not request.headers.get("X-Remote-User-Id"):
+            groups = {group.strip() for group in request.headers.get("X-Remote-User-Groups", "").split(",")}
+            if (request.remote != trusted_peer or not request.headers.get("X-Remote-User-Id")
+                    or "system-admin" not in groups):
                 raise web.HTTPForbidden()
             if request.method != "GET":
                 supplied = request.headers.get("X-CSRF-Token", "")
