@@ -43,7 +43,7 @@ function description(item){
 function render(data){
   snapshot=data;csrf=data.csrf;
   $("app-title").textContent="Find My Home"+(data.channel==="edge"?" Edge":data.channel==="stable"?"":" Edge");
-  $("health").textContent=({"ok":"Tracking","partial_results":"Some items need attention","no_reports":"No reports returned","reauth_required":"Connect location access","select_items":"Choose tracked items","polling":"Refreshing","error":"Refresh needs attention","starting":"Starting","ready":"Location access connected"})[data.health.status]||"Checking";
+  $("health").textContent=({"ok":"Tracking","searching":"Tracking; searching remaining items","partial_results":"Some items need attention","no_reports":"No reports returned","reauth_required":"Connect location access","select_items":"Choose tracked items","polling":"Refreshing","error":"Refresh needs attention","starting":"Starting","ready":"Location access connected"})[data.health.status]||"Checking";
   const selected=data.items.filter(item=>item.enabled), known=selected.filter(item=>item.report).length, health=data.health;
   $("poll-summary").textContent=selected.length+" tracked · "+known+" with a saved location · Scheduled check: "+(health.last_poll?ago(health.last_poll):"not completed")+" · Checked "+(health.items_completed??0)+"/"+selected.length+(health.error_code?" · "+(errors[health.error_code]||"Refresh needs attention."):"");
   const cards=$("cards");cards.replaceChildren();
@@ -52,7 +52,7 @@ function render(data){
     const card=text("article","");card.append(text("h2",item.name));const detail=text("p",description(item));detail.className="item-description";card.append(detail);const dl=text("dl",""),report=item.report;
     for(const [label,value] of [["Last sighting",ago(report?.timestamp)],["Last checked",item.refresh?.checked_at?ago(item.refresh.checked_at):"Not checked yet"],["Reported at",report?new Date(report.timestamp).toLocaleString():"Not reported"],["Accuracy",report?Math.round(report.accuracy)+" m":"Not reported"]])dl.append(text("dt",label),text("dd",value));
     card.append(dl);
-    const state=item.refresh||{}, status=text("p",({"queued":"Queued for the next available worker…","refreshing":"Asking Apple for this item…","updated":"Latest available report checked.","no_report":"Check finished: Apple returned no sighting for this item.","cancelled":"Refresh cancelled."})[state.status]||(state.status==="error"?(errors[state.error]||"Refresh failed. Try again later."):""));
+    const state=item.refresh||{}, status=text("p",({"queued":"Queued for the next available worker…","refreshing":"Asking Apple for this item…","updated":"Latest available report checked.","searching":"Recent keys checked. The older key search will continue on the next refresh.","no_report":"Check finished: Apple returned no sighting for this item.","cancelled":"Refresh cancelled."})[state.status]||(state.status==="error"?(errors[state.error]||"Refresh failed. Try again later."):""));
     status.className="item-status";status.setAttribute("role","status");card.append(status);
     const button=text("button",state.status==="queued"?"Refresh queued":state.status==="refreshing"?"Refreshing…":"Refresh this item");button.dataset.refresh=item.id;
     button.onclick=()=>action(async()=>{

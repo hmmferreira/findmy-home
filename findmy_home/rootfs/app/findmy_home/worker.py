@@ -169,7 +169,7 @@ class AppleWorker:
             try:
                 result=await self._query_process(item_id)
                 self.store.item_health[item_id]={
-                    "status":("updated" if result.get("report") else "no_report") if result.get("ok") else "error",
+                    "status":("updated" if result.get("report") else "searching" if result.get("search_pending") else "no_report") if result.get("ok") else "error",
                     "checked_at":datetime.now(timezone.utc).isoformat(),
                     "error":result.get("error"),"progress":safe_progress(result.get("progress"))}
                 return result
@@ -273,6 +273,7 @@ class AppleWorker:
             error_code=None,next_poll=datetime.fromtimestamp(time.time()+900,timezone.utc).isoformat())
         self._summary("poll started")
         failures=[]
+        searches=[]
         queue=asyncio.Queue()
         for key in selected:
             queue.put_nowait(key)
@@ -298,6 +299,8 @@ class AppleWorker:
                     raise
                 except Exception:
                     result={"ok":False,"error":"poll_failed"}
+                if result.get("search_pending"):
+                    searches.append(key)
                 if not result["ok"]:
                     error=result.get("error","poll_failed")
                     failures.append(error)
@@ -319,11 +322,11 @@ class AppleWorker:
         if "authentication_required" in failures:
             status="reauth_required"
         elif received:
-            status="partial_results" if failures else "ok"
+            status="partial_results" if failures else "searching" if searches else "ok"
         else:
-            status="error" if failures else "no_reports"
+            status="error" if failures else "searching" if searches else "no_reports"
         self.failures=self.failures+1 if failures else 0
-        self.store.health.update(status=status,last_poll=datetime.now(timezone.utc).isoformat())
+        self.store.health.update(status=status,items_searching=len(searches),last_poll=datetime.now(timezone.utc).isoformat())
         self._summary("poll completed")
 
     async def run(self):

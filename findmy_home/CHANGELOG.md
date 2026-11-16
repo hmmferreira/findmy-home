@@ -1,3 +1,11 @@
+# 0.1.7 — Bounded item searches with private checkpoints
+
+- Check recent keys first, then at most one older key window per item refresh.
+- Resume successful empty searches on later polls instead of repeatedly scanning
+  from the beginning until timeout. Preserve checkpoints across restarts.
+- Show incomplete searches explicitly; keep saved sightings and existing Apple
+  pacing, global rate-limit pauses, worker limits and hard timeouts.
+
 # 0.1.6 — Administrator access enforced in the app
 
 - Require the exact administrator group from trusted Supervisor ingress, as

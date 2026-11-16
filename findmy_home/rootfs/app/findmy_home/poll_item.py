@@ -10,6 +10,7 @@ import sys
 from .apple import ReportingAccount, ReportSourceUnavailable, PacedHttp, RateLimited
 from .storage import read_json, atomic_json
 from .progress import QueryProgress
+from .search import fetch_bounded
 
 async def query():
     from findmy import FindMyAccessory
@@ -33,11 +34,11 @@ async def query():
     try:
         accessory=FindMyAccessory.from_json(key_file)
         progress.instrument(account,accessory)
-        report=await account.fetch_location(accessory)
+        report,search_pending=await fetch_bounded(account,accessory,root/"search"/(item_id+".json"))
         progress.complete()
         # Poll children never write the shared session: UI authentication owns it.
         atomic_json(key_file,accessory.to_json())
-        return {"ok":True,"report":None if report is None else {
+        return {"ok":True,"search_pending":search_pending,"report":None if report is None else {
             "latitude":report.latitude,"longitude":report.longitude,
             "accuracy":report.horizontal_accuracy,
             "timestamp":report.timestamp.astimezone(timezone.utc).isoformat()}}

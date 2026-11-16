@@ -1,7 +1,7 @@
 {
   "domain": "findmy_home",
   "name": "Find My Home",
-  "version": "0.1.6-dev.8.1",
+  "version": "0.1.7-dev.9.1",
   "config_flow": true,
   "documentation": "https://github.com/hmmferreira/findmy-home",
   "issue_tracker": "https://github.com/hmmferreira/findmy-home/issues",
