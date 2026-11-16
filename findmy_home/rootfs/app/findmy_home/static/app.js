@@ -1,0 +1,33 @@
+"use strict";
+let csrf="", snapshot=null, loginMethod=null, busy=false, selectionDirty=false;
+const $=id=>document.getElementById(id);
+const text=(tag,value)=>{const n=document.createElement(tag);n.textContent=value;return n;};
+let map=null,markers=null;
+if(window.L){map=L.map("map");L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap contributors",maxZoom:19}).addTo(map);markers=L.layerGroup().addTo(map);map.setView([20,0],2);}
+async function api(path,data){const response=await fetch(path,{method:data?"POST":"GET",headers:data?{"Content-Type":"application/json","X-CSRF-Token":csrf}:{},body:data?JSON.stringify(data):undefined,cache:"no-store",credentials:"same-origin"});const result=await response.json();if(!response.ok)throw Error(result.message||"Connection failed. Refresh this page or check the app.");return result;}
+async function action(fn){if(busy)return;busy=true;document.querySelectorAll("button").forEach(b=>b.disabled=true);$("message").textContent="Working…";try{await fn();$("message").textContent="Saved. Locations refresh on the next scheduled poll.";await refresh();}catch(e){$("message").textContent=e.message;}finally{busy=false;document.querySelectorAll("button").forEach(b=>b.disabled=false);}}
+function ago(value){if(!value)return "No sighting yet";const seconds=Math.max(0,Math.floor((Date.now()-Date.parse(value))/1000));return seconds<60?"Just now":seconds<3600?Math.floor(seconds/60)+" minutes ago":seconds<86400?Math.floor(seconds/3600)+" hours ago":Math.floor(seconds/86400)+" days ago";}
+function render(data){snapshot=data;csrf=data.csrf;$("health").textContent=({"ok":"Tracking","reauth_required":"Sign-in needed","select_items":"Choose items","polling":"Refreshing","error":"Refresh failed","starting":"Starting","ready":"Account connected"})[data.health.status]||"Checking";
+$("cards").replaceChildren();if(markers)markers.clearLayers();const points=[];
+for(const item of data.items.filter(i=>i.enabled)){const card=text("article","");card.append(text("h2",item.name));const dl=text("dl","");const report=item.report;
+for(const [label,value] of [["Last sighting",ago(report?.timestamp)],["Reported at",report?new Date(report.timestamp).toLocaleString():"Not reported"],["Accuracy",report?Math.round(report.accuracy)+" m":"Not reported"],["Battery","Not reported"]]){dl.append(text("dt",label),text("dd",value));}card.append(dl);$("cards").append(card);
+if(report&&markers){const p=[report.latitude,report.longitude];points.push(p);L.marker(p).bindPopup(text("span",item.name+" · "+ago(report.timestamp))).addTo(markers);L.circle(p,{radius:report.accuracy,weight:1}).addTo(markers);}}
+if(points.length&&map&&!map._userMoved){map.fitBounds(points,{padding:[35,35],maxZoom:15});}
+if(!selectionDirty){$("choices").replaceChildren();for(const item of data.items){const label=text("label","");label.className="check";const check=document.createElement("input");check.type="checkbox";check.value=item.id;check.checked=item.enabled;check.addEventListener("change",()=>selectionDirty=true);label.append(check,text("span",item.name));$("choices").append(label);}if(!data.items.length)$("choices").append(text("p","Discover your items first."));}
+renderRecovery(data.recovery);}
+if(map)map.on("dragstart zoomstart",event=>{if(event.originalEvent)map._userMoved=true;});
+function renderRecovery(flow){const f=$("recovery");f.replaceChildren();f.hidden=flow?.phase!=="input";if(f.hidden)return;f.append(text("label",flow.label));let input;
+if(flow.kind==="recovery_device"){input=document.createElement("select");for(const c of flow.choices){const o=text("option",c.label);o.value=c.value;input.append(o);}}
+else{input=document.createElement("input");input.type=flow.secret?"password":flow.kind==="email"?"email":"text";input.autocomplete=flow.kind==="password"?"current-password":flow.kind==="email"?"username":"off";input.maxLength=512;input.required=true;}
+input.name="response";f.append(input,text("button","Continue"));f.onsubmit=e=>{e.preventDefault();const value=input.value;input.value="";action(async()=>{await api("ui/recovery",{action:"answer",value});});};}
+async function refresh(){try{render(await api("v1/snapshot"));}catch(e){$("health").textContent="App unavailable";$("message").textContent=e.message;}}
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{for(const id of ["overview","setup"])$(id).hidden=id!==b.dataset.tab;document.querySelectorAll("[data-tab]").forEach(x=>x.setAttribute("aria-selected",String(x===b)));if(map)map.invalidateSize();});
+$("login").onsubmit=e=>{e.preventDefault();const email=e.target.email.value,password=e.target.password.value;e.target.password.value="";action(async()=>showFactor(await api("ui/login",{email,password})));};
+function showFactor(result){const f=$("factor");f.replaceChildren();f.hidden=result.phase==="complete";
+if(result.phase==="choose_method"){const select=document.createElement("select");for(const m of result.methods){const o=text("option",m.label);o.value=m.value;select.append(o);}f.append(text("label","Verification method"),select,text("button","Send code"));f.onsubmit=e=>{e.preventDefault();loginMethod=Number(select.value);action(async()=>showFactor(await api("ui/factor",{method:loginMethod})));};}
+else if(result.phase==="verification_code"){const code=document.createElement("input");code.type="password";code.inputMode="numeric";code.autocomplete="one-time-code";code.maxLength=8;code.required=true;f.append(text("label","Enter the code sent by the selected method"),code,text("button","Verify"));f.onsubmit=e=>{e.preventDefault();const value=code.value;code.value="";action(async()=>showFactor(await api("ui/factor",{method:loginMethod,code:value})));};}}
+$("selection").onsubmit=e=>{e.preventDefault();action(async()=>{const ids=[...$("choices").querySelectorAll("input:checked")].map(c=>c.value);await api("ui/select",{ids});selectionDirty=false;});};
+$("discover").onclick=()=>action(async()=>{if(!$("consent").checked)throw Error("Read and accept the recovery explanation first.");await api("ui/recovery",{action:"start",consent:true});});
+$("cancel-recovery").onclick=()=>action(()=>api("ui/recovery",{action:"cancel"}));
+$("cancel-login").onclick=()=>action(async()=>{await api("ui/cancel",{});$("factor").hidden=true;});
+refresh();setInterval(()=>{if(!busy)refresh();},10000);
