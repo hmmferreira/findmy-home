@@ -36,3 +36,11 @@ Supervisor install was submitted once; its 300-second tool timeout did not
 establish completion or failure. Await durable installed state and UI account
 setup before claiming live polling success. Configuration check passed and
 Core restart was initiated to activate the HACS-managed companion integration.
+
+Final offline suite: 38 tests passed, including cross-worker HTTP 429 cooldown.
+Final 0.1.2 image built and passed non-root/private-state/ingress/helper startup
+smoke. Previous repository run also published v0.1.2-dev.3.1 successfully.
+No stable release is approved. Supervisor still has no durable installed
+version for Edge after its install tool timed out; user UI status is pending.
+Core is back after the HACS activation restart; no findmy_home startup errors
+were returned by the system-log query. Existing MQTT status remains ok, reports 9.

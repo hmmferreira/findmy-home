@@ -6,6 +6,7 @@
 - Keep old sightings intact and never pass Apple credentials on child argv.
 - Two asynchronous workers, shared request pacing, and no shared-session writes.
 - Stop queued work on authentication-required or rate-limit responses.
+- Share a 30-minute HTTP 429 cooldown across both workers.
 - Prepare Edge/stable repository delivery instead of repeated archive installs.
 
 # 0.1.1 — Polling visibility
