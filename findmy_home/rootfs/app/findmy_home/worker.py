@@ -7,6 +7,7 @@ import sys
 import json
 import time
 from .storage import atomic_json, read_json, token_only
+from .progress import safe_progress
 
 
 class AppleWorker:
@@ -170,7 +171,7 @@ class AppleWorker:
                 self.store.item_health[item_id]={
                     "status":("updated" if result.get("report") else "no_report") if result.get("ok") else "error",
                     "checked_at":datetime.now(timezone.utc).isoformat(),
-                    "error":result.get("error")}
+                    "error":result.get("error"),"progress":safe_progress(result.get("progress"))}
                 return result
             except asyncio.CancelledError:
                 self.store.item_health[item_id]={"status":"cancelled"}
@@ -188,6 +189,8 @@ class AppleWorker:
             ("PATH","LANG","LC_ALL","SSL_CERT_FILE","SSL_CERT_DIR","XDG_CONFIG_HOME")
             if key in os.environ}
         env["FINDMY_HOME_DATA"]=str(self.store.root)
+        progress_path=self.store.root/"progress"/(item_id+".json")
+        progress_path.unlink(missing_ok=True)
         process=await asyncio.create_subprocess_exec(*command,
             stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,env=env)
@@ -199,7 +202,9 @@ class AppleWorker:
             except TimeoutError:
                 process.kill()
                 await process.communicate()
-                return {"ok":False,"error":"item_timeout"}
+                progress=safe_progress(read_json(progress_path,{}))
+                print("Find My Home query timeout: "+json.dumps(progress),flush=True)
+                return {"ok":False,"error":"item_timeout","progress":progress}
             if process.returncode or len(output)>8192:
                 return {"ok":False,"error":"poll_failed"}
             result=json.loads(output)
@@ -207,6 +212,10 @@ class AppleWorker:
                 return {"ok":False,"error":"poll_failed"}
             if result.get("error") not in self.ALLOWED_ERRORS and not result["ok"]:
                 return {"ok":False,"error":"poll_failed"}
+            progress=safe_progress(read_json(progress_path,{}))
+            if progress:
+                result["progress"]=progress
+                print("Find My Home query completed: "+json.dumps(progress),flush=True)
             return result
         finally:
             if process.returncode is None:

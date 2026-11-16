@@ -18,8 +18,8 @@ class ChildQueryTests(unittest.IsolatedAsyncioTestCase):
             atomic_json(root/"account.json",session)
             atomic_json(root/"items.json",{item:{"enabled":True,"key_file":item+".json"}})
             atomic_json(root/"keys"/(item+".json"),{"fixture":"key"})
-            accessory=SimpleNamespace(to_json=lambda:{"fixture":"updated-alignment"})
-            account=SimpleNamespace(_http=None,fetch_location=AsyncMock(return_value=None),close=AsyncMock())
+            accessory=SimpleNamespace(keys_at=lambda index:set(),to_json=lambda:{"fixture":"updated-alignment"})
+            account=SimpleNamespace(_http=None,fetch_raw_reports=AsyncMock(return_value=[]),fetch_location=AsyncMock(return_value=None),close=AsyncMock())
             with patch.dict(os.environ,{"FINDMY_HOME_DATA":tmp}), patch("sys.stdin",SimpleNamespace(buffer=io.BytesIO(json.dumps({"id":item}).encode()))), patch("findmy_home.poll_item.ReportingAccount.from_json",return_value=account), patch("findmy.FindMyAccessory.from_json",return_value=accessory):
                 self.assertEqual(await query(),{"ok":True,"report":None})
             account.fetch_location.assert_awaited_once_with(accessory)

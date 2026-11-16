@@ -9,6 +9,7 @@ import re
 import sys
 from .apple import ReportingAccount, ReportSourceUnavailable, PacedHttp, RateLimited
 from .storage import read_json, atomic_json
+from .progress import QueryProgress
 
 async def query():
     from findmy import FindMyAccessory
@@ -18,6 +19,7 @@ async def query():
     item_id=request["id"]
     if not isinstance(item_id,str) or not re.fullmatch("[a-f0-9]{32}",item_id):
         raise ValueError("Invalid item identifier")
+    progress=QueryProgress(root/"progress"/(item_id+".json"))
     items=read_json(root/"items.json",{})
     item=items[item_id]
     if not item["enabled"]:
@@ -30,7 +32,9 @@ async def query():
     account._http=PacedHttp(account._http,root/"request-gate")
     try:
         accessory=FindMyAccessory.from_json(key_file)
+        progress.instrument(account,accessory)
         report=await account.fetch_location(accessory)
+        progress.complete()
         # Poll children never write the shared session: UI authentication owns it.
         atomic_json(key_file,accessory.to_json())
         return {"ok":True,"report":None if report is None else {

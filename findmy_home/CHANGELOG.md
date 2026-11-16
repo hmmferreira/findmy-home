@@ -1,3 +1,9 @@
+# 0.1.5 — Diagnose slow item lookups
+
+- Persist allowlisted query phase, elapsed time and aggregate counts.
+- Surface timeout diagnostics without names, identifiers, keys or locations.
+- Keep asynchronous queries, limits and credentials unchanged.
+
 # 0.1.4 — Descriptive item labels and consistent Edge naming
 
 - Add secondary labels with Apple-provided name, known model name, pairing date
