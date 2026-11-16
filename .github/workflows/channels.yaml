@@ -28,6 +28,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r findmy_home/requirements.txt
+      - run: npm ci --prefix tools/ui-tests --ignore-scripts --no-audit --no-fund
       - name: Isolated synthetic tests (no Apple credentials)
         env:
           PYTHONPATH: findmy_home/rootfs/app

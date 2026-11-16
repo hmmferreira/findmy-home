@@ -44,3 +44,15 @@ No stable release is approved. Supervisor still has no durable installed
 version for Edge after its install tool timed out; user UI status is pending.
 Core is back after the HACS activation restart; no findmy_home startup errors
 were returned by the system-log query. Existing MQTT status remains ok, reports 9.
+
+## Usability 0.1.3
+
+47 Python test cases passed, including a Node/jsdom runner covering six DOM
+scenarios: saved-count feedback, failed-save edit retention, typed SMS preservation,
+combined credentials, saved discovery-session reuse, and one-item refresh.
+Backend tests verify private credential consumption, explicit fresh-login,
+shared automatic/manual concurrency, duplicate refresh suppression, cooldown,
+Apple pause and CSRF/read-only API boundaries. DOM dependencies are locked and
+excluded from app runtime. No native HA config entries existed at the initial
+live check; no existing entity registry IDs were renamed. Real browser visual
+testing and a live native entity creation check remain pending.

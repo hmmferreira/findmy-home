@@ -66,3 +66,7 @@ can still finish). This is combined with
 15-minute minimum polling and exponential error backoff up to one hour. Apple's
 private API has no documented quota here; concurrency is intentionally conservative.
 The request limiter uses private local metadata, not a cookie or credential file.
+
+For manual per-item refresh, cached discovery sessions, setup feedback and new
+channel-specific entity names/IDs, see USABILITY.md. Per-item refresh stays on
+the CSRF-protected ingress management API; the companion snapshot API is read-only.

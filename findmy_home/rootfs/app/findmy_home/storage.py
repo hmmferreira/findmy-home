@@ -48,6 +48,10 @@ class Store:
         root.mkdir(parents=True, exist_ok=True, mode=0o700)
         root.chmod(0o700)
         self.root = root
+        self.item_health = {}
+        metadata_path = Path(__file__).with_name("channel.json")
+        metadata = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
+        self.channel = metadata.get("channel") if metadata.get("channel") in ("edge","stable") else "beta"
         identity = read_json(root / "identity.json")
         if identity is None:
             identity = {"instance_id": secrets.token_hex(16),
@@ -61,10 +65,10 @@ class Store:
         self.health = {"status": "starting", "last_poll": None, "next_poll": None}
 
     def public(self):
-        return {"instance_id": self.identity["instance_id"], "health": self.health,
+        return {"instance_id": self.identity["instance_id"], "channel": self.channel, "health": self.health,
                 "items": [{"id": key, "name": item["name"],
                            "model": item.get("model"), "enabled": item["enabled"],
-                           "report": self.reports.get(key)}
+                           "report": self.reports.get(key), "refresh": self.item_health.get(key,{})}
                           for key, item in self.items.items()]}
 
     def select(self, ids):

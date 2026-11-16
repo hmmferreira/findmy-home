@@ -61,7 +61,9 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
         data = store.public()
         if management:
             owner = request.headers["X-Remote-User-Id"]
-            data.update(csrf=csrf(store, owner), recovery=flow.visible(owner))
+            data.update(csrf=csrf(store, owner), recovery=flow.visible(owner),
+                        setup={"locations_connected":(store.root/"account.json").exists() and store.health.get("status")!="reauth_required",
+                               "discovery_session_saved":(store.root/"export/state/exporter-session.plist").exists()})
         return web.json_response(data)
 
     app.router.add_get("/v1/snapshot", snapshot)
@@ -75,7 +77,8 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
         data = await request.json()
         store.select(data["ids"])
         worker.request_poll()
-        return web.json_response({"saved": True})
+        return web.json_response({"saved": True, "selected_count":len(data["ids"]),
+                                  "message":"Tracking choices saved."})
 
     async def login(request):
         data = await request.json()
@@ -97,7 +100,12 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
         if data["action"] == "start":
             if data.get("consent") is not True:
                 raise ValueError()
-            await flow.start(owner)
+            credentials=data.get("credentials")
+            if credentials is not None and not isinstance(credentials,dict):
+                raise ValueError()
+            if not isinstance(data.get("fresh_login",False),bool):
+                raise ValueError()
+            await flow.start(owner,credentials=credentials,fresh_login=data.get("fresh_login",False))
         elif data["action"] == "answer":
             await flow.answer(owner, data["value"])
         elif data["action"] == "cancel":
@@ -108,6 +116,12 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
             await asyncio.to_thread(import_exports, store, store.root / "export" / "accessories")
         return web.json_response(flow.visible(owner))
 
+    async def refresh_item(request):
+        data=await request.json()
+        if not isinstance(data.get("id"),str):
+            raise ValueError()
+        return web.json_response(worker.request_refresh(data["id"]))
+
     async def cancel(request):
         await worker.cancel(request.headers["X-Remote-User-Id"])
         return web.json_response({"phase": "cancelled"})
@@ -115,6 +129,7 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
     app.router.add_get("/", index)
     app.router.add_static("/static", STATIC)
     app.router.add_post("/ui/select", select)
+    app.router.add_post("/ui/refresh", refresh_item)
     app.router.add_post("/ui/login", login)
     app.router.add_post("/ui/factor", factor)
     app.router.add_post("/ui/cancel", cancel)
@@ -129,7 +144,7 @@ async def announce(store):
     async with ClientSession(timeout=ClientTimeout(total=15)) as session:
         async with session.post("http://supervisor/discovery", headers={"Authorization": "Bearer " + token},
             json={"service": "findmy_home", "config": {"host": socket.gethostname(), "port": 8100,
-                  "token": store.identity["read_token"], "instance_id": store.identity["instance_id"]}}) as response:
+                  "token": store.identity["read_token"], "instance_id": store.identity["instance_id"], "channel":store.channel}}) as response:
             return response.status == 200
 
 
@@ -159,6 +174,7 @@ async def main():
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
         await flow.cancel(flow.owner)
+        await worker.close()
         await worker.cancel(worker.owner)
         await api.cleanup()
         await ui.cleanup()

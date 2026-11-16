@@ -30,7 +30,7 @@ if args.mode in ("test","build"):
     stream=io.BytesIO()
     with tarfile.open(fileobj=stream,mode="w") as tar:
         for path in sorted(context.rglob("*")):
-            if any(part in (".git","__pycache__",".venv",".pytest_cache") for part in path.relative_to(context).parts):
+            if any(part in (".git","__pycache__",".venv",".pytest_cache","node_modules") for part in path.relative_to(context).parts):
                 continue
             if path.is_file():
                 tar.add(path,arcname=str(path.relative_to(context)))

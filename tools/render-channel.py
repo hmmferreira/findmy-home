@@ -18,6 +18,8 @@ def render(source, target, channel, version):
         shutil.copytree(source/name, target/name, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     for name in ("README.md", "repository.yaml", "hacs.json", "LICENSE"):
         shutil.copyfile(source/name, target/name)
+    (target/"findmy_home/rootfs/app/findmy_home/channel.json").write_text(
+        json.dumps({"channel":channel,"version":version})+"\n")
     config=target/"findmy_home/config.yaml"
     text=config.read_text()
     text=re.sub(r"(?m)^version:.*$", "version: "+version, text)

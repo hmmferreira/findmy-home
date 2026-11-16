@@ -7,9 +7,18 @@ class ItemEntity(CoordinatorEntity):
     def __init__(self, coordinator, item, suffix):
         super().__init__(coordinator)
         self.item_id = item["id"]
+        channel=coordinator.entry.data.get("channel",coordinator.data.get("channel","beta"))
+        self.channel=channel if channel in ("edge","stable") else "beta"
+        self._object_suffix=suffix
         self._attr_unique_id = coordinator.entry.unique_id + "_" + self.item_id + suffix
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.entry.unique_id + "_" + self.item_id)},
-            name=item["name"] + " (Beta)", manufacturer="Apple Find My", model=item.get("model") or "Item")
+            name=item["name"] + " ("+self.channel.title()+")", manufacturer="Apple Find My", model=item.get("model") or "Item")
+    @property
+    def suggested_object_id(self):
+        # New registry IDs explicitly carry their channel; existing registry IDs
+        # and stable unique IDs are preserved rather than silently renamed.
+        return "findmy_home_"+self.channel+"_"+self.item_id[:12]+self._object_suffix
+
     @property
     def item(self):
         return next((i for i in self.coordinator.data["items"] if i["id"] == self.item_id), {})

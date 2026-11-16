@@ -1,5 +1,5 @@
 name: Find My Home (experimental)
-version: 0.1.2
+version: 0.1.3
 slug: findmy_home
 description: Guided Find My item recovery and native Home Assistant tracking
 arch:

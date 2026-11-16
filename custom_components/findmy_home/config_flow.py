@@ -15,7 +15,7 @@ class FindMyHomeFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._connection["app_slug"] = discovery_info.slug
         await self.async_set_unique_id(self._connection["instance_id"])
         self._abort_if_unique_id_configured()
-        self.context["title_placeholders"] = {"name": "Find My Home"}
+        self.context["title_placeholders"] = {"name": "Find My Home ("+self._connection.get("channel","Beta").title()+")"}
         return await self.async_step_hassio_confirm()
 
     async def async_step_hassio_confirm(self, user_input=None):
@@ -27,7 +27,8 @@ class FindMyHomeFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return self.async_abort(reason="wrong_instance")
         except Exception:
             return self.async_show_form(step_id="hassio_confirm", errors={"base":"cannot_connect"})
-        return self.async_create_entry(title="Find My Home (Beta)", data=self._connection)
+        self._connection["channel"]=data.get("channel","beta")
+        return self.async_create_entry(title="Find My Home ("+self._connection["channel"].title()+")", data=self._connection)
 
     async def async_step_user(self, user_input=None):
         errors = {}
@@ -41,7 +42,7 @@ class FindMyHomeFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not errors:
                 await self.async_set_unique_id(data["instance_id"])
                 self._abort_if_unique_id_configured()
-                return self.async_create_entry(title="Find My Home (Beta)", data={**user_input,"instance_id":data["instance_id"]})
+                return self.async_create_entry(title="Find My Home ("+data.get("channel","beta").title()+")", data={**user_input,"instance_id":data["instance_id"],"channel":data.get("channel","beta")})
         return self.async_show_form(step_id="user", errors=errors, data_schema=vol.Schema({
             vol.Required("host"): str,
             vol.Required("token"): selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD))}))

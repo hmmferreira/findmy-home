@@ -157,3 +157,21 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
         await self.flow.cancel("alice")
         self.assertFalse(child.isalive())
         self.assertIsNone(self.flow.child)
+
+    async def test_combined_credentials_skip_separate_prompts_without_exposing_secrets(self):
+        await self.flow.start("alice",credentials={"email":"fixture@example.invalid","password":"synthetic-combined-password"})
+        self.assertEqual(self.flow.state["kind"],"verification_code")
+        self.assertEqual(self.flow._credentials,{})
+        self.assertNotIn("synthetic-combined-password",json.dumps(self.flow.visible("alice")))
+        args=self.flow.child.args
+        self.assertFalse(any(arg in ("--fresh-login",b"--fresh-login") for arg in args))
+        self.assertFalse(any("synthetic-combined-password" in str(arg) for arg in args))
+
+    async def test_fresh_login_is_explicit(self):
+        await self.flow.start("alice",fresh_login=True)
+        self.assertIn(b"--fresh-login",self.flow.child.args)
+
+    async def test_combined_credentials_reject_control_characters_before_spawning(self):
+        with self.assertRaises(ValueError):
+            await self.flow.start("alice",credentials={"email":"fixture@example.invalid","password":"unsafe\ninput"})
+        self.assertIsNone(self.flow.child)
