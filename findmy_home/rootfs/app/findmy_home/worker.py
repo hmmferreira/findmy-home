@@ -2,6 +2,7 @@
 import asyncio
 from datetime import datetime, timezone, timedelta
 import math
+import json
 import time
 from .storage import atomic_json, read_json, token_only
 
@@ -15,6 +16,11 @@ class AppleWorker:
         self.methods = []
         self.auth_task = None
         self.failures = 0
+        self.wake = asyncio.Event()
+        self.last_attempt = None
+
+    def request_poll(self):
+        self.wake.set()
 
     def _session(self, account):
         atomic_json(self.store.root / "account.json", token_only(account))
@@ -53,6 +59,7 @@ class AppleWorker:
                     self._session(account)
                     await self._clear_pending()
                     self.store.health["status"] = "ready"
+                    self.request_poll()
                     return {"phase": "complete"}
             except Exception:
                 await self._clear_pending()
@@ -77,6 +84,7 @@ class AppleWorker:
                     self._session(self.pending)
                     await self._clear_pending()
                     self.store.health["status"] = "ready"
+                    self.request_poll()
                     return {"phase": "complete"}
             except Exception:
                 await self._clear_pending()
@@ -112,9 +120,13 @@ class AppleWorker:
         asyncio.run(self._fetch(session, selected))
 
     async def _fetch(self, session, selected):
-        from findmy import AsyncAppleAccount, FindMyAccessory
+        from findmy import FindMyAccessory
         from findmy.errors import InvalidCredentialsError
-        account = AsyncAppleAccount.from_json(session, anisette_libs_path=str(self.store.root / "ani_libs.bin"))
+        from .apple import ReportingAccount, ReportSourceUnavailable
+        self.last_attempt = time.monotonic()
+        self.store.health.update(last_attempt=datetime.now(timezone.utc).isoformat(),
+            selected_count=len(selected), reports_received=0, error_code=None)
+        account = ReportingAccount.from_json(session, anisette_libs_path=str(self.store.root / "ani_libs.bin"))
         try:
             accessories = [FindMyAccessory.from_json(self.store.root / "keys" / item["key_file"])
                            for item in selected.values()]
@@ -136,25 +148,47 @@ class AppleWorker:
                     continue
                 if previous and timestamp < datetime.fromisoformat(previous["timestamp"]):
                     continue
+                self.store.health["reports_received"] += 1
                 self.store.reports[key] = {"latitude": lat, "longitude": lon, "accuracy": accuracy,
                                            "timestamp": timestamp.isoformat()}
             atomic_json(self.store.root / "reports.json", self.store.reports)
             self.failures = 0
-            self.store.health.update(status="ok", last_poll=datetime.now(timezone.utc).isoformat())
+            known = sum(key in self.store.reports for key in selected)
+            self.store.health.update(status="ok" if self.store.health["reports_received"] else "no_reports",
+                last_poll=datetime.now(timezone.utc).isoformat(), items_with_locations=known)
+        except ReportSourceUnavailable:
+            self.failures += 1
+            self.store.health.update(status="error", error_code="apple_empty_response")
         except InvalidCredentialsError:
-            self.store.health["status"] = "reauth_required"
+            self.store.health.update(status="reauth_required", error_code="authentication_required")
         except Exception as error:
             self.failures += 1
-            self.store.health["status"] = "reauth_required" if isinstance(error, ValueError) and str(error) == "No username or password specified" else "error"
+            reauth = isinstance(error, ValueError) and str(error) == "No username or password specified"
+            self.store.health.update(status="reauth_required" if reauth else "error",
+                error_code="authentication_required" if reauth else "poll_failed")
         finally:
             await account.close()
+            # Explicit allowlist: no coordinates, item IDs, names, tokens or exception text.
+            summary={key:self.store.health.get(key) for key in
+                ("status","selected_count","reports_received","items_with_locations","error_code")}
+            print("Find My Home poll: "+json.dumps(summary),flush=True)
+
     async def run(self):
         while True:
-            try:
-                await self.poll()
-            except Exception:
-                self.failures += 1
-                self.store.health["status"] = "error"
-            delay = min(3600, 900 * 2 ** min(self.failures, 2))
+            self.wake.clear()
+            # UI actions may wake the loop, but never bypass the Apple query cooldown.
+            remaining = 0 if self.last_attempt is None else max(0, self.last_attempt + 900 - time.monotonic())
+            if not remaining:
+                try:
+                    await self.poll()
+                except Exception:
+                    self.failures += 1
+                    self.store.health.update(status="error", error_code="poll_failed")
+                delay = min(3600, 900 * 2 ** min(self.failures, 2))
+            else:
+                delay = remaining
             self.store.health["next_poll"] = datetime.fromtimestamp(time.time() + delay, timezone.utc).isoformat()
-            await asyncio.sleep(delay)
+            try:
+                await asyncio.wait_for(self.wake.wait(),timeout=delay)
+            except TimeoutError:
+                pass

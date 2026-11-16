@@ -3,6 +3,7 @@ import argparse
 import io
 import json
 import os
+import re
 from pathlib import Path
 import struct
 import tarfile
@@ -22,7 +23,8 @@ def api(path,data=None,method=None):
         data=response.read()
         return json.loads(data) if data else None
 
-image="dragon/findmy-home-tests:0.1.0" if args.mode=="test" else "dragon/findmy-home:0.1.0"
+version=next(line.split(":",1)[1].strip() for line in (root/"findmy_home/config.yaml").read_text().splitlines() if line.startswith("version:"))
+image="dragon/findmy-home-tests:"+version if args.mode=="test" else "dragon/findmy-home:"+version
 if args.mode in ("test","build"):
     context=root if args.mode=="test" else root/"findmy_home"
     stream=io.BytesIO()

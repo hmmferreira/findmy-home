@@ -74,6 +74,7 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
     async def select(request):
         data = await request.json()
         store.select(data["ids"])
+        worker.request_poll()
         return web.json_response({"saved": True})
 
     async def login(request):

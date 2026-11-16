@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Find My Home</title><link rel="stylesheet" href="static/style.css"><link rel="stylesheet" href="static/vendor/leaflet.css"><script defer src="static/vendor/leaflet.js"></script><script defer src="static/app.js"></script></head>
 <body><main><header><div><p class="eyebrow">FIND MY HOME · EXPERIMENTAL</p><h1>Your things, together.</h1><p>Choose what to track. See when it was last found.</p></div><span id="health" role="status">Connecting…</span></header>
 <nav aria-label="Views"><button data-tab="overview" aria-selected="true">Overview</button><button data-tab="setup">Account & items</button></nav>
-<p id="message" role="status" aria-live="polite"></p>
+<p id="poll-summary" class="muted" role="status"></p>\n<p id="message" role="status" aria-live="polite"></p>
 <section id="overview"><div id="map" aria-label="Last known item locations"></div><p class="muted">Locations are last sightings, not live GPS. Map tiles come from OpenStreetMap. Your laptop can be off.</p><div id="cards" class="cards"></div></section>
 <section id="setup" hidden><div class="steps">
 <article><p class="eyebrow">01 · CONNECT</p><h2>Connect your Apple account</h2><p>Used to refresh locations. Your password is discarded after sign-in. If Apple expires the session, Home Assistant will ask you to reconnect.</p>

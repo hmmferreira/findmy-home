@@ -36,7 +36,7 @@ class PollTests(unittest.IsolatedAsyncioTestCase):
         self.store.reports["a"]=old.copy()
         await self.fetch()
         self.assertEqual(self.store.reports["a"],old)
-        self.assertEqual(self.store.health["status"],"ok")
+        self.assertEqual(self.store.health["status"],"no_reports")
     async def test_invalid_and_future_reports_are_ignored(self):
         for lat,when in [(float("nan"),datetime.now(timezone.utc)),(1,datetime.now(timezone.utc)+timedelta(days=1))]:
             await self.fetch(SimpleNamespace(latitude=lat,longitude=2,horizontal_accuracy=3,timestamp=when))
@@ -51,3 +51,32 @@ class PollTests(unittest.IsolatedAsyncioTestCase):
             await self.worker.poll()
             query.assert_not_called()
         self.assertEqual(self.store.health["status"],"select_items")
+
+    async def test_empty_apple_response_is_not_reported_as_tracking(self):
+        from findmy_home.apple import ReportSourceUnavailable
+        await self.fetch(error=ReportSourceUnavailable())
+        self.assertEqual(self.store.health["status"],"error")
+        self.assertEqual(self.store.health["error_code"],"apple_empty_response")
+
+    async def test_report_counters_do_not_include_location_data(self):
+        sighting=datetime.now(timezone.utc)-timedelta(hours=1)
+        await self.fetch(SimpleNamespace(latitude=1.,longitude=2.,horizontal_accuracy=30.,timestamp=sighting))
+        health=self.store.public()["health"]
+        self.assertEqual(health["selected_count"],1)
+        self.assertEqual(health["reports_received"],1)
+        self.assertEqual(health["items_with_locations"],1)
+        self.assertNotIn("latitude",health)
+
+    async def test_ui_wake_does_not_bypass_poll_cooldown(self):
+        import asyncio,time
+        async def fake_poll():
+            self.worker.last_attempt=time.monotonic()
+        with patch.object(self.worker,"poll",AsyncMock(side_effect=fake_poll)) as query:
+            task=asyncio.create_task(self.worker.run())
+            await asyncio.sleep(.02)
+            self.worker.request_poll()
+            await asyncio.sleep(.02)
+            self.assertEqual(query.await_count,1)
+            task.cancel()
+            with self.assertRaises(asyncio.CancelledError):
+                await task
