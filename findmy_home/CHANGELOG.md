@@ -1,3 +1,18 @@
+# 0.1.3 — Setup, feedback, Edge names and manual refresh
+
+- Explain separate location-access and item-key discovery sessions.
+- Reuse the saved discovery session; fresh login is an explicit choice.
+- Submit discovery email and password together through private stdin handling.
+- Preserve typed recovery responses while refreshing background status.
+- Confirm the exact number of saved tracked items; retain edits after errors.
+- Add per-item asynchronous refresh with one-minute spacing, shared worker
+  limits, duplicate suppression and the shared Apple rate-limit pause.
+- Show per-item refresh progress and check time separately from sighting time.
+- Publish channel metadata; new Edge entities have explicit Edge names/IDs.
+  Existing stable unique IDs and existing registry IDs are retained.
+- Make the app map an optional preview; link native HA devices and map views.
+- Add locked DOM regression tests; these are not bundled in the runtime app.
+
 # 0.1.2 — Concurrent incremental item queries
 
 - Save and display each item result immediately.

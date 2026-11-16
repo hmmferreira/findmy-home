@@ -21,6 +21,10 @@ class AppleWorker:
         self.failures = 0
         self.wake = asyncio.Event()
         self.last_attempt = None
+        self.query_slots = asyncio.Semaphore(self.CONCURRENCY)
+        self.active_items = set()
+        self.item_attempts = {}
+        self.manual_tasks = {}
 
     def request_poll(self):
         self.wake.set()
@@ -104,7 +108,81 @@ class AppleWorker:
     ITEM_TIMEOUT = 120
     ALLOWED_ERRORS = {"apple_empty_response","authentication_required","poll_failed","item_timeout","rate_limited"}
 
+    MANUAL_INTERVAL = 60
+
+    def request_refresh(self, item_id):
+        if item_id not in self.store.items or not self.store.items[item_id].get("enabled"):
+            raise ValueError("Choose a tracked item")
+        if self.pending:
+            return {"status":"signing_in","message":"Finish account sign-in first."}
+        if read_json(self.store.root/"account.json") is None:
+            return {"status":"reauth_required","message":"Connect the location account first."}
+        until=read_json(self.store.root/"request-cooldown.json",{}).get("until",0)
+        if until>time.time():
+            return {"status":"paused","retry_after":math.ceil(until-time.time()),
+                    "message":"Apple requested a pause. Refresh will be available after the pause."}
+        if item_id in self.active_items:
+            return {"status":"refreshing","message":"This item is already refreshing."}
+        task=self.manual_tasks.get(item_id)
+        if task and not task.done():
+            return {"status":"queued","message":"This item is already queued."}
+        remaining=self.MANUAL_INTERVAL-(time.monotonic()-self.item_attempts.get(item_id,-math.inf))
+        if remaining>0:
+            return {"status":"cooldown","retry_after":math.ceil(remaining),
+                    "message":"This item was checked recently. Try again in "+str(math.ceil(remaining))+" seconds."}
+        self.store.item_health[item_id]={"status":"queued"}
+        task=asyncio.create_task(self._manual_refresh(item_id))
+        self.manual_tasks[item_id]=task
+        task.add_done_callback(lambda completed: self.manual_tasks.pop(item_id,None)
+                               if self.manual_tasks.get(item_id) is completed else None)
+        return {"status":"queued","message":"Refresh queued for this item. It will use the next available worker."}
+
+    async def _manual_refresh(self, item_id):
+        try:
+            result=await self._query_item(item_id)
+            if result.get("ok") and self.store.items.get(item_id,{}).get("enabled"):
+                self._accept_report(item_id,result.get("report"))
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            self.store.item_health[item_id]={"status":"error","error":"poll_failed"}
+
+    async def close(self):
+        tasks=list(self.manual_tasks.values())
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks,return_exceptions=True)
+
     async def _query_item(self, item_id):
+        # Automatic and manual requests share the same two slots. Semaphore
+        # waiters are served before an automatic worker can take another item.
+        async with self.query_slots:
+            if not self.store.items.get(item_id,{}).get("enabled"):
+                return {"ok":True,"report":None}
+            previous=self.item_attempts.get(item_id)
+            if previous is not None and time.monotonic()-previous<self.MANUAL_INTERVAL:
+                return {"ok":True,"report":None,"skipped":True}
+            self.item_attempts[item_id]=time.monotonic()
+            self.active_items.add(item_id)
+            self.store.item_health[item_id]={"status":"refreshing"}
+            try:
+                result=await self._query_process(item_id)
+                self.store.item_health[item_id]={
+                    "status":("updated" if result.get("report") else "no_report") if result.get("ok") else "error",
+                    "checked_at":datetime.now(timezone.utc).isoformat(),
+                    "error":result.get("error")}
+                return result
+            except asyncio.CancelledError:
+                self.store.item_health[item_id]={"status":"cancelled"}
+                raise
+            except Exception:
+                self.store.item_health[item_id]={"status":"error","error":"poll_failed",
+                    "checked_at":datetime.now(timezone.utc).isoformat()}
+                return {"ok":False,"error":"poll_failed"}
+            finally:
+                self.active_items.discard(item_id)
+
+    async def _query_process(self, item_id):
         command=getattr(self,"_item_command",[sys.executable,"-m","findmy_home.poll_item"])
         env={key:os.environ[key] for key in
             ("PATH","LANG","LC_ALL","SSL_CERT_FILE","SSL_CERT_DIR","XDG_CONFIG_HOME")

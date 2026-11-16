@@ -9,7 +9,7 @@ Runs independently of an existing MQTT tracker.
 3. Discover items through guided key recovery. Accept the Keychain trust
    explanation, authenticate, choose a trusted device, and enter its unlock passcode.
 4. Select items with checkboxes. New items start disabled; rediscovery keeps choices.
-5. Approve the discovered native integration. It creates separate Beta devices,
+5. Approve the discovered native integration. It creates separate channel-specific devices,
    GPS trackers and last-sighting sensors. HA zones and Recorder handle history.
 6. Open Overview for the map. Add items later from Account & items.
 
@@ -49,6 +49,20 @@ The native integration is separate from the app. HACS can install it as a custom
 Integration repository; enable prerelease versions for Edge integration updates. Stable integration
 releases are published only on explicit stable promotion.
 See [channel delivery and migration](docs/CHANNELS.md).
+
+## Usability update (0.1.3)
+
+Setup explains location access versus item-key discovery. Discovery reuses its
+saved session and accepts email/password together on first sign-in. Item choices
+show exact save feedback, and each tracked item has an asynchronous refresh
+button. Manual refresh uses a one-minute anti-spam guard and always respects
+Apple's rate-limit pause. New Edge native entities have explicit Edge labels
+and channel-marked IDs. The app map is an optional preview; use HA's native
+map and tracker history for daily use. See [the implemented behavior and native
+UI direction](docs/USABILITY.md).
+
+Finish an active import before updating the app. Update the companion through
+HACS and restart Core for the new native naming before confirming discovery.
 
 ## Development
 Build from the findmy_home directory using its Dockerfile. It compiles the pinned

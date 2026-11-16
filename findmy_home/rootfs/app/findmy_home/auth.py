@@ -24,16 +24,23 @@ class ExportFlow:
         self.deadline = 0
         self.lock = asyncio.Lock()
         self.expiry_task = None
+        self._credentials = {}
 
     def visible(self, owner):
         if self.owner and self.owner != owner:
             return {"phase": "busy", "message": "Another user is completing recovery."}
         return self.state
 
-    async def start(self, owner):
+    async def start(self, owner, credentials=None, fresh_login=False):
         async with self.lock:
             if self.child is not None:
                 raise ValueError("Recovery already in progress")
+            credentials = credentials or {}
+            if credentials and (set(credentials) != {"email", "password"} or any(
+                not isinstance(v,str) or not v or len(v)>512 or any(c in v for c in "\r\n\x00")
+                for v in credentials.values())):
+                raise ValueError("Invalid credentials")
+            self._credentials = dict(credentials)
             export = self.root / "export"
             export.mkdir(parents=True, exist_ok=True, mode=0o700)
             self.owner = owner
@@ -41,7 +48,7 @@ class ExportFlow:
             self.state = {"phase": "working"}
             try:
                 self.child = pexpect.spawn(self.executable,
-                    ["--fresh-login", "--anisette-url", "http://127.0.0.1:6969",
+                    (["--fresh-login"] if fresh_login else []) + ["--anisette-url", "http://127.0.0.1:6969",
                      "--output-dir", str(export / "accessories")],
                     cwd=str(export), encoding="utf-8", echo=False, timeout=90,
                     maxread=4096, searchwindowsize=16384,
@@ -76,7 +83,15 @@ class ExportFlow:
 
     async def _advance(self):
         child = self.child
-        index = await asyncio.to_thread(child.expect, PROMPTS)
+        while True:
+            index = await asyncio.to_thread(child.expect, PROMPTS)
+            kind = KINDS[index] if index < len(KINDS) else None
+            value = self._credentials.pop(kind, None)
+            if value is None:
+                self._credentials.clear()
+                break
+            await asyncio.to_thread(child.sendline, value)
+            value = None
         if index < len(KINDS):
             kind = KINDS[index]
             choices = []
@@ -93,6 +108,7 @@ class ExportFlow:
             self._close("timed_out")
 
     def _close(self, phase):
+        self._credentials.clear()
         if self.child is not None:
             self.child.close(force=True)
             self.child = None

@@ -24,4 +24,6 @@ class Api:
             data = await response.json()
         if not isinstance(data.get("items"), list) or not isinstance(data.get("health"), dict):
             raise ValueError("Invalid app response")
+        if data.get("channel") not in ("edge","stable","beta"):
+            data["channel"]="beta"
         return data
