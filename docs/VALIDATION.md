@@ -15,3 +15,12 @@
   have not yet run. These focused tests do not prove end-to-end HA compatibility.
 - No live Apple authentication was attempted in the new app. No original sessions,
   keys or item data were copied into it. The baseline bridge remains unchanged.
+
+## Concurrent polling update — 2026-11-16
+
+33 isolated tests passed before channel tests were added. Built 0.1.2 and passed
+its non-root/private-state/ingress/local-helper startup smoke check. Tests cover
+two-worker limits, immediate partial results, timeout of a CPU-bound process,
+cancellation cleanup, global pacing, rate limits, old timestamps and cooldown.
+Live Home Assistant still runs local app 0.1.1; these changes have not yet
+produced a verified live Apple report. Do not claim the live issue resolved.

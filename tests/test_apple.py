@@ -20,3 +20,27 @@ class AppleResponseTests(unittest.IsolatedAsyncioTestCase):
         account.close=AsyncMock()
         with patch.object(AsyncAppleAccount,"fetch_raw_reports",AsyncMock(return_value=[])):
             self.assertEqual(await account.fetch_raw_reports([]),[])
+
+
+class PacingTests(unittest.IsolatedAsyncioTestCase):
+    async def test_http_429_is_not_retried_or_exposed(self):
+        from findmy_home.apple import PacedHttp,RateLimited
+        from types import SimpleNamespace
+        delegate=SimpleNamespace(post=AsyncMock(return_value=SimpleNamespace(status_code=429)))
+        client=PacedHttp(delegate,None)
+        with patch.object(client,"_reserve",return_value=0):
+            with self.assertRaises(RateLimited):
+                await client.post("https://example.invalid")
+        delegate.post.assert_awaited_once()
+
+    async def test_cross_worker_reservations_are_spaced(self):
+        import asyncio,tempfile
+        from pathlib import Path
+        from findmy_home.apple import PacedHttp
+        with tempfile.TemporaryDirectory() as tmp:
+            gate=Path(tmp)/"gate"
+            clients=[PacedHttp(None,gate),PacedHttp(None,gate)]
+            delays=await asyncio.gather(*(asyncio.to_thread(c._reserve) for c in clients))
+            self.assertLess(min(delays),.2)
+            self.assertGreater(max(delays),.8)
+            self.assertEqual(gate.stat().st_mode & 0o777,0o600)

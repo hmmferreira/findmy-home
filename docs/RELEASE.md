@@ -26,10 +26,18 @@ Rollback: stop/disable the beta app and integration. Keep private state until th
 user chooses deletion. Review and back up before removing integration entities.
 
 ## Community release gates
-No public repository or release exists. FindMy.py is MIT licensed. The pinned
+Repository channel delivery is prepared; no stable release is approved. FindMy.py is MIT licensed. The pinned
 findmy-export checkout has no obvious LICENSE or Cargo license field: resolve
 redistribution rights before publishing its binary or sources. Review rustpush,
 Apple-private API dependencies and anisette independently. Preserve required
 notices and publish corresponding source where required. Apple compatibility is
 unofficial and no endorsement is implied. Complete live testing, hassfest/native
 integration checks, browser tests, AppArmor, SBOM, locks and signing first.
+
+## Repository channel delivery
+
+See CHANNELS.md. Edge is automatically tested and published from main. Stable
+requires explicit workflow promotion after the comparison checklist above.
+For now builds happen in Supervisor on Install/Update; public prebuilt images
+remain gated on dependency redistribution review. No manual package copying is
+needed after the one-time repository app setup.

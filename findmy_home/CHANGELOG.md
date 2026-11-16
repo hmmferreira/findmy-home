@@ -1,3 +1,13 @@
+# 0.1.2 — Concurrent incremental item queries
+
+- Save and display each item result immediately.
+- Hard-limit each item query to 120 seconds, including synchronous key derivation.
+- Continue after a timed-out item and expose per-item progress counts.
+- Keep old sightings intact and never pass Apple credentials on child argv.
+- Two asynchronous workers, shared request pacing, and no shared-session writes.
+- Stop queued work on authentication-required or rate-limit responses.
+- Prepare Edge/stable repository delivery instead of repeated archive installs.
+
 # 0.1.1 — Polling visibility
 
 - Distinguish no location reports from successful tracking.

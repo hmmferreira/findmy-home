@@ -1,0 +1,82 @@
+name: Validate and deliver channels
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Channel to deliver
+        type: choice
+        options: [edge, stable]
+        default: edge
+      stable_verified:
+        description: Stable passed the documented real-account and security release checks
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: channels-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - run: pip install -r findmy_home/requirements.txt
+      - name: Isolated synthetic tests (no Apple credentials)
+        env:
+          PYTHONPATH: findmy_home/rootfs/app
+        run: python -m unittest discover -s tests -v
+  deliver:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - name: Render selected channel
+        env:
+          REQUESTED_CHANNEL: ${{ inputs.channel || 'edge' }}
+          STABLE_VERIFIED: ${{ inputs.stable_verified }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$REQUESTED_CHANNEL" = stable ] && [ "$STABLE_VERIFIED" != true ]; then
+            echo 'Stable requires the documented live validation.' >&2
+            exit 1
+          fi
+          VERSION=$(sed -n 's/^version: *//p' findmy_home/config.yaml)
+          if [ "$REQUESTED_CHANNEL" = edge ]; then
+            VERSION="$VERSION-dev.$GITHUB_RUN_NUMBER.$GITHUB_RUN_ATTEMPT"
+          fi
+          python tools/render-channel.py "$REQUESTED_CHANNEL" "$VERSION" "$RUNNER_TEMP/channel-tree"
+          echo "CHANNEL=$REQUESTED_CHANNEL" >> "$GITHUB_ENV"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Publish channel with normal fast-forward Git history
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          if git show-ref --verify --quiet "refs/remotes/origin/$CHANNEL"; then
+            if [ "$CHANNEL" = stable ] && git show "origin/stable:CHANNEL.json" | grep -Fq "\"version\": \"$VERSION\""; then
+              echo 'Stable versions are immutable; increase the source version.' >&2
+              exit 1
+            fi
+            git checkout -B delivery "origin/$CHANNEL"
+          else
+            git checkout --orphan delivery
+          fi
+          git rm -r --ignore-unmatch .
+          cp -a "$RUNNER_TEMP/channel-tree/." .
+          git add .
+          git commit -m "Deliver $CHANNEL $VERSION from $GITHUB_SHA"
+          git push origin "HEAD:refs/heads/$CHANNEL"

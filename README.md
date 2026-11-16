@@ -1,7 +1,7 @@
 # Find My Home — experimental app + integration
 
 A separate prototype for friendly Apple Find My item setup in Home Assistant.
-The working Dragon MQTT bridge and Item Tracking dashboard are not modified.
+Runs independently of an existing MQTT tracker.
 
 ## User journey
 1. Open the app through Home Assistant ingress.
@@ -34,8 +34,21 @@ is promised. Sparse sightings are not a continuous GPS track.
 - docs/SECURITY.md: trust boundaries, storage and remaining review.
 - docs/RELEASE.md: install/compare checklist and community-release gates.
 
-Manifest URLs are the intended project location. No GitHub repository or public
-release has been created. The source is kept in a separate local Git repo.
+## Install and update through Home Assistant
+
+Add the [Edge app repository](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fhmmferreira%2Ffindmy-home%23edge), then install **Find My Home Edge**.
+Updates appear in Settings → Apps. No terminal archive copying is needed.
+The initial source build can take a while; subsequent builds reuse cached layers.
+
+Edge is delivered after tests on main. Stable is reserved for manually promoted,
+validated releases at `https://github.com/hmmferreira/findmy-home#stable`.
+Do not add stable until its first release has passed live validation.
+Both channels remain experimental until the security/release checks are complete.
+
+The native integration is separate from the app. HACS can install it as a custom
+Integration repository; during development select the `edge` branch when
+redownloading. A tagged stable release will be needed for normal HACS updates.
+See [channel delivery and migration](docs/CHANNELS.md).
 
 ## Development
 Build from the findmy_home directory using its Dockerfile. It compiles the pinned
