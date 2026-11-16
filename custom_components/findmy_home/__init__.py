@@ -24,7 +24,7 @@ class Coordinator(DataUpdateCoordinator):
         except Exception as error:
             raise UpdateFailed("Find My Home app is unavailable") from error
         status = data["health"].get("status")
-        for key, active in {"apple_reauth":status=="reauth_required", "poll_failed":status=="error"}.items():
+        for key, active in {"apple_reauth":status=="reauth_required", "poll_failed":status in ("error","partial_results")}.items():
             issue_id = self.entry.entry_id + "_" + key
             if active:
                 ir.async_create_issue(self.hass, DOMAIN, issue_id, is_fixable=False,

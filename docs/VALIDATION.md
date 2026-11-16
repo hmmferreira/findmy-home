@@ -24,3 +24,7 @@ two-worker limits, immediate partial results, timeout of a CPU-bound process,
 cancellation cleanup, global pacing, rate limits, old timestamps and cooldown.
 Live Home Assistant still runs local app 0.1.1; these changes have not yet
 produced a verified live Apple report. Do not claim the live issue resolved.
+
+Repository CI passed all 36 tests on the first source push. Channel delivery
+initialization needed a fix for staged orphan-branch files; delivery is being
+verified separately before advertising the channel as installable.

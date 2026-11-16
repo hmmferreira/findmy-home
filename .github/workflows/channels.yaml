@@ -23,8 +23,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: '3.12'
       - run: pip install -r findmy_home/requirements.txt
@@ -39,7 +39,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           fetch-depth: 0
       - name: Render selected channel
@@ -75,7 +75,7 @@ jobs:
           else
             git checkout --orphan delivery
           fi
-          git rm -r --ignore-unmatch .
+          git rm -rf --ignore-unmatch .
           cp -a "$RUNNER_TEMP/channel-tree/." .
           git add .
           git commit -m "Deliver $CHANNEL $VERSION from $GITHUB_SHA"
