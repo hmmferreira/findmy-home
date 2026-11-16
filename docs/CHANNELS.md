@@ -60,7 +60,9 @@ Every completed valid report is saved immediately, preserving original timestamp
 One hung item cannot hold back the other worker's results. Account state is read
 only by children; only the UI authentication flow saves its token-only session.
 Expired sessions require sign-in instead of persisting a password.
-An Apple 429 stops queued work (one other worker can already be running), with
+An Apple 429 stops queued work and sets a shared 30-minute request cooldown.
+The other worker checks it before sending another POST (a request already sent
+can still finish). This is combined with
 15-minute minimum polling and exponential error backoff up to one hour. Apple's
 private API has no documented quota here; concurrency is intentionally conservative.
 The request limiter uses private local metadata, not a cookie or credential file.

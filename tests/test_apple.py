@@ -28,7 +28,7 @@ class PacingTests(unittest.IsolatedAsyncioTestCase):
         from types import SimpleNamespace
         delegate=SimpleNamespace(post=AsyncMock(return_value=SimpleNamespace(status_code=429)))
         client=PacedHttp(delegate,None)
-        with patch.object(client,"_reserve",return_value=0):
+        with patch.object(client,"_reserve",return_value=0), patch.object(client,"_check_blocked"), patch.object(client,"_block"):
             with self.assertRaises(RateLimited):
                 await client.post("https://example.invalid")
         delegate.post.assert_awaited_once()
@@ -44,3 +44,16 @@ class PacingTests(unittest.IsolatedAsyncioTestCase):
             self.assertLess(min(delays),.2)
             self.assertGreater(max(delays),.8)
             self.assertEqual(gate.stat().st_mode & 0o777,0o600)
+
+    async def test_rate_limit_cooldown_is_shared_with_other_worker(self):
+        import tempfile
+        from pathlib import Path
+        from types import SimpleNamespace
+        from findmy_home.apple import PacedHttp,RateLimited
+        with tempfile.TemporaryDirectory() as tmp:
+            delegate=SimpleNamespace(post=AsyncMock(return_value=SimpleNamespace(status_code=429)))
+            gate=Path(tmp)/"gate"
+            first,second=PacedHttp(delegate,gate),PacedHttp(delegate,gate)
+            with self.assertRaises(RateLimited): await first.post("https://example.invalid")
+            with self.assertRaises(RateLimited): await second.post("https://example.invalid")
+            delegate.post.assert_awaited_once()

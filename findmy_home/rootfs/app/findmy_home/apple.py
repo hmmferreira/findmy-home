@@ -28,10 +28,23 @@ class PacedHttp:
     def __getattr__(self, name):
         return getattr(self.delegate, name)
 
+    def _check_blocked(self):
+        import time
+        from .storage import read_json
+        state=read_json(self.gate.with_name("request-cooldown.json"),{})
+        if state.get("until",0)>time.time():
+            raise RateLimited("rate_limited")
+
+    def _block(self):
+        import time
+        from .storage import atomic_json
+        atomic_json(self.gate.with_name("request-cooldown.json"),{"until":time.time()+1800})
+
     def _reserve(self):
         import fcntl
         import os
         import time
+        self._check_blocked()
         fd = os.open(self.gate, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
         with os.fdopen(fd, "r+") as handle:
             fcntl.flock(handle, fcntl.LOCK_EX)
@@ -51,7 +64,9 @@ class PacedHttp:
         import asyncio
         delay = await asyncio.to_thread(self._reserve)
         await asyncio.sleep(delay)
+        await asyncio.to_thread(self._check_blocked)
         response = await self.delegate.post(*args, **kwargs)
         if response.status_code == 429:
+            await asyncio.to_thread(self._block)
             raise RateLimited("rate_limited")
         return response
