@@ -1,3 +1,11 @@
+# 0.1.8 — Durable state and restore regression coverage
+
+- Publish selection, metadata, imports and sightings to memory only after their
+  atomic file write succeeds, avoiding misleading state after disk-write errors.
+- Add synthetic restore checks for identities, choices, keys, sessions, sightings
+  and search checkpoints, including permissions and corrupt-state rejection.
+- Document safe same-channel restore and the remaining live Supervisor test.
+
 # 0.1.7 — Bounded item searches with private checkpoints
 
 - Check recent keys first, then at most one older key window per item refresh.

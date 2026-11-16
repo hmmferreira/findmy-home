@@ -7,7 +7,9 @@ Verified 2026-11-16 against the installed Edge app:
   batches per timed-out item. Bounded searches now revisit 580 recent key indices
   then at most 2,320 older indices, saving a private continuation checkpoint.
   Incomplete searches are marked explicitly. This reduces repeated work; it
-  cannot guarantee Apple has a sighting. Live validation is pending deployment.
+  cannot guarantee Apple has a sighting. The first live bounded poll completed all five item queries without failures:
+  three sightings and two continuing searches. These two items still have no
+  saved sighting; receiving reports for them remains unverified.
 - Manual refresh retrieves Apple's stored report; it cannot make an AirTag
   broadcast or make nearby Apple devices relay a new sighting.
 - Location polling and item discovery have separate initial authorizations.
