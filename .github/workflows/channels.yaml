@@ -27,7 +27,8 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: '3.12'
-      - run: pip install --require-hashes --only-binary=:all: -r findmy_home/requirements.lock
+      - run: |
+          pip install --require-hashes --only-binary=:all: -r findmy_home/requirements.lock
       - run: pip check
       - run: npm ci --prefix tools/ui-tests --ignore-scripts --no-audit --no-fund
       - name: Isolated synthetic tests (no Apple credentials)
