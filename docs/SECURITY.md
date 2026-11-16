@@ -47,7 +47,10 @@ browser tile requests. No reverse geocoding is done.
 - Test real Apple factors, expiry, cancellation and token-only reauth.
 - Replace human-prompt matching with a typed exporter protocol upstream.
 - Audit transitive dependencies, binary provenance and license compatibility.
-- AppArmor testing, dependency locking/SBOM, signed images and CI.
+- Python runtime dependencies are pinned with committed wheel SHA-256 hashes;
+  production/test builds and CI use pip hash-checking mode and reject source
+  distributions. See [dependency updates](DEPENDENCIES.md). AppArmor testing,
+  SBOM and signed images remain outstanding.
 - Browser tests of TLS ingress, CSRF, recovery ownership and redaction.
 - Synthetic private-state restore and disk-write failure regression tests pass;
   live Supervisor backup/restore and key deletion/retention policy remain. See
