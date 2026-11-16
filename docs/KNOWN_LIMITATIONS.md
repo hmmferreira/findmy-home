@@ -2,10 +2,12 @@
 
 Verified 2026-11-16 against the installed Edge app:
 
-- Repeated polls of five selected items produce three reports; two item queries
-  reach the 120-second limit. Diagnostics show 46–48 report batches with no reports before the limit;
-  a bounded/resumable search is still needed. Other items'
-  completed reports are saved independently.
+- Before bounded searching, repeated polls of five selected items produced three
+  reports and two 120-second timeouts. Diagnostics showed 46–48 empty report
+  batches per timed-out item. Bounded searches now revisit 580 recent key indices
+  then at most 2,320 older indices, saving a private continuation checkpoint.
+  Incomplete searches are marked explicitly. This reduces repeated work; it
+  cannot guarantee Apple has a sighting. Live validation is pending deployment.
 - Manual refresh retrieves Apple's stored report; it cannot make an AirTag
   broadcast or make nearby Apple devices relay a new sighting.
 - Location polling and item discovery have separate initial authorizations.

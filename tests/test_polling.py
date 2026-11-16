@@ -140,3 +140,11 @@ class PollTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(query.await_count,1)
             task.cancel()
             with self.assertRaises(asyncio.CancelledError): await task
+
+    async def test_pending_search_does_not_become_no_reports_or_error_backoff(self):
+        with patch.object(self.worker,"_query_item",AsyncMock(return_value={"ok":True,"report":None,"search_pending":True})):
+            await self.worker.poll()
+        self.assertEqual(self.store.health["status"],"searching")
+        self.assertEqual(self.store.health["items_searching"],6)
+        self.assertEqual(self.store.health["items_failed"],0)
+        self.assertEqual(self.worker.failures,0)

@@ -122,3 +122,13 @@ test("legacy channel labels are shown as Edge",async()=>{
     assert.equal(env.document.getElementById("app-title").textContent,"Find My Home Edge");
   }finally{env.close();}
 });
+
+test("incomplete key search is distinguished from no sighting",async()=>{
+  const env=await setup({enabled:true});try{
+    env.data.health.status="searching";
+    env.data.items[0].refresh={status:"searching"};await env.refresh();
+    assert.match(env.document.getElementById("health").textContent,/searching remaining/);
+    assert.match(env.document.querySelector(".item-status").textContent,/older key search will continue/);
+    assert.equal(env.document.querySelector("[data-refresh]").disabled,false);
+  }finally{env.close();}
+});
