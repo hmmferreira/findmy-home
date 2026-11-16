@@ -7,7 +7,8 @@ privileged mode, /config mount or Core administrator API token is requested.
 The local helper is bundled in the app container, binds only loopback, and has no published port. Helper/exporter child environments do not inherit the Supervisor token.
 
 Management accepts only the Supervisor ingress peer and a trusted nonempty user
-header. Mutations require a short-lived per-user CSRF token and JSON. The sidebar
+header and the exact `system-admin` group. Missing groups fail closed.
+Supervisor 2026.11.0 or newer is required. Mutations require a short-lived per-user CSRF token and JSON. The sidebar
 panel is administrator-only. A separate listener offers authenticated read-only
 snapshots to Core. Its bearer credential cannot access account management.
 
@@ -36,8 +37,13 @@ CSP/no-store headers are set. Map executable assets are local; OpenStreetMap see
 browser tile requests. No reverse geocoding is done.
 
 ## Release review still required
-- Verify actual Supervisor authorization for non-admin ingress users; sidebar
-  visibility alone must not be assumed a complete authorization boundary.
+- Live non-admin browser validation remains outstanding. Supervisor 2026.11.0's
+  [ingress handler](https://github.com/home-assistant/supervisor/blob/2026.11.0/supervisor/api/ingress.py)
+  enforces panel_admin in its backend, filters client-supplied identity/group
+  headers, then forwards authenticated groups. Its
+  [user model](https://github.com/home-assistant/supervisor/blob/2026.11.0/supervisor/const.py)
+  includes system-admin for owners. App tests independently reject missing or
+  non-admin groups and forged administrator headers from an untrusted peer.
 - Test real Apple factors, expiry, cancellation and token-only reauth.
 - Replace human-prompt matching with a typed exporter protocol upstream.
 - Audit transitive dependencies, binary provenance and license compatibility.

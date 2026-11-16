@@ -1,3 +1,10 @@
+# 0.1.6 — Administrator access enforced in the app
+
+- Require the exact administrator group from trusted Supervisor ingress, as
+  well as the trusted peer and user identity; reject missing group headers.
+- Preserve CSRF protection and the separate read-only integration API.
+- Requires Supervisor 2026.11.0 or newer for forwarded group information.
+
 # 0.1.5 — Diagnose slow item lookups
 
 - Persist allowlisted query phase, elapsed time and aggregate counts.
