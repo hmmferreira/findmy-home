@@ -46,8 +46,8 @@ Do not add stable until its first release has passed live validation.
 Both channels remain experimental until the security/release checks are complete.
 
 The native integration is separate from the app. HACS can install it as a custom
-Integration repository; during development select the `edge` branch when
-redownloading. A tagged stable release will be needed for normal HACS updates.
+Integration repository; enable prerelease versions for Edge integration updates. Stable integration
+releases are published only on explicit stable promotion.
 See [channel delivery and migration](docs/CHANNELS.md).
 
 ## Development

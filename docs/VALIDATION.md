@@ -28,3 +28,11 @@ produced a verified live Apple report. Do not claim the live issue resolved.
 Repository CI passed all 36 tests on the first source push. Channel delivery
 initialization needed a fix for staged orphan-branch files; delivery is being
 verified separately before advertising the channel as installable.
+
+The corrected GitHub run passed all 37 tests and delivered Edge
+0.1.2-dev.2.1 (branch commit 28439ba). Home Assistant accepted the repository
+and listed its app. HACS accepted the integration and downloaded edge.
+Supervisor install was submitted once; its 300-second tool timeout did not
+establish completion or failure. Await durable installed state and UI account
+setup before claiming live polling success. Configuration check passed and
+Core restart was initiated to activate the HACS-managed companion integration.
