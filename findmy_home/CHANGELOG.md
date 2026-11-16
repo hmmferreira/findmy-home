@@ -1,3 +1,13 @@
+# 0.1.4 — Descriptive item labels and consistent Edge naming
+
+- Add secondary labels with Apple-provided name, known model name, pairing date
+  and a short app ID; omit unavailable information.
+- Backfill existing items from saved files without a login or key rewrite.
+- Give same-name exports unique hashed filenames instead of overwriting them.
+- Use Edge consistently for development labels, including legacy integration
+  titles; retain existing entity IDs, unique IDs and user title overrides.
+- Remove the obsolete hardcoded diagnostics version.
+
 # 0.1.3 — Setup, feedback, Edge names and manual refresh
 
 - Explain separate location-access and item-key discovery sessions.

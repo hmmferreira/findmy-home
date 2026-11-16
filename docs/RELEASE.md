@@ -20,7 +20,7 @@ disabled items and stable IDs. Privately compare Apple timestamps, accuracy and
 locations with the baseline. Test two successful polls, expiry -> Repairs -> login,
 app/Core restarts, network loss/backoff, and Recorder history. Check phone and
 desktop layouts. A missing report must keep its timestamp, not appear fresh.
-Beta trackers must remain separate from existing MQTT entities/person bindings.
+Edge trackers must remain separate from existing MQTT entities/person bindings.
 
 Rollback: stop/disable the beta app and integration. Keep private state until the
 user chooses deletion. Review and back up before removing integration entities.
@@ -41,3 +41,12 @@ requires explicit workflow promotion after the comparison checklist above.
 For now builds happen in Supervisor on Install/Update; public prebuilt images
 remain gated on dependency redistribution review. No manual package copying is
 needed after the one-time repository app setup.
+
+## Current live evidence — 2026-11-16
+
+Two companion entries are loaded and Edge now receives real reports. Repeated
+polls yield reports for three of five selected items; two time out. This is
+partial live validation, not completion of the checklist. See
+KNOWN_LIMITATIONS.md before deciding between an official preview and Stable.
+The user asked what the limitations are; the release choice remains open.
+No stable_verified assertion or Stable promotion has been made.

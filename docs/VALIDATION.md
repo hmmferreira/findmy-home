@@ -56,3 +56,13 @@ Apple pause and CSRF/read-only API boundaries. DOM dependencies are locked and
 excluded from app runtime. No native HA config entries existed at the initial
 live check; no existing entity registry IDs were renamed. Real browser visual
 testing and a live native entity creation check remain pending.
+
+## Item descriptions and Edge terminology — 0.1.4
+
+52 Python cases pass, including eight DOM scenarios. New tests verify bounded
+friendly-model mapping, date handling, metadata allowlisting, legacy-channel
+normalization and backfill without key rewrites. Production exporter build
+passes two Rust tests for collision-free same-name exports and safe bounded
+filenames. Live Edge polls now repeatedly return three reports for five selected
+items, with two item timeouts; two native integration entries are loaded.
+Native label migration and descriptive backfill have not yet been verified live.

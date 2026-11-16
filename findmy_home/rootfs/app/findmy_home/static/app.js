@@ -32,16 +32,24 @@ function updateButtons(){
 }
 function ago(value){if(!value)return "No sighting yet";const seconds=Math.max(0,Math.floor((Date.now()-Date.parse(value))/1000));return seconds<60?"Just now":seconds<3600?Math.floor(seconds/60)+" minutes ago":seconds<86400?Math.floor(seconds/3600)+" hours ago":Math.floor(seconds/86400)+" days ago";}
 const errors={"rate_limited":"Apple requested a pause.","apple_empty_response":"Apple returned an empty response.","authentication_required":"Reconnect location access.","poll_failed":"Refresh failed.","item_timeout":"This item exceeded its query time limit."};
+function description(item){
+  const parts=[];
+  if(item.apple_name&&item.apple_name!==item.name)parts.push(item.apple_name);
+  if(item.model_name||item.model)parts.push(item.model_name||item.model);
+  if(item.paired_at)parts.push("Paired "+item.paired_at);
+  parts.push("ID "+item.id.slice(0,8));
+  return parts.join(" · ");
+}
 function render(data){
   snapshot=data;csrf=data.csrf;
-  $("app-title").textContent="Find My Home"+(data.channel==="edge"?" Edge":data.channel==="stable"?"":" Beta");
+  $("app-title").textContent="Find My Home"+(data.channel==="edge"?" Edge":data.channel==="stable"?"":" Edge");
   $("health").textContent=({"ok":"Tracking","partial_results":"Some items need attention","no_reports":"No reports returned","reauth_required":"Connect location access","select_items":"Choose tracked items","polling":"Refreshing","error":"Refresh needs attention","starting":"Starting","ready":"Location access connected"})[data.health.status]||"Checking";
   const selected=data.items.filter(item=>item.enabled), known=selected.filter(item=>item.report).length, health=data.health;
   $("poll-summary").textContent=selected.length+" tracked · "+known+" with a saved location · Scheduled check: "+(health.last_poll?ago(health.last_poll):"not completed")+" · Checked "+(health.items_completed??0)+"/"+selected.length+(health.error_code?" · "+(errors[health.error_code]||"Refresh needs attention."):"");
   const cards=$("cards");cards.replaceChildren();
   if(!selected.length)cards.append(text("p","Choose items in Setup, then save your tracking choices."));
   for(const item of selected){
-    const card=text("article","");card.append(text("h2",item.name));const dl=text("dl",""),report=item.report;
+    const card=text("article","");card.append(text("h2",item.name));const detail=text("p",description(item));detail.className="item-description";card.append(detail);const dl=text("dl",""),report=item.report;
     for(const [label,value] of [["Last sighting",ago(report?.timestamp)],["Last checked",item.refresh?.checked_at?ago(item.refresh.checked_at):"Not checked yet"],["Reported at",report?new Date(report.timestamp).toLocaleString():"Not reported"],["Accuracy",report?Math.round(report.accuracy)+" m":"Not reported"]])dl.append(text("dt",label),text("dd",value));
     card.append(dl);
     const state=item.refresh||{}, status=text("p",({"queued":"Queued for the next available worker…","refreshing":"Asking Apple for this item…","updated":"Latest available report checked.","no_report":"Check finished: Apple returned no sighting for this item.","cancelled":"Refresh cancelled."})[state.status]||(state.status==="error"?(errors[state.error]||"Refresh failed. Try again later."):""));
@@ -59,7 +67,9 @@ function render(data){
       const label=text("label","");label.className="check";
       const check=document.createElement("input");check.type="checkbox";check.value=item.id;check.checked=item.enabled;
       check.onchange=()=>{selectionDirty=true;$("selection-state").textContent="Unsaved changes";$("selection-count").textContent=choices.querySelectorAll("input:checked").length+" selected";updateButtons();};
-      label.append(check,text("span",item.name));choices.append(label);
+      const copy=text("span","");copy.className="item-label";
+      copy.append(text("span",item.name));const detail=text("small",description(item));detail.className="item-description";copy.append(detail);
+      label.append(check,copy);choices.append(label);
     }
     if(!data.items.length)choices.append(text("p","Discover items in step 2 first."));
     $("selection-count").textContent=selected.length+" selected";

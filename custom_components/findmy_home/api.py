@@ -1,6 +1,7 @@
 """The integration has a read-only credential, never Apple credentials."""
 import re
 from aiohttp import ClientSession, ClientTimeout
+from .const import normalize_channel
 
 class Unauthorized(Exception):
     pass
@@ -24,6 +25,5 @@ class Api:
             data = await response.json()
         if not isinstance(data.get("items"), list) or not isinstance(data.get("health"), dict):
             raise ValueError("Invalid app response")
-        if data.get("channel") not in ("edge","stable","beta"):
-            data["channel"]="beta"
+        data["channel"]=normalize_channel(data.get("channel"))
         return data

@@ -104,3 +104,21 @@ test("per-item refresh queues only the clicked item and shows progress",async()=
     assert.equal(env.document.getElementById("app-title").textContent,"Find My Home Edge");
   }finally{env.close();}
 });
+
+test("same-name items have descriptive secondary labels",async()=>{
+  const env=await setup();try{
+    env.data.items[0]={...env.data.items[0],name:"iPhone",model:"iPhone17,2",model_name:"iPhone 16 Pro Max",paired_at:"2024-01-02"};
+    env.data.items[1]={...env.data.items[1],name:"iPhone",model:"iPhone18,2",model_name:"iPhone 17 Pro Max",paired_at:"2025-03-04"};
+    await env.refresh();
+    const details=[...env.document.querySelectorAll("#choices small")].map(node=>node.textContent);
+    assert.match(details[0],/iPhone 16 Pro Max.*Paired 2024-01-02.*ID a/);
+    assert.match(details[1],/iPhone 17 Pro Max.*Paired 2025-03-04.*ID b/);
+    assert.equal(env.document.querySelectorAll("#choices input").length,2);
+  }finally{env.close();}
+});
+test("legacy channel labels are shown as Edge",async()=>{
+  const env=await setup();try{
+    env.data.channel="beta";await env.refresh();
+    assert.equal(env.document.getElementById("app-title").textContent,"Find My Home Edge");
+  }finally{env.close();}
+});
