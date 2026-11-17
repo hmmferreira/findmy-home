@@ -55,5 +55,9 @@ browser tile requests. No reverse geocoding is done.
 - Synthetic private-state restore and disk-write failure regression tests pass;
   live Supervisor backup/restore and key deletion/retention policy remain. See
   [backup/restore procedure](BACKUP_RESTORE.md).
-- Explicit pairing-token rotation/revocation.
+- Pairing-token renewal is administrator/CSRF protected and revokes old snapshot
+  access immediately. Replacement tokens are sent only through Supervisor
+  discovery; companion 0.1.10+ verifies the same instance before updating and
+  reloading the existing entry. No token is returned to the browser. Live
+  rotation validation remains outstanding; do not rotate during an upgrade.
 Focused automated tests do not replace an independent security review.

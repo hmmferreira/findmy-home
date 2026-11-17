@@ -26,6 +26,7 @@
 <p id="recovery-status" role="status" aria-live="polite"></p><form id="recovery" hidden></form><button id="cancel-recovery" class="secondary">Cancel discovery</button></article>
 <article><div class="step-heading"><h2>3. Choose tracked items</h2><span id="selection-count" class="badge">0 selected</span></div><p>New items start unchecked. Saving keeps your choices; it does not mean a location report has arrived.</p><form id="selection"><div id="choices"></div><div class="save-bar"><span id="selection-state" role="status">No unsaved changes</span><button id="save-selection" disabled>Save tracked items</button></div></form></article>
 </div>
+<article><h2>Home Assistant connection security</h2><p>Renew the read-only pairing credential if access may have been exposed. This immediately revokes the previous credential. The companion integration version 0.1.10 or newer reconnects automatically through Supervisor discovery. Apple sessions, items and history are kept.</p><form id="pairing-security"><label class="check"><input type="checkbox" id="pairing-consent" required>I understand existing read-only connections will need the replacement credential.</label><button>Revoke old access and reconnect Home Assistant</button></form></article>
 </section>
 <footer>Apple sessions and item keys stay in this app. Passwords and verification codes are not saved. Battery levels and street addresses are unavailable from this source. Protect Home Assistant and its backups.</footer>
 </main></body></html>
