@@ -1,3 +1,10 @@
+# 0.1.12 — Patch HTTP dependency and check published advisories
+
+- Upgrade aiohttp from 3.13.2 to 3.14.5 with reviewed wheel hashes.
+- Check locked runtime dependencies against OSV before channel delivery.
+- Keep exact, expiring applicability notes for setuptools platform/build-only
+  advisories; new findings and expired notes block release validation.
+
 # 0.1.11 — Fail safely on incomplete or unsafe restored data
 
 - Validate the whole private tree before privileged ownership/mode repair.

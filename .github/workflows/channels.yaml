@@ -30,6 +30,8 @@ jobs:
       - run: |
           pip install --require-hashes --only-binary=:all: -r findmy_home/requirements.lock
       - run: pip check
+      - name: Check runtime advisories and expiring applicability notes
+        run: python tools/audit-python.py
       - run: npm ci --prefix tools/ui-tests --ignore-scripts --no-audit --no-fund
       - name: Isolated synthetic tests (no Apple credentials)
         env:

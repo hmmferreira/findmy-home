@@ -1,0 +1,26 @@
+[
+  {
+    "package": "setuptools",
+    "version": "80.9.0",
+    "advisory": "GHSA-h35f-9h28-mq5c",
+    "expires": "2026-12-17",
+    "reason": "Affects macOS sdist MANIFEST.in normalization. This app runs on Linux and installs hash-checked wheels only; it does not build Python sdists. Retained temporarily for fs/pkg_resources compatibility.",
+    "source": "https://github.com/pypa/setuptools/security/advisories/GHSA-h35f-9h28-mq5c"
+  },
+  {
+    "package": "setuptools",
+    "version": "80.9.0",
+    "advisory": "PYSEC-2026-3447",
+    "expires": "2026-12-17",
+    "reason": "Alias of the macOS sdist normalization issue; same Linux wheel-only applicability assessment.",
+    "source": "https://github.com/pypa/setuptools/security/advisories/GHSA-h35f-9h28-mq5c"
+  },
+  {
+    "package": "setuptools",
+    "version": "80.9.0",
+    "advisory": "GHSA-xmj3-9gf7-h52w",
+    "expires": "2026-12-17",
+    "reason": "Affects Windows path handling during legacy wheel installation. App/test/CI runtimes are Linux; installation uses pip's wheel path, not setuptools legacy installation.",
+    "source": "https://github.com/pypa/setuptools/security/advisories/GHSA-xmj3-9gf7-h52w"
+  }
+]

@@ -24,7 +24,11 @@ Verified 2026-11-16 against the installed Edge app:
   tests. Supervisor backend authorization was source-reviewed and the app additionally
   enforces administrator groups (Supervisor 2026.11.0+). Independent security
   review, real non-admin browser validation,
-  full session-expiry recovery and backup/restore validation are incomplete.
+  full session-expiry recovery and live Supervisor backup/restore validation are
+  incomplete. Pairing revocation and strict private restore validation now have
+  regression coverage. Channel delivery also requires native Core tests,
+  hassfest and an OSV package check. Setuptools has scoped, expiring platform-only
+  applicability notes; see DEPENDENCIES.md. This is not an independent audit.
 - Edge, local and future Stable app installations have separate private data.
   Switching installation/channel currently needs one-time account setup.
   The companion integration uses one shared code package in Core; installing
