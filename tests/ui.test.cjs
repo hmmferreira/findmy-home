@@ -21,6 +21,8 @@ async function setup(options={}){
     if(url==="ui/select"){
       if(options.failSave){ok=false;result={message:"Fixture save failure"};}
       else {for(const item of data.items)item.enabled=body.ids.includes(item.id);result={saved:true,selected_count:body.ids.length};}
+    }else if(url==="ui/rotate-pairing"){
+      result={revoked:true,message:"Previous read access revoked."};
     }else if(url==="ui/recovery"){
       data.recovery={phase:"input",kind:"verification_code",label:"SMS verification code",secret:true,choices:[]};
       result=data.recovery;
@@ -130,5 +132,19 @@ test("incomplete key search is distinguished from no sighting",async()=>{
     assert.match(env.document.getElementById("health").textContent,/searching remaining/);
     assert.match(env.document.querySelector(".item-status").textContent,/older key search will continue/);
     assert.equal(env.document.querySelector("[data-refresh]").disabled,false);
+  }finally{env.close();}
+});
+
+test("pairing renewal requires explicit confirmation and never displays tokens",async()=>{
+  const env=await setup();try{
+    const form=env.document.getElementById("pairing-security");
+    form.dispatchEvent(new env.window.Event("submit",{cancelable:true}));await flush();
+    assert.equal(env.requests.filter(call=>call.url==="ui/rotate-pairing").length,0);
+    env.document.getElementById("pairing-consent").checked=true;
+    form.dispatchEvent(new env.window.Event("submit",{cancelable:true}));await flush();await flush();
+    const calls=env.requests.filter(call=>call.url==="ui/rotate-pairing");
+    assert.equal(calls.length,1);assert.deepEqual(calls[0].body,{confirm:true});
+    assert.match(env.document.getElementById("message").textContent,/revoked/);
+    assert.equal(env.document.getElementById("pairing-consent").checked,false);
   }finally{env.close();}
 });

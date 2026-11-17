@@ -45,6 +45,14 @@ class StorageTests(unittest.TestCase):
         value = token_only(Account())
         self.assertIsNone(value["account"]["password"])
         self.assertNotIn("DO_NOT_SAVE", json.dumps(value))
+    def test_failed_pairing_rotation_preserves_current_access(self):
+        store=Store(self.root)
+        before=dict(store.identity)
+        with patch("findmy_home.storage.atomic_json",side_effect=OSError("synthetic disk full")):
+            with self.assertRaises(OSError): store.rotate_read_token()
+        self.assertEqual(store.identity,before)
+        self.assertEqual(read_json(self.root/"identity.json"),before)
+
     def test_selection_is_explicit_and_rejects_unknown(self):
         store = Store(self.root)
         store.items={"a":{"name":"A","enabled":False},"b":{"name":"B","enabled":True}}
@@ -126,6 +134,31 @@ class HttpTests(unittest.IsolatedAsyncioTestCase):
         data=await (await client.get("/v1/snapshot",headers=headers)).json()
         headers["X-CSRF-Token"]=data["csrf"]
         self.assertEqual((await client.post("/ui/recovery",headers=headers,json={"action":"start"})).status,400)
+    async def test_pairing_rotation_revokes_old_token_without_exposing_replacement(self):
+        client=await self.client(True)
+        api=await self.client()
+        headers={"X-Remote-User-Id":"alice","X-Remote-User-Groups":"system-admin"}
+        data=await (await client.get("/v1/snapshot",headers=headers)).json()
+        old=dict(self.store.identity)
+        self.assertEqual((await client.post("/ui/rotate-pairing",headers=headers,json={"confirm":True})).status,403)
+        headers["X-CSRF-Token"]=data["csrf"]
+        self.assertEqual((await client.post("/ui/rotate-pairing",headers=headers,json={})).status,400)
+        self.assertEqual(self.store.identity,old)
+        with patch("findmy_home.server.announce",side_effect=OSError("synthetic unavailable")):
+            response=await client.post("/ui/rotate-pairing",headers=headers,json={"confirm":True})
+        self.assertEqual(response.status,200)
+        result=await response.json()
+        self.assertTrue(result["revoked"])
+        self.assertTrue(result["reconnection_pending"])
+        self.assertEqual(old["instance_id"],self.store.identity["instance_id"])
+        self.assertEqual(old["csrf_key"],self.store.identity["csrf_key"])
+        self.assertNotEqual(old["read_token"],self.store.identity["read_token"])
+        self.assertNotIn(self.store.identity["read_token"],json.dumps(result))
+        self.assertEqual(read_json(self.store.root/"identity.json"),self.store.identity)
+        self.assertEqual((await api.get("/v1/snapshot",headers={"Authorization":"Bearer "+old["read_token"]})).status,401)
+        self.assertEqual((await api.get("/v1/snapshot",headers={"Authorization":"Bearer "+self.store.identity["read_token"]})).status,200)
+        self.assertEqual((await api.post("/ui/rotate-pairing",headers={"Authorization":"Bearer "+self.store.identity["read_token"]},json={"confirm":True})).status,404)
+
     async def test_snapshot_disables_caching(self):
         client=await self.client()
         response=await client.get("/v1/snapshot",headers={"Authorization":"Bearer "+self.store.identity["read_token"]})

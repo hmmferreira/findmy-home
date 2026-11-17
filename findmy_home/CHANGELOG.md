@@ -1,3 +1,12 @@
+# 0.1.10 — Revoke and renew read-only pairing access
+
+- Add an administrator-only, CSRF-protected pairing renewal action with explicit
+  confirmation. Old read access is revoked immediately; tokens never enter UI.
+- Verify the same app identity before accepting updated Supervisor discovery
+  credentials; reconnect the existing integration without replacing entity IDs.
+- Preserve Apple sessions and retry discovery if Supervisor is unavailable.
+- Companion integration 0.1.10+ is required for automatic reconnection.
+
 # 0.1.9 — Hash-checked runtime dependency lock
 
 - Pin all 30 Python runtime dependencies to versions from the tested image.

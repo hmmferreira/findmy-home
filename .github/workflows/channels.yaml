@@ -35,8 +35,23 @@ jobs:
         env:
           PYTHONPATH: findmy_home/rootfs/app
         run: python -m unittest discover -s tests -v
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.14'
+      - run: pip install homeassistant==2026.9.3
+      - name: Native discovery and credential renewal regression tests
+        run: python -m unittest discover -s tests/native -v
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: home-assistant/actions/hassfest@86d4564712fa02543c808e3a693dd04f9d3f8361
   deliver:
-    needs: test
+    needs: [test, native, hassfest]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

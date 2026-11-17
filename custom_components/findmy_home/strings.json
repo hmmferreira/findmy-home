@@ -29,7 +29,8 @@
     "abort": {
       "already_configured": "This app is already connected.",
       "reauth_successful": "App connection restored.",
-      "wrong_instance": "This is a different app instance."
+      "wrong_instance": "This is a different app instance.",
+      "cannot_connect": "Cannot verify the rediscovered app. Existing connection settings were preserved."
     }
   },
   "issues": {

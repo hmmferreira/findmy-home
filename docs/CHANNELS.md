@@ -28,7 +28,7 @@ The local install, Edge and stable therefore have separate private /data volumes
 sessions and native integration instance IDs. Installing Edge cannot silently
 adopt the local app's credentials. Keep the old app/data for rollback; use the
 Edge ingress setup once and confirm its discovered integration. Avoid running
-multiple Apple pollers longer than needed for comparison. Stop the old beta after
+multiple Apple pollers longer than needed for comparison. Stop the old local development app after
 checking two successful Edge polls, UI responsiveness and native tracker history.
 The independent existing MQTT tracker does not change.
 
@@ -70,3 +70,14 @@ The request limiter uses private local metadata, not a cookie or credential file
 For manual per-item refresh, cached discovery sessions, setup feedback and new
 channel-specific entity names/IDs, see USABILITY.md. Per-item refresh stays on
 the CSRF-protected ingress management API; the companion snapshot API is read-only.
+
+
+## Pairing credential renewal
+
+Update the companion integration to 0.1.10 or newer before using Setup → Home
+Assistant connection security. Confirming renewal revokes the old read-only
+credential immediately. The replacement is privately announced to Supervisor;
+the existing integration verifies the same instance and updates its connection
+without new entities or copying tokens through the browser. Discovery retries
+if Supervisor is temporarily unavailable. The read-only API has no renewal
+endpoint. Apple credentials and source item keys are not changed.

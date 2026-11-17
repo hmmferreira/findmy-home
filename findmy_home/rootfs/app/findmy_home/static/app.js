@@ -156,4 +156,9 @@ $("selection").onsubmit=event=>{
 };
 $("cancel-recovery").onclick=()=>action(()=>api("ui/recovery",{action:"cancel"}),"Cancelling discovery…","Discovery cancelled.");
 $("cancel-login").onclick=()=>action(async()=>{await api("ui/cancel",{});$("factor").hidden=true;},"Cancelling sign-in…","Location sign-in cancelled.");
+$("pairing-security").onsubmit=event=>{
+  event.preventDefault();
+  if(!$("pairing-consent").checked){notice("Confirm that existing read-only access should be revoked.","error");return;}
+  action(async()=>{const result=await api("ui/rotate-pairing",{confirm:true});$("pairing-consent").checked=false;return result;},"Revoking old location-read access…",result=>result.message);
+};
 refresh();setInterval(refresh,5000);

@@ -125,6 +125,20 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
             raise ValueError()
         return web.json_response(worker.request_refresh(data["id"]))
 
+    async def rotate_pairing(request):
+        data=await request.json()
+        if data.get("confirm") is not True:
+            raise ValueError()
+        store.rotate_read_token()
+        # Revocation is committed even if discovery is temporarily unavailable.
+        # The normal announcement task retries without exposing either token.
+        try:
+            announced=await announce(store)
+        except Exception:
+            announced=False
+        return web.json_response({"revoked":True,"reconnection_pending":not announced,
+            "message":"Previous location-read access revoked. Home Assistant will reconnect through Supervisor discovery; this may take a few minutes. Update the companion integration if it cannot reconnect."})
+
     async def cancel(request):
         await worker.cancel(request.headers["X-Remote-User-Id"])
         return web.json_response({"phase": "cancelled"})
@@ -132,6 +146,7 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
     app.router.add_get("/", index)
     app.router.add_static("/static", STATIC)
     app.router.add_post("/ui/select", select)
+    app.router.add_post("/ui/rotate-pairing", rotate_pairing)
     app.router.add_post("/ui/refresh", refresh_item)
     app.router.add_post("/ui/login", login)
     app.router.add_post("/ui/factor", factor)

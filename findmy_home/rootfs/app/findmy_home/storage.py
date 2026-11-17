@@ -64,6 +64,12 @@ class Store:
         # Reports survive restart, health does not: a restart is not a successful poll.
         self.health = {"status": "starting", "last_poll": None, "next_poll": None}
 
+    def rotate_read_token(self):
+        """Revoke old snapshot access without changing instance or entity IDs."""
+        updated={**self.identity,"read_token":secrets.token_urlsafe(48)}
+        atomic_json(self.root/"identity.json",updated)
+        self.identity=updated
+
     def public(self):
         return {"instance_id": self.identity["instance_id"], "channel": self.channel, "health": self.health,
                 "items": [{"id": key, "name": item["name"],
