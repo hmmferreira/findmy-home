@@ -50,7 +50,9 @@ browser tile requests. No reverse geocoding is done.
 - Python runtime dependencies are pinned with committed wheel SHA-256 hashes;
   production/test builds and CI use pip hash-checking mode and reject source
   distributions. See [dependency updates](DEPENDENCIES.md). AppArmor testing,
-  SBOM and signed images remain outstanding.
+  SBOM and signed images remain outstanding. Runtime Python OSV checks gate
+  delivery, with exact expiring applicability notes for setuptools platform-only
+  findings. aiohttp was patched to 3.14.5 after the first advisory scan.
 - Browser tests of TLS ingress, CSRF, recovery ownership and redaction.
 - Synthetic private-state restore and disk-write failure regression tests pass;
   live Supervisor backup/restore and key deletion/retention policy remain. See

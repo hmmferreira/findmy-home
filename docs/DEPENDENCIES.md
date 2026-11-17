@@ -24,3 +24,24 @@ that a package is safe or that PyPI was uncompromised when the hashes were
 selected. Rust uses its pinned checkout and Cargo lock separately. Base images,
 Debian packages, SBOM/provenance and public image signatures need separate work;
 this Python lock does not make the complete container bit-for-bit reproducible.
+
+## Advisory check — 2026-11-17
+
+`python tools/audit-python.py` queries OSV using only the public package/version
+pairs in the lock, in bounded concurrent batches. CI runs it before delivery.
+Network failure, new unreviewed findings, or expired applicability notes fail
+validation. This covers Python packages only, not Rust, the helper or OS images.
+
+The first scan found published advisories for aiohttp 3.13.2. It was upgraded to
+3.14.5 with matching wheel hashes, regression tests and a new production build.
+A follow-up query reports no aiohttp findings for that version. OSV findings can
+change later; passing once is not a permanent security guarantee.
+
+Setuptools 80.9.0 remains for the legacy `fs` dependency's pkg_resources use.
+Three reported identifiers (including an alias) have exact, expiring notes in
+`security/advisory-exceptions.json` on main: the affected features are macOS sdist
+normalization and Windows legacy wheel installation. This app/test/CI runs Linux,
+uses pip with hash-checked wheels, and does not execute those build/install paths.
+This is an applicability assessment, not removal of the affected package. Review
+by 2026-12-17; a new advisory or version is never covered by these notes. Replacing
+the legacy fs/pkg_resources dependency remains preferable to indefinite notes.

@@ -13,5 +13,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/hmmferreira/findmy-home/issues",
   "requirements": [],
-  "version": "0.1.11-dev.15.1"
+  "version": "0.1.12-dev.16.1"
 }
