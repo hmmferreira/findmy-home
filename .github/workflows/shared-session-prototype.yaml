@@ -1,0 +1,50 @@
+name: Shared-session discovery prototype
+on:
+  push:
+    branches: [feat/shared-session-discovery]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  app-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - run: |
+          pip install --require-hashes --only-binary=:all: -r findmy_home/requirements.lock
+      - run: npm ci --prefix tools/ui-tests --ignore-scripts --no-audit --no-fund
+      - run: python -m unittest discover -s tests -v
+        env:
+          PYTHONPATH: findmy_home/rootfs/app
+  protocol-candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: parawanderer/FindMy.py
+          ref: 8ecfae6cb34b29caf0bd8176ee73155ca81415a8
+          path: reviewed-backend
+          persist-credentials: false
+      - name: Build disposable public-source test image
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/shared-context"
+          cp experiments/shared-session/Dockerfile "$RUNNER_TEMP/shared-context/Dockerfile"
+          cp findmy_home/requirements.lock "$RUNNER_TEMP/shared-context/requirements.lock"
+          cp -a findmy_home/rootfs/app "$RUNNER_TEMP/shared-context/app"
+          cp -a reviewed-backend "$RUNNER_TEMP/shared-context/backend"
+          rm -rf "$RUNNER_TEMP/shared-context/backend/.git"
+          cp tests/test_shared_discovery.py "$RUNNER_TEMP/shared-context/test_shared_discovery.py"
+          cp experiments/shared-session/test_controller_protocol.py "$RUNNER_TEMP/shared-context/test_controller_protocol.py"
+          docker build --build-arg TEST_BASE_IMAGE=python:3.12-slim-bookworm -t shared-discovery-test "$RUNNER_TEMP/shared-context"
+      - name: Offline protocol and controller tests
+        run: docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,nosuid,size=256m shared-discovery-test
