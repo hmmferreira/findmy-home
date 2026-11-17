@@ -1,3 +1,10 @@
+# 0.1.11 — Fail safely on incomplete or unsafe restored data
+
+- Validate the whole private tree before privileged ownership/mode repair.
+- Reject symlink roots/directories/files, hardlinks and special files.
+- Refuse to create a replacement identity over an incomplete restore, preserving
+  entity identity and pairing expectations instead of silently starting over.
+
 # 0.1.10 — Revoke and renew read-only pairing access
 
 - Add an administrator-only, CSRF-protected pairing renewal action with explicit

@@ -11,7 +11,11 @@ For a same-channel recovery, restore the app's complete private data with the
 same app slug rather than selected individual files. The identity ties the
 read API and native entities to this installation. Keep identity, items, key
 files, account/exporter sessions, reports and search checkpoints together.
-Bootstrap reapplies app ownership and private file/directory permissions.
+Bootstrap validates the complete private tree before repairing ownership/modes.
+Symlink roots, directories and files, hardlinks and special files are rejected.
+Missing or malformed identity state fails instead of creating a replacement over
+an incomplete restore. Do not work around this by deleting remaining data;
+restore a complete backup or retain the old data and use a separate installation.
 After starting, confirm the existing integration connects, choices and saved
 sighting timestamps are preserved, and a new poll completes. Restored sightings
 must retain their original timestamps. A restored session may still have expired

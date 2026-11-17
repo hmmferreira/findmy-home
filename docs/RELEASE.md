@@ -31,8 +31,10 @@ findmy-export checkout has no obvious LICENSE or Cargo license field: resolve
 redistribution rights before publishing its binary or sources. Review rustpush,
 Apple-private API dependencies and anisette independently. Preserve required
 notices and publish corresponding source where required. Apple compatibility is
-unofficial and no endorsement is implied. Complete live testing, hassfest/native
-integration checks, browser tests, AppArmor, SBOM, locks and signing first.
+unofficial and no endorsement is implied. Native tests against Home Assistant 2026.9.3 and hassfest now gate channel
+publication. Python wheel locks are enforced. Live browser/restore checks,
+AppArmor, SBOM, licensing and signing still remain. The evidence inventory is
+[THIRD_PARTY_REVIEW.md](THIRD_PARTY_REVIEW.md).
 
 ## Repository channel delivery
 
