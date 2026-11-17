@@ -5,21 +5,12 @@ import signal
 import subprocess
 import sys
 import time
+from findmy_home.private_data import prepare_private_root
 
 os.umask(0o077)
 root = Path("/data/findmy_home")
-root.mkdir(parents=True, exist_ok=True, mode=0o700)
+prepare_private_root(root,1000 if os.geteuid()==0 else None,1000)
 if os.geteuid() == 0:
-    os.chown(root, 1000, 1000)
-    for directory, dirs, files in os.walk(root):
-        os.chown(directory, 1000, 1000)
-        os.chmod(directory, 0o700)
-        for name in files:
-            path = Path(directory) / name
-            if path.is_symlink():
-                raise RuntimeError("Symlinks are not allowed in private app state")
-            os.chown(path, 1000, 1000)
-            os.chmod(path, 0o600)
     os.setgroups([])
     os.setgid(1000)
     os.setuid(1000)

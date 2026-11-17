@@ -11,7 +11,7 @@ Runs independently of an existing MQTT tracker.
 4. Select items with checkboxes. New items start disabled; rediscovery keeps choices.
 5. Approve the discovered native integration. It creates separate channel-specific devices,
    GPS trackers and last-sighting sensors. HA zones and Recorder handle history.
-6. Open Overview for the map. Add items later from Account & items.
+6. Open Items for the overview and optional map preview. Add items later in Setup.
 
 Apple polling and key recovery use separate sessions. The wizard exposes
 both; it does not promise one universal login. No Mac needs to stay running.
@@ -19,8 +19,11 @@ both; it does not promise one universal login. No Mac needs to stay running.
 ## Status and limits
 This is development source, not a published or security-audited release.
 Transport/recovery tests use synthetic credentials without Apple network access.
-A real Supervisor ingress/discovery install and real-account UI journey must still
-be tested before this can replace the working bridge. Only amd64 is targeted.
+Repository Edge has partial real-account validation on Home Assistant OS;
+this does not complete the release/security checklist. Only amd64 is targeted.
+Minimum tested Core is 2026.9.3, with Supervisor 2026.11.0+ required for trusted
+administrator group headers. Home Assistant Container without Supervisor is not
+supported by this app installation path.
 Battery status and street addresses are not available from this report source.
 History follows the user's Recorder configuration; no retention period or backfill
 is promised. Sparse sightings are not a continuous GPS track.

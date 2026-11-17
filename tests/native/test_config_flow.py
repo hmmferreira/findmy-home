@@ -55,3 +55,19 @@ class DiscoveryTests(unittest.IsolatedAsyncioTestCase):
             result=await flow.async_step_hassio(info)
         self.assertEqual(result["reason"],"cannot_connect")
         api.assert_not_called()
+
+    async def test_new_app_requires_confirmation_before_creating_entry(self):
+        flow,info,existing=self.setup_flow()
+        flow.context={}
+        with patch.object(flow,"async_set_unique_id",AsyncMock(return_value=None)), patch.object(flow,"_abort_if_unique_id_configured") as update, patch.object(module,"Api") as api:
+            result=await flow.async_step_hassio(info)
+        self.assertEqual(result["type"],"form")
+        self.assertEqual(result["step_id"],"hassio_confirm")
+        api.assert_not_called()
+        update.assert_called_once_with()
+        connected=SimpleNamespace(snapshot=AsyncMock(return_value={"instance_id":"a"*32,"channel":"edge"}))
+        with patch.object(module,"Api",return_value=connected),patch.object(module,"async_get_clientsession"),patch.object(flow,"async_create_entry",return_value={"type":"create_entry"}) as create:
+            result=await flow.async_step_hassio_confirm({})
+        self.assertEqual(result["type"],"create_entry")
+        self.assertEqual(create.call_args.kwargs["data"]["instance_id"],"a"*32)
+        self.assertNotIn("unrelated",create.call_args.kwargs["data"])
