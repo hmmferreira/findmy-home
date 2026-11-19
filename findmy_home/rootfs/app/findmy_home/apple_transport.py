@@ -31,10 +31,15 @@ ACCOUNT_PATHS={
 }
 CLOUDKIT_PATHS=frozenset({"/setup/setup/ck/v1/ckAppInit","/ckcoderouter/api/client/code/invoke"}|{
     "/ckdatabase/api/client/"+path for path in ("zone/retrieve","zone/sync","record/retrieve","record/sync")})
+PROVISIONING_ROUTES=frozenset({
+    ("GET","/grandslam/GsService2/lookup"),
+    ("POST","/grandslam/MidService/startMachineProvisioning"),
+    ("POST","/grandslam/MidService/finishMachineProvisioning"),
+})
 ESCROW_PATHS=frozenset("/escrowproxy/api/"+path for path in ("get_records","get_club_cert","srp_init","recover"))
 
 def validate_destination(profile,method,url):
-    if profile not in ("account","cloudkit","escrow") or method not in ("GET","POST"):
+    if profile not in ("account","cloudkit","escrow","provisioning") or method not in ("GET","POST"):
         raise TransportBlocked()
     if not isinstance(url,str) or any(ord(c)<=32 or ord(c)>=127 for c in url) or any(c in url for c in "\\#"):
         raise TransportBlocked()
@@ -53,6 +58,8 @@ def validate_destination(profile,method,url):
             allowed=parsed.path in ACCOUNT_PATHS.get(host,())
         elif profile=="cloudkit":
             allowed=host=="gateway.icloud.com" and parsed.path in CLOUDKIT_PATHS and method=="POST"
+        elif profile=="provisioning":
+            allowed=host=="gsa.apple.com" and (method,parsed.path) in PROVISIONING_ROUTES
         else:
             allowed=bool(re.fullmatch(r"p[1-9][0-9]{0,4}-escrowproxy\.icloud\.com",host)) and parsed.path in ESCROW_PATHS and method=="POST"
         if not allowed: raise TransportBlocked()
@@ -109,7 +116,7 @@ class Response:
 class OwnedHttpSession:
     MAX_BODY=8*1024*1024
     def __init__(self,*,profile="account",timeout=30,verify_tls=True):
-        if profile not in ("account","cloudkit","escrow") or verify_tls is not True:
+        if profile not in ("account","cloudkit","escrow","provisioning") or verify_tls is not True:
             raise TransportBlocked("transport_options_blocked")
         if not isinstance(timeout,(int,float)) or isinstance(timeout,bool) or not math.isfinite(timeout) or not 0<timeout<=90:
             raise TransportBlocked("transport_options_blocked")

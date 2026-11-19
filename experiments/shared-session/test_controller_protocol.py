@@ -172,3 +172,106 @@ async def test_default_downloading_or_remote_provider_is_not_admitted():
     try:
         with pytest.raises(TransportBlocked):await create_account(provider)
     finally:await provider.close()
+
+async def _restored_reporting_account(monkeypatch,tmp_path):
+    """Real candidate state serialization + app restore; native engine synthetic."""
+    import hashlib
+    from findmy.reports.anisette import DeviceIdentity
+    from findmy.reports.state import LoginState
+    from findmy_home.offline_signer import OfflineSigner,provider_for
+    from findmy_home.owned_protocol import create_account
+    from findmy_home.owned_session import snapshot_account,restore_account
+    library=tmp_path/"reviewed-library";library.write_bytes(b"synthetic-reviewed-library")
+    digest=hashlib.sha256(library.read_bytes()).hexdigest()
+    engine=SimpleNamespace(is_provisioned=True,get_data=lambda:{"X-Apple-I-MD":"synthetic-otp","X-Apple-I-MD-M":"synthetic-machine"},
+        save_provisioning=lambda stream:stream.write(b"synthetic-existing-state"))
+    monkeypatch.setattr("findmy_home.offline_signer._build_engine",lambda state,libraries:engine)
+    signer=OfflineSigner(library,b"synthetic-existing-state",digest);await signer.initialize()
+    identity=DeviceIdentity(model="SyntheticModel1,1",os_name="SyntheticOS",os_version="1.2",os_build="SYNTHETIC",cfnetwork="1",darwin="1")
+    source=await create_account(provider_for(signer,serial="SYNTHETIC-RESTORE",identity=identity))
+    source._username="synthetic@example.invalid";source._password="synthetic-transient-password"
+    source._set_login_state(LoginState.LOGGED_IN,{"dsid":"12345","adsid":"56789","mobileme_data":{"tokens":{
+        "searchPartyToken":"synthetic-report-token","cloudKitToken":"synthetic-cloudkit-token"}},
+        "idms_pet":"synthetic-pet-not-for-disk","idms_hb":"synthetic-heartbeat-not-for-disk"})
+    before=source.to_json()
+    key=b"s"*32
+    try:envelope=await snapshot_account(source,encryption_key=key,expires_at=2000,now=1000)
+    finally:await source.close()
+    # The SDK generic deserializer must never be used by restoration.
+    from findmy import AsyncAppleAccount
+    monkeypatch.setattr(AsyncAppleAccount,"from_json",lambda *args,**kwargs:pytest.fail("legacy account restore used"))
+    restored=await restore_account(envelope,encryption_key=key,library=library,expected_sha256=digest,now=1001,timeout=17)
+    after=restored.to_json()
+    assert after["ids"]==before["ids"]
+    assert after["anisette"]["identity"]==identity.to_json()
+    assert after["anisette"]["serial"]=="SYNTHETIC-RESTORE"
+    assert after["account"]["password"] is None
+    assert "idms_pet" not in after["login"]["data"] and "idms_hb" not in after["login"]["data"]
+    assert restored.service_tokens==before["login"]["data"]["mobileme_data"]["tokens"]
+    return restored
+
+
+def _report_reply(monkeypatch,*,status,body):
+    """Keep owned request construction, validation and redirect policy active."""
+    calls=[]
+    class Reply:
+        headers={}
+        def __init__(self):self.status=status
+        async def __aenter__(self):return self
+        async def __aexit__(self,*args):pass
+        @property
+        def content(self):return self
+        async def iter_chunked(self,size):yield body
+    class Session:
+        def request(self,method,url,**kwargs):calls.append((method,url,kwargs));return Reply()
+    async def connection(transport,host):
+        assert transport.profile=="account" and host=="gateway.icloud.com"
+        return Session()
+    monkeypatch.setattr(OwnedHttpSession,"_session",connection)
+    return calls
+
+@pytest.mark.asyncio
+async def test_real_session_roundtrip_preserves_reporting_class_identity_and_owned_requests(monkeypatch,tmp_path):
+    from findmy_home.apple import ReportingAccount
+    restored=await _restored_reporting_account(monkeypatch,tmp_path)
+    calls=_report_reply(monkeypatch,status=200,body=b'{"acsnLocations":{"statusCode":"200","locationPayload":[]}}')
+    try:
+        assert isinstance(restored,ReportingAccount)
+        assert isinstance(restored._http,OwnedHttpSession) and restored._http.timeout==17
+        assert await restored.fetch_raw_reports([(["synthetic-key"],[])])==[]
+        assert len(calls)==1
+        method,url,kwargs=calls[0]
+        assert method=="POST" and url=="https://gateway.icloud.com/findmyservice/v2/fetch"
+        assert (kwargs["auth"].login,kwargs["auth"].password)==("12345","synthetic-report-token")
+        assert kwargs["headers"]["X-Apple-I-MD"]=="synthetic-otp"
+        assert kwargs["allow_redirects"] is False
+    finally:await restored.close()
+    assert not restored._anisette._owned_signer.ready and restored._http._closed
+
+@pytest.mark.asyncio
+async def test_restored_report_rejection_requires_reauth_without_login_or_pet_retry(monkeypatch,tmp_path):
+    from findmy.errors import UnauthorizedError
+    restored=await _restored_reporting_account(monkeypatch,tmp_path)
+    calls=_report_reply(monkeypatch,status=401,body=b"{}")
+    login=AsyncMock(side_effect=AssertionError("restored account attempted login"))
+    monkeypatch.setattr(restored,"_gsa_authenticate",login)
+    try:
+        with pytest.raises(UnauthorizedError):await restored.fetch_raw_reports([(["synthetic-key"],[])])
+        assert len(calls)==1
+        login.assert_not_awaited()
+        assert restored._password is None
+    finally:await restored.close()
+
+@pytest.mark.asyncio
+async def test_restored_reporting_empty_response_retains_app_error_classification(monkeypatch,tmp_path):
+    from findmy_home.apple import ReportSourceUnavailable
+    restored=await _restored_reporting_account(monkeypatch,tmp_path)
+    calls=_report_reply(monkeypatch,status=200,body=b"")
+    # The candidate performs bounded async empty-body retries. Skip only the wait,
+    # not request construction or the ReportingAccount classification boundary.
+    monkeypatch.setattr("findmy.reports.account.asyncio.sleep",AsyncMock())
+    try:
+        with pytest.raises(ReportSourceUnavailable,match="empty_response"):
+            await restored.fetch_raw_reports([(["synthetic-key"],[])])
+        assert len(calls)==6
+    finally:await restored.close()

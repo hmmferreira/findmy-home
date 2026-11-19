@@ -1,7 +1,7 @@
 "use strict";
 let csrf="", snapshot=null, loginMethod=null, busy=false, selectionDirty=false;
 let forceDiscoveryLogin=false, reconnecting=false, recoveryKey="", map=null, markers=null;
-let refreshing=false, emailHint="";
+let refreshing=false, emailHint="", authKey="";
 const $=id=>document.getElementById(id);
 const itemCount=n=>n+" item"+(n===1?"":"s");
 const text=(tag,value)=>{const node=document.createElement(tag);node.textContent=value;return node;};
@@ -23,6 +23,9 @@ async function action(fn,pending="Working…",success){
 }
 function updateButtons(){
   for(const button of document.querySelectorAll("form button"))button.disabled=busy;
+  if(snapshot?.setup?.shared_auth&&snapshot.auth?.phase==="working"){
+    for(const button of document.querySelectorAll("#login button,#factor button"))button.disabled=true;
+  }
   $("save-selection").disabled=busy||!selectionDirty;
   $("cancel-login").disabled=busy;$("cancel-recovery").disabled=busy;
   for(const button of document.querySelectorAll("[data-refresh]")){
@@ -57,7 +60,7 @@ function render(data){
     const button=text("button",state.status==="queued"?"Refresh queued":state.status==="refreshing"?"Refreshing…":"Refresh this item");button.dataset.refresh=item.id;
     button.onclick=()=>action(async()=>{
       const result=await api("ui/refresh",{id:item.id});
-      notice(result.message+(result.status==="paused"?" Try again in "+Math.ceil(result.retry_after/60)+" minutes.":""),["paused","cooldown","reauth_required"].includes(result.status)?"info":"success");
+      notice(result.message+(result.status==="paused"?" Try again in "+Math.ceil(result.retry_after/60)+" minutes.":""),["paused","cooldown","reauth_required","discovery_busy"].includes(result.status)?"info":"success");
     },"Queueing this item's refresh…");
     card.append(button);cards.append(card);
   }
@@ -77,20 +80,48 @@ function render(data){
   const connected=Boolean(data.setup?.locations_connected);
   $("location-state").textContent=connected?"Connected":"Not connected";
   $("login").hidden=connected&&!reconnecting;$("reconnect").hidden=!connected;
+  const shared=Boolean(data.setup?.shared_auth);
+  if(shared){
+    $("auth-explanation").textContent="One Apple sign-in connects location access and starts item discovery. Select the item-key recovery consent below before signing in. Apple may still request a trusted device's unlock passcode; it is separate from your Apple password.";
+    $("discovery-description").textContent="Discovery starts after the main Apple sign-in. Choose a trusted device below and enter its unlock passcode if requested. Later discovery may need main-account reauthentication because location tokens cannot unlock Keychain recovery.";
+    $("consent-label").textContent="I allow this installation to recover my encrypted Find My item keys using my authenticated account and a trusted device's unlock passcode.";
+    const key=JSON.stringify(data.auth||{});
+    if(key!==authKey){authKey=key;showFactor(data.auth||{phase:"idle"});}
+    const needsLogin=data.auth?.phase==="failed"||["expired","failed"].includes(data.recovery?.phase);
+    if(needsLogin){reconnecting=true;$("login").hidden=false;}
+  }
   const saved=Boolean(data.setup?.discovery_session_saved);
   $("discovery-state").textContent=saved?"Session saved":"First discovery";
   $("discovery-credentials").hidden=saved&&!forceDiscoveryLogin;
   for(const input of $("discovery-credentials").querySelectorAll("input"))input.required=!$("discovery-credentials").hidden;
   $("discovery-signin").hidden=!saved||forceDiscoveryLogin;
   $("discover").textContent=saved&&!forceDiscoveryLogin?"Discover using saved session":"Sign in and discover items";
+  if(shared){
+    $("discovery-credentials").hidden=true;
+    for(const input of $("discovery-credentials").querySelectorAll("input"))input.required=false;
+    $("discovery-signin").hidden=true;
+    $("discover").hidden=true;
+    $("discovery-state").textContent="Shared Apple sign-in";
+  }
   renderRecovery(data.recovery);
   renderMap();updateButtons();
 }
 function renderRecovery(flow){
   const messages={"idle":"","working":"Contacting Apple. Keep this page open…","complete":"Discovery complete. Choose items below and save your tracking choices.","failed":"Discovery did not finish. Try the saved session again, or choose Sign in again if Apple expired it.","timed_out":"Apple did not respond in time. Try again.","expired":"Discovery expired. Start it again.","cancelled":"Discovery cancelled.","busy":"Another user is completing discovery."};
-  $("recovery-status").textContent=messages[flow?.phase]??"";
+  const sharedErrors={"authentication_required":"Reconnect using the main Apple sign-in to authorize item discovery. Location tokens alone cannot unlock item keys.","timed_out":"Apple did not respond in time. Reconnect using the main Apple sign-in to try discovery again.","no_recovery_devices":"Apple returned no recoverable trusted devices. Check your account's Keychain setup before reconnecting.","discovery_failed":"Item discovery could not finish. Reconnect using the main Apple sign-in to try again."};
+  $("recovery-status").textContent=snapshot?.setup?.shared_auth?(flow?.phase==="expired"?"Item discovery expired. Reconnect using the main Apple sign-in; your saved tracked items are kept.":flow?.phase==="failed"?(sharedErrors[flow.error]||sharedErrors.discovery_failed):messages[flow?.phase]??""):messages[flow?.phase]??"";
   const key=JSON.stringify(flow||{});if(key===recoveryKey)return;recoveryKey=key;
   const form=$("recovery");form.replaceChildren();form.hidden=flow?.phase!=="input";if(form.hidden)return;
+  if(flow.kind==="device_unlock"){
+    const select=document.createElement("select");select.name="choice";
+    for(const choice of flow.choices||[]){const option=text("option",choice.label);option.value=choice.value;select.append(option);}
+    const device=text("label","Trusted device");device.append(select);
+    const passcode=document.createElement("input");passcode.type="password";passcode.autocomplete="off";passcode.maxLength=512;passcode.required=true;
+    const label=text("label","Unlock passcode for the selected device");label.append(passcode);
+    form.append(text("p","Your Apple account is already signed in. Use this device's unlock passcode to recover encrypted item keys. It is not saved and failed attempts are not retried automatically."),device,label,text("button","Unlock item keys"));
+    form.onsubmit=event=>{event.preventDefault();const value=passcode.value;passcode.value="";action(()=>api("ui/recovery",{action:"answer",choice:select.value,passcode:value}),"Recovering item keys…");};
+    return;
+  }
   const label=text("label",flow.label);let input;
   if(flow.kind==="recovery_device"){
     input=document.createElement("select");
@@ -120,10 +151,15 @@ function renderMap(){
 async function refresh(){if(refreshing)return;refreshing=true;try{render(await api("v1/snapshot"));}catch(error){$("health").textContent="App unavailable";notice(error.message,"error");}finally{refreshing=false;}}
 document.querySelectorAll("[data-tab]").forEach(button=>button.onclick=()=>{for(const id of ["overview","setup"])$(id).hidden=id!==button.dataset.tab;document.querySelectorAll("[data-tab]").forEach(other=>other.setAttribute("aria-selected",String(other===button)));renderMap();});
 $("map-preview").ontoggle=renderMap;
-$("login").onsubmit=event=>{event.preventDefault();const email=event.target.elements.namedItem("email").value,password=event.target.elements.namedItem("password").value;emailHint=email;$("discovery-email").value=email;event.target.elements.namedItem("password").value="";action(async()=>showFactor(await api("ui/login",{email,password})),"Connecting location access…");};
+$("login").onsubmit=event=>{event.preventDefault();const email=event.target.elements.namedItem("email").value,password=event.target.elements.namedItem("password").value;emailHint=email;$("discovery-email").value=email;event.target.elements.namedItem("password").value="";if(snapshot?.setup?.shared_auth&&!$("consent").checked){notice("Accept item-key recovery in step 2 before signing in.","error");return;}action(async()=>showFactor(await api("ui/login",{email,password,...(snapshot?.setup?.shared_auth?{discovery_consent:true}:{})})),"Connecting location access…");};
 function showFactor(result){
-  const form=$("factor");form.replaceChildren();form.hidden=result.phase==="complete";
-  if(result.phase==="complete"){reconnecting=false;notice("Location access connected. Next, discover or choose your items.","success");}
+  const form=$("factor");form.replaceChildren();form.hidden=!["choose_method","verification_code"].includes(result.phase);
+  if(result.phase==="complete"){reconnecting=false;notice(snapshot?.setup?.shared_auth?"Apple account connected. Item discovery is running below.":"Location access connected. Next, discover or choose your items.","success");}
+  if(result.phase==="working")notice("Apple sign-in is running. Progress will update here.","working");
+  if(result.phase==="failed"){
+    const reasons={"sign_in_expired":"The verification step expired. Sign in again using the main Apple account form.","session_expired":"The saved session expired. Reconnect using the main Apple account form.","session_save_failed":"Your account session could not be saved securely. Check app storage before signing in again.","setup_required":"Secure account setup is not ready. Check the app's provisioning requirements before signing in."};
+    notice(reasons[result.error]||"Apple sign-in could not finish. Reconnect through this sign-in form.","error");
+  }
   if(result.phase==="choose_method"){
     notice("Choose how Apple should send your location-access verification code.","info");
     const select=document.createElement("select");for(const method of result.methods){const option=text("option",method.label);option.value=method.value;select.append(option);}

@@ -9,6 +9,8 @@ import re
 import sys
 from .apple import ReportingAccount, ReportSourceUnavailable, PacedHttp, RateLimited
 from .storage import read_json, atomic_json
+from .private_session_store import restore_reporting_account
+from .owned_session import SessionBlocked
 from .progress import QueryProgress
 from .search import fetch_bounded
 
@@ -28,8 +30,10 @@ async def query():
     key_file=root/"keys"/item["key_file"]
     if key_file.resolve().parent != (root/"keys").resolve():
         raise ValueError("Invalid key file")
-    session=read_json(root/"account.json")
-    account=ReportingAccount.from_json(session,anisette_libs_path=str(root/"ani_libs.bin"))
+    try:
+        account=await restore_reporting_account(root)
+    except SessionBlocked:
+        return {"ok":False,"error":"authentication_required"}
     account._http=PacedHttp(account._http,root/"request-gate")
     try:
         accessory=FindMyAccessory.from_json(key_file)

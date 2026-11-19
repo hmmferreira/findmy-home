@@ -125,3 +125,25 @@ with redacted errors, and transient prepared headers are cleared after use.
 Validation: 120 app cases, 877 candidate cases and seven composition cases pass;
 the 15 controller cases also pass in the candidate environment. Fresh provisioning,
 owned restore, UI wiring and process isolation remain open; no Edge deployment.
+
+## Integrated review checkpoint — 2026-11-19
+
+The three parallel implementations are now reviewed together. Encrypted session
+storage publishes matching private generations atomically; per-item report
+processes restore the owned account and preserve error classification, pacing and
+explicit reauthentication. UI composition takes explicit account/session hooks,
+uses async progress and cancellation, and privately commits item inventories.
+Signer cancellation immediately revokes reuse and rejects late native results.
+Session snapshots retain only required reporting/CloudKit token scopes.
+
+Validation: 168 app tests, 877 pinned backend cases, ten real candidate composition
+cases, and 15 controller cases in the candidate runtime (also in the app count).
+Tests use synthetic state and network-disabled containers. No live Apple login,
+provisioning, household migration, Home Assistant restart or Edge deployment.
+
+Deployment is still gated. Missing: reviewed artifact/distribution policy and
+isolated native provisioning worker with denied networking, restricted filesystem
+and bounded private IPC/termination; dependency provenance/licensing sign-off;
+backup/restore rehearsal and deliberate protected-UI live comparison. Production
+main and dependency lock remain unchanged. This checkpoint closes the old report
+restoration gap but is not permission to enable unfinished provisioning.

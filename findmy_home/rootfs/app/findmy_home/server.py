@@ -14,6 +14,7 @@ from .auth import ExportFlow
 from .worker import AppleWorker
 from .importer import import_exports
 from .descriptions import enrich_metadata
+from .shared_discovery import SharedDiscoveryError
 
 STATIC = Path(__file__).parent / "static"
 
@@ -23,9 +24,10 @@ def csrf(store, owner, bucket=None):
     return hmac.new(store.identity["csrf_key"].encode(), f"{owner}:{bucket}".encode(), hashlib.sha256).hexdigest()
 
 
-def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, worker=None):
+def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, worker=None, shared_ui=None):
     flow = flow or ExportFlow(store.root)
     worker = worker or AppleWorker(store)
+    if shared_ui is not None:shared_ui.bind(worker)
 
     @web.middleware
     async def security(request, handler):
@@ -48,6 +50,15 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
             response = await handler(request)
         except web.HTTPException:
             raise
+        except SharedDiscoveryError as error:
+            messages={"busy":"Another account or discovery operation is already running.",
+                      "not_owner":"This operation belongs to another user.",
+                      "expired":"This step expired. Reconnect using the main Apple sign-in.",
+                      "authentication_required":"Reconnect using the main Apple sign-in to discover items.",
+                      "invalid_choice":"Choose a device from the current discovery step.",
+                      "invalid_passcode":"Enter the unlock passcode for the selected device."}
+            response=web.json_response({"error":error.code if error.code in messages else "discovery_failed",
+                "message":messages.get(error.code,"Discovery could not finish. Reconnect using the main Apple sign-in.")},status=409)
         except (ValueError, KeyError, TypeError):
             response = web.json_response({"error": "invalid_request", "message": "Check the current step and try again."}, status=400)
         except Exception:
@@ -64,9 +75,12 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
         data = store.public()
         if management:
             owner = request.headers["X-Remote-User-Id"]
-            data.update(csrf=csrf(store, owner), recovery=flow.visible(owner),
-                        setup={"locations_connected":(store.root/"account.json").exists() and store.health.get("status")!="reauth_required",
+            data.update(csrf=csrf(store, owner), recovery=shared_ui.visible(owner) if shared_ui else flow.visible(owner),
+                        setup={"locations_connected":worker.session_available() and store.health.get("status")!="reauth_required",
                                "discovery_session_saved":(store.root/"export/state/exporter-session.plist").exists()})
+            if shared_ui is not None:
+                data["setup"]["shared_auth"]=True
+                data["auth"]=shared_ui.auth_visible(owner)
         return web.json_response(data)
 
     app.router.add_get("/v1/snapshot", snapshot)
@@ -88,18 +102,29 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
         email, password = data["email"], data["password"]
         if not isinstance(email, str) or not isinstance(password, str) or not (0 < len(email) <= 254 and 0 < len(password) <= 512):
             raise ValueError()
-        return web.json_response(await worker.login(request.headers["X-Remote-User-Id"], email, password))
+        owner=request.headers["X-Remote-User-Id"]
+        if shared_ui is not None:
+            if data.get("discovery_consent") is not True:raise ValueError()
+            data=await shared_ui.authenticate(owner,lambda:worker.login(owner,email,password))
+            return web.json_response(data,status=202)
+        return web.json_response(await worker.login(owner,email,password))
 
     async def factor(request):
         data = await request.json()
         code = data.get("code")
         if code is not None and (not isinstance(code, str) or not code.isdigit() or not 4 <= len(code) <= 8):
             raise ValueError()
-        return web.json_response(await worker.factor(request.headers["X-Remote-User-Id"], data["method"], code))
+        owner=request.headers["X-Remote-User-Id"]
+        if shared_ui is not None:
+            result=await shared_ui.authenticate(owner,lambda:worker.factor(owner,data["method"],code))
+            return web.json_response(result,status=202)
+        return web.json_response(await worker.factor(owner,data["method"],code))
 
     async def recovery(request):
         owner = request.headers["X-Remote-User-Id"]
         data = await request.json()
+        if shared_ui is not None:
+            return web.json_response(await shared_ui.action(owner,data),status=202)
         if data["action"] == "start":
             if data.get("consent") is not True:
                 raise ValueError()
@@ -140,9 +165,14 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
             "message":"Previous location-read access revoked. Home Assistant will reconnect through Supervisor discovery; this may take a few minutes. Update the companion integration if it cannot reconnect."})
 
     async def cancel(request):
-        await worker.cancel(request.headers["X-Remote-User-Id"])
+        owner=request.headers["X-Remote-User-Id"]
+        if shared_ui is not None:await shared_ui.cancel_auth(owner)
+        else:await worker.cancel(owner)
         return web.json_response({"phase": "cancelled"})
 
+    if shared_ui is not None:
+        async def close_shared(app):await shared_ui.close()
+        app.on_cleanup.append(close_shared)
     app.router.add_get("/", index)
     app.router.add_static("/static", STATIC)
     app.router.add_post("/ui/select", select)

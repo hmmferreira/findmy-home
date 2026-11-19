@@ -148,3 +148,36 @@ test("pairing renewal requires explicit confirmation and never displays tokens",
     assert.equal(env.document.getElementById("pairing-consent").checked,false);
   }finally{env.close();}
 });
+
+test("shared authentication uses the main form and device-unlock prompt",async()=>{
+  const env=await setup();try{
+    env.data.setup.shared_auth=true;env.data.auth={phase:"working"};
+    env.data.recovery={phase:"input",kind:"device_unlock",choices:[{value:"opaque",label:"Synthetic phone · iPhone"}]};
+    await env.refresh();
+    assert.equal(env.document.getElementById("discovery-credentials").hidden,true);
+    assert.equal(env.document.getElementById("discover").hidden,true);
+    assert.match(env.document.getElementById("auth-explanation").textContent,/One Apple sign-in/);
+    const passcode=env.document.querySelector("#recovery input");
+    assert.equal(passcode.type,"password");passcode.value="synthetic-unlock";
+    await env.refresh();assert.equal(passcode.value,"synthetic-unlock");
+    submit(env,"recovery");await flush();
+    const request=env.requests.find(request=>request.url==="ui/recovery");
+    assert.deepEqual(request.body,{action:"answer",choice:"opaque",passcode:"synthetic-unlock"});
+    assert.equal(passcode.value,"");
+    assert.equal(env.document.body.textContent.includes("synthetic-unlock"),false);
+  }finally{env.close();}
+});
+
+
+test("expired shared verification reopens the main sign-in with an explicit reason",async()=>{
+  const env=await setup();try{
+    env.data.setup.shared_auth=true;env.data.auth={phase:"failed",error:"sign_in_expired"};
+    env.data.recovery={phase:"expired"};
+    await env.refresh();
+    assert.equal(env.document.getElementById("login").hidden,false);
+    assert.equal(env.document.getElementById("factor").hidden,true);
+    assert.match(env.document.getElementById("message").textContent,/verification step expired/);
+    assert.match(env.document.getElementById("recovery-status").textContent,/saved tracked items are kept/);
+    assert.equal(env.document.getElementById("discovery-credentials").hidden,true);
+  }finally{env.close();}
+});

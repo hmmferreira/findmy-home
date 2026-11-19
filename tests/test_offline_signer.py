@@ -68,6 +68,65 @@ class OfflineSignerTests(unittest.IsolatedAsyncioTestCase):
         self.engine.get_data.side_effect=native
         await self.signer.headers()
         self.assertNotEqual(threads,[threading.get_ident()])
+    async def test_cancelled_initialization_cannot_publish_late_engine(self):
+        import threading
+        entered=threading.Event();release=threading.Event();finished=threading.Event()
+        def build(*args):
+            entered.set()
+            try:
+                if not release.wait(2):raise RuntimeError("test worker release timeout")
+                return self.engine
+            finally:finished.set()
+        with patch("findmy_home.offline_signer._build_engine",side_effect=build):
+            task=asyncio.create_task(self.signer.initialize())
+            try:
+                self.assertTrue(await asyncio.to_thread(entered.wait,1))
+                task.cancel()
+                with self.assertRaises(asyncio.CancelledError):await task
+                self.assertFalse(self.signer.ready)
+                self.assertIsNone(self.signer._state)
+            finally:release.set()
+            self.assertTrue(await asyncio.to_thread(finished.wait,1))
+            # Joining the worker lock observes its final publication decision.
+            await asyncio.to_thread(lambda:self.signer._lock.acquire())
+            self.signer._lock.release()
+        self.assertIsNone(self.signer._engine)
+        with self.assertRaises(SignerBlocked):await self.signer.initialize()
+    async def test_close_revokes_immediately_during_native_signing(self):
+        import threading
+        await self.ready()
+        entered=threading.Event();release=threading.Event()
+        def native():
+            entered.set()
+            if not release.wait(2):raise RuntimeError("test worker release timeout")
+            return {"X-Apple-I-MD":"PRIVATE_LATE_OTP","X-Apple-I-MD-M":"PRIVATE_LATE_MACHINE"}
+        self.engine.get_data.side_effect=native
+        task=asyncio.create_task(self.signer.headers())
+        try:
+            self.assertTrue(await asyncio.to_thread(entered.wait,1))
+            await asyncio.wait_for(self.signer.close(),.1)
+            self.assertFalse(self.signer.ready)
+            self.assertIsNone(self.signer._engine)
+        finally:release.set()
+        with self.assertRaises(SignerBlocked) as caught:await task
+        self.assertEqual(str(caught.exception),"signer_closed")
+    async def test_cancelled_signing_revokes_all_future_use(self):
+        import threading
+        await self.ready()
+        entered=threading.Event();release=threading.Event()
+        def native():
+            entered.set()
+            if not release.wait(2):raise RuntimeError("test worker release timeout")
+            return {"X-Apple-I-MD":"PRIVATE_LATE_OTP","X-Apple-I-MD-M":"PRIVATE_LATE_MACHINE"}
+        self.engine.get_data.side_effect=native
+        task=asyncio.create_task(self.signer.headers())
+        try:
+            self.assertTrue(await asyncio.to_thread(entered.wait,1))
+            task.cancel()
+            with self.assertRaises(asyncio.CancelledError):await task
+            self.assertFalse(self.signer.ready)
+        finally:release.set()
+        with self.assertRaises(SignerBlocked):await self.signer.headers()
     def test_empty_state_or_unreviewed_digest_is_rejected(self):
         for state,digest in ((b"",self.digest),(None,self.digest),(b"state",None),(b"state","unknown")):
             with self.assertRaises(SignerBlocked):OfflineSigner(self.path,state,digest)

@@ -11,8 +11,12 @@ from .progress import safe_progress
 
 
 class AppleWorker:
-    def __init__(self, store):
+    def __init__(self, store, *, account_factory=None, session_writer=None, authenticated=None, session_available=None):
         self.store = store
+        self.account_factory=account_factory
+        self.session_writer=session_writer
+        self.authenticated=authenticated
+        self.session_available=session_available or (lambda:read_json(self.store.root/"account.json") is not None)
         self.lock = asyncio.Lock()
         self.poll_lock = asyncio.Lock()
         self.pending = None
@@ -23,6 +27,7 @@ class AppleWorker:
         self.wake = asyncio.Event()
         self.last_attempt = None
         self.query_slots = asyncio.Semaphore(self.CONCURRENCY)
+        self.inventory_busy=False
         self.active_items = set()
         self.item_attempts = {}
         self.manual_tasks = {}
@@ -33,10 +38,27 @@ class AppleWorker:
     def _session(self, account):
         atomic_json(self.store.root / "account.json", token_only(account))
 
+    async def _complete_signin(self):
+        account=self.pending
+        if self.session_writer is None:self._session(account)
+        else:await self.session_writer(account)
+        if self.authenticated is not None:
+            await self.authenticated(self.owner,account)
+            # The callback explicitly takes ownership until discovery completes.
+            self.pending=None
+        await self._clear_pending()
+        self.store.health["status"]="ready"
+        self.request_poll()
+        return {"phase":"complete"}
+
     async def _clear_pending(self):
-        if self.pending:
-            await self.pending.close()
+        account=self.pending
         self.pending, self.owner, self.methods = None, None, []
+        if account is not None:
+            if hasattr(account,"_password"):account._password=None
+            try:
+                async with asyncio.timeout(10):await account.close()
+            except Exception:pass
         if self.auth_task and self.auth_task is not asyncio.current_task():
             self.auth_task.cancel()
         self.auth_task = None
@@ -51,7 +73,9 @@ class AppleWorker:
         async with self.lock:
             if self.pending:
                 raise ValueError("Finish or cancel the current sign-in")
-            account = AsyncAppleAccount(LocalAnisetteProvider(libs_path=str(self.store.root / "ani_libs.bin")))
+            async with asyncio.timeout(90):
+                account = (await self.account_factory() if self.account_factory is not None else
+                           AsyncAppleAccount(LocalAnisetteProvider(libs_path=str(self.store.root / "ani_libs.bin"))))
             self.pending, self.owner = account, owner
             self.auth_task = asyncio.create_task(self._expire())
             try:
@@ -64,12 +88,8 @@ class AppleWorker:
                             for n, m in enumerate(self.methods)]}
                     if state != LoginState.LOGGED_IN:
                         raise ValueError("Authentication incomplete")
-                    self._session(account)
-                    await self._clear_pending()
-                    self.store.health["status"] = "ready"
-                    self.request_poll()
-                    return {"phase": "complete"}
-            except Exception:
+                    return await self._complete_signin()
+            except BaseException:
                 await self._clear_pending()
                 raise
 
@@ -89,12 +109,8 @@ class AppleWorker:
                     await method.submit(code)
                     if self.pending.login_state != LoginState.LOGGED_IN:
                         raise ValueError("Verification incomplete")
-                    self._session(self.pending)
-                    await self._clear_pending()
-                    self.store.health["status"] = "ready"
-                    self.request_poll()
-                    return {"phase": "complete"}
-            except Exception:
+                    return await self._complete_signin()
+            except BaseException:
                 await self._clear_pending()
                 raise
 
@@ -112,11 +128,13 @@ class AppleWorker:
     MANUAL_INTERVAL = 60
 
     def request_refresh(self, item_id):
+        if self.inventory_busy:
+            return {"status":"discovery_busy","message":"Item discovery is saving keys. Try refresh again when it finishes."}
         if item_id not in self.store.items or not self.store.items[item_id].get("enabled"):
             raise ValueError("Choose a tracked item")
         if self.pending:
             return {"status":"signing_in","message":"Finish account sign-in first."}
-        if read_json(self.store.root/"account.json") is None:
+        if not self.session_available():
             return {"status":"reauth_required","message":"Connect the location account first."}
         until=read_json(self.store.root/"request-cooldown.json",{}).get("until",0)
         if until>time.time():
@@ -261,7 +279,7 @@ class AppleWorker:
         if self.pending:
             return
         selected={key:item for key,item in self.store.items.items() if item["enabled"]}
-        if read_json(self.store.root/"account.json") is None:
+        if not self.session_available():
             self.store.health["status"]="reauth_required"
             return
         if not selected:

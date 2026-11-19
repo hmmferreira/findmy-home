@@ -26,3 +26,12 @@ class ChildQueryTests(unittest.IsolatedAsyncioTestCase):
             account.close.assert_awaited_once()
             self.assertEqual(read_json(root/"account.json"),session)
             self.assertEqual(read_json(root/"keys"/(item+".json")),{"fixture":"updated-alignment"})
+
+    async def test_owned_session_failure_requests_authentication_before_fetch(self):
+        from findmy_home.owned_session import SessionBlocked
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);item="a"*32
+            atomic_json(root/"items.json",{item:{"enabled":True,"key_file":item+".json"}})
+            with patch.dict(os.environ,{"FINDMY_HOME_DATA":tmp}), patch("sys.stdin",SimpleNamespace(buffer=io.BytesIO(json.dumps({"id":item}).encode()))), patch("findmy_home.poll_item.restore_reporting_account",new=AsyncMock(side_effect=SessionBlocked("session_expired"))), patch("findmy.FindMyAccessory.from_json") as accessory:
+                self.assertEqual(await query(),{"ok":False,"error":"authentication_required"})
+                accessory.assert_not_called()

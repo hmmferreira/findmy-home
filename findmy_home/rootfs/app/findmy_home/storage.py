@@ -57,7 +57,7 @@ class Store:
         self.channel = metadata.get("channel") if metadata.get("channel") in ("edge","stable") else "edge"
         identity = read_json(root / "identity.json")
         if identity is None:
-            if any((root/name).exists() for name in ("items.json","reports.json","account.json","keys","export")):
+            if any((root/name).exists() for name in ("items.json","reports.json","account.json","owned-session.json","keys","export")):
                 raise ValueError("Private state identity is missing; restore the complete app backup")
             identity = {"instance_id": secrets.token_hex(16),
                         "read_token": secrets.token_urlsafe(48),

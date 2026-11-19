@@ -70,15 +70,26 @@ class OfflineSigner:
             if self._closed:raise SignerBlocked("signer_closed")
             if self._engine is not None:return
             try:
-                engine=_build_engine(self._state,self._read_artifact())
+                state=self._state
+                artifact=self._read_artifact()
+                if self._closed:raise SignerBlocked("signer_closed")
+                engine=_build_engine(state,artifact)
                 if not engine.is_provisioned:raise SignerBlocked("provisioning_required")
+                if self._closed:raise SignerBlocked("signer_closed")
                 self._engine=engine
             except BaseException:
                 self._closed=True
                 raise
-            finally:self._state=None
+            finally:
+                self._state=None
+                if self._closed:self._engine=None
     async def initialize(self):
-        try:await asyncio.to_thread(self._initialize)
+        try:
+            await asyncio.to_thread(self._initialize)
+            if self._closed:raise SignerBlocked("signer_closed")
+        except asyncio.CancelledError:
+            self._revoke()
+            raise
         except SignerBlocked:raise
         except Exception:raise SignerBlocked("signer_initialization_failed") from None
     def _require_ready(self):
@@ -88,7 +99,9 @@ class OfflineSigner:
     def _headers(self):
         with self._lock:
             self._require_ready()
-            value=self._engine.get_data()
+            engine=self._engine
+            value=engine.get_data()
+            if self._closed:raise SignerBlocked("signer_closed")
             result={}
             for key in ("X-Apple-I-MD","X-Apple-I-MD-M"):
                 text=value.get(key) if isinstance(value,dict) else None
@@ -97,23 +110,34 @@ class OfflineSigner:
                 result[key]=text
             return result
     async def headers(self):
-        try:return await asyncio.to_thread(self._headers)
+        try:
+            result=await asyncio.to_thread(self._headers)
+            if self._closed:raise SignerBlocked("signer_closed")
+            return result
+        except asyncio.CancelledError:
+            self._revoke()
+            raise
         except SignerBlocked:raise
         except Exception:raise SignerBlocked("signing_failed") from None
     def snapshot(self):
         with self._lock:
             self._require_ready()
             output=BytesIO()
-            self._engine.save_provisioning(output)
+            engine=self._engine
+            engine.save_provisioning(output)
+            if self._closed:raise SignerBlocked("signer_closed")
             value=output.getvalue()
             if not 0<len(value)<=self.MAX_STATE:raise SignerBlocked("provisioning_state_invalid")
             return value
-    def _close(self):
-        with self._lock:
-            self._closed=True
-            self._state=None
-            self._engine=None
-    async def close(self):await asyncio.to_thread(self._close)
+    def _revoke(self):
+        # Immediate logical revocation, independent of a blocked native lock.
+        # A native call already in flight can finish using its local references,
+        # but its result is rejected and initialization cannot publish an engine.
+        self._closed=True
+        self._state=None
+        self._engine=None
+    async def close(self):
+        self._revoke()
 
 def provider_for(signer,*,serial,identity=None):
     """Build the SDK interface around owned offline signing, not SDK networking."""

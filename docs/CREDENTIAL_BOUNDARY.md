@@ -119,3 +119,14 @@ egress isolation remain required before activation. Native work in a thread
 cannot be forcibly interrupted by cancelling its await; no hard preemption or
 memory zeroization is claimed. An explicitly supplied digest must ultimately come
 from a reviewed release manifest, not from an untrusted downloaded artifact.
+
+### Offline signer lifecycle review
+
+Cancellation of initialization/signing and explicit close now immediately revoke
+the signer without waiting for its native thread lock. Late initialization cannot
+produce a usable signer and late OTP results are rejected before delivery.
+Synthetic event-controlled tests cover each case. Close drops app references;
+it does not kill a native call or promise destruction/zeroization. A real process
+boundary and reviewed artifact manifest remain activation requirements; see
+CONTROLLED_PROVISIONING.md for the concrete deployment checklist and the
+`isolated_provisioning_worker_required` gate.
