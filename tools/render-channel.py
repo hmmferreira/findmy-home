@@ -6,9 +6,11 @@ import re
 import shutil
 
 
-def render(source, target, channel, version):
+def render(source, target, channel, version, *, runtime="legacy"):
     if channel not in ("edge", "stable"):
         raise ValueError("Unknown channel")
+    if runtime not in ("legacy","shared") or (runtime=="shared" and channel!="edge"):
+        raise ValueError("Shared runtime requires an explicit Edge build")
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:-dev\.[0-9]+\.[0-9]+)?", version):
         raise ValueError("Invalid version")
     if (channel == "edge") != ("-dev." in version):
@@ -26,6 +28,9 @@ def render(source, target, channel, version):
     title="Find My Home Edge" if channel=="edge" else "Find My Home"
     text=re.sub(r"(?m)^name:.*$", "name: "+title, text)
     text=re.sub(r"(?m)^panel_title:.*$", "panel_title: "+title, text)
+    if runtime=="shared":
+        shutil.copyfile(target/"findmy_home/Dockerfile.shared",target/"findmy_home/Dockerfile")
+        text=text.replace("  runtime_mode: legacy","  runtime_mode: shared",1)
     config.write_text(text)
     # Channel name alone never removes experimental status: live validation is required.
     repo=target/"repository.yaml"
@@ -34,12 +39,13 @@ def render(source, target, channel, version):
     data=json.loads(manifest.read_text())
     data["version"]=version
     manifest.write_text(json.dumps(data,indent=2)+"\n")
-    (target/"CHANNEL.json").write_text(json.dumps({"channel":channel,"version":version},indent=2)+"\n")
+    (target/"CHANNEL.json").write_text(json.dumps({"channel":channel,"version":version,"runtime":runtime},indent=2)+"\n")
 
 if __name__=="__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument("channel",choices=["edge","stable"])
     parser.add_argument("version")
     parser.add_argument("output",type=Path)
+    parser.add_argument("--runtime",choices=["legacy","shared"],default="legacy")
     args=parser.parse_args()
-    render(Path(__file__).resolve().parents[1],args.output,args.channel,args.version)
+    render(Path(__file__).resolve().parents[1],args.output,args.channel,args.version,runtime=args.runtime)

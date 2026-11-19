@@ -20,6 +20,12 @@ discovery:
   - findmy_home
 ports:
   8100/tcp: null
-options: {}
-schema: {}
+options:
+  runtime_mode: legacy
+  shared_artifact_id: applemusic-arm64-v8a
+  create_new_identity: false
+schema:
+  runtime_mode: list(legacy|shared)
+  shared_artifact_id: str
+  create_new_identity: bool
 stage: experimental

@@ -55,3 +55,13 @@ backup/restoration gap but do not supply missing implementation:
 No additional user-provided API key or manual file upload is needed for the
 completed review. A future live sign-in/verification or device-unlock prompt must
 stay in the protected UI, not chat or logs.
+
+
+## Follow-up implementation
+
+The development tasks listed in the Edge decision above have since been
+implemented on the feature branch: restricted native worker, fixed source-bound
+artifact policy, explicit shared runtime composition/image and Edge renderer.
+See SHARED_AUTH_REWRITE.md's final implementation checkpoint for current counts.
+The policy's approval remains pending, and actual target/live verification is
+still required; the earlier section records the decision at that review point.

@@ -201,9 +201,15 @@ async def main():
     logging.disable(logging.CRITICAL)
     store = Store(Path(os.environ.get("FINDMY_HOME_DATA", "/data/findmy_home")))
     await asyncio.to_thread(enrich_metadata,store)
-    flow, worker = ExportFlow(store.root), AppleWorker(store)
-    ui = web.AppRunner(make_app(store, management=True, flow=flow, worker=worker), access_log=None)
-    api = web.AppRunner(make_app(store), access_log=None)
+    from .shared_runtime import read_options,configure_runtime,compose_runtime
+    runtime_options=read_options()
+    mode=configure_runtime(runtime_options)
+    shared_ui=None
+    flow=ExportFlow(store.root)
+    if mode=="shared":worker,shared_ui=await compose_runtime(store,runtime_options)
+    else:worker=AppleWorker(store)
+    ui = web.AppRunner(make_app(store, management=True, flow=flow, worker=worker,shared_ui=shared_ui), access_log=None)
+    api = web.AppRunner(make_app(store,worker=worker), access_log=None)
     await ui.setup()
     await api.setup()
     await web.TCPSite(ui, "0.0.0.0", 8099).start()
@@ -222,6 +228,7 @@ async def main():
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+        if shared_ui is not None:await shared_ui.close()
         await flow.cancel(flow.owner)
         await worker.close()
         await worker.cancel(worker.owner)

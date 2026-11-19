@@ -88,3 +88,28 @@ class PrivateSessionStoreTests(unittest.IsolatedAsyncioTestCase):
     async def test_symlink_data_root_rejected(self):
         link=self.root/'alias';link.symlink_to(self.root,target_is_directory=True)
         with self.assertRaises(SessionBlocked):await restore_reporting_account(link)
+
+    async def test_shared_mode_never_restores_legacy_account(self):
+        import os
+        atomic_json(self.root/'account.json',{'legacy':True})
+        with patch.dict(os.environ,{'FINDMY_RUNTIME_MODE':'shared'}),patch('findmy_home.apple.ReportingAccount.from_json') as legacy:
+            with self.assertRaises(SessionBlocked):await restore_reporting_account(self.root)
+            legacy.assert_not_called()
+
+    async def test_shared_reporting_requires_process_signer(self):
+        import os,sys,types
+        class SyntheticProcessSigner:pass
+        module=types.ModuleType('findmy_home.native_worker');module.ProcessOfflineSigner=SyntheticProcessSigner
+        with patch('findmy_home.private_session_store.snapshot_account',new=AsyncMock(return_value=b'cipher')):await self.store.save(object())
+        with patch.dict(os.environ,{'FINDMY_RUNTIME_MODE':'shared'}),patch.dict(sys.modules,{'findmy_home.native_worker':module}),patch('findmy_home.artifact_policy.reviewed_artifact',return_value=types.SimpleNamespace(expected_sha256='a'*64)),patch('findmy_home.artifact_policy.verify_artifact',new=AsyncMock()),patch('findmy_home.private_session_store.restore_account',new=AsyncMock(return_value='isolated')) as restore:
+            self.assertEqual(await restore_reporting_account(self.root),'isolated')
+            self.assertIs(restore.call_args.kwargs['signer_factory'],SyntheticProcessSigner)
+
+    async def test_shared_manifest_cannot_approve_its_own_artifact_digest(self):
+        import os,sys,types
+        module=types.ModuleType('findmy_home.native_worker');module.ProcessOfflineSigner=type('SyntheticProcessSigner',(),{})
+        with patch('findmy_home.private_session_store.snapshot_account',new=AsyncMock(return_value=b'cipher')):await self.store.save(object())
+        with patch.dict(os.environ,{'FINDMY_RUNTIME_MODE':'shared'}),patch.dict(sys.modules,{'findmy_home.native_worker':module}),patch('findmy_home.artifact_policy.reviewed_artifact',return_value=types.SimpleNamespace(expected_sha256='b'*64)),patch('findmy_home.private_session_store.restore_account',new=AsyncMock()) as restore:
+            with self.assertRaises(SessionBlocked) as raised:await restore_reporting_account(self.root)
+            self.assertEqual(raised.exception.code,'session_artifact_mismatch')
+            restore.assert_not_awaited()

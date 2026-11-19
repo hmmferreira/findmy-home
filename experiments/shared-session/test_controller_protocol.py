@@ -324,3 +324,60 @@ async def test_mixed_encrypted_generations_and_missing_backup_key_fail_closed(mo
     with pytest.raises(SessionBlocked):await restore_reporting_account(tmp_path)
     newkey.unlink()
     with pytest.raises(SessionBlocked):await restore_reporting_account(tmp_path)
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("existing",[True,False])
+async def test_shared_startup_factory_preserves_full_identity_with_real_candidate(monkeypatch,tmp_path,existing):
+    """Real SDK construction, synthetic native state; no Apple/native execution."""
+    from findmy_home import shared_runtime
+    from findmy_home.offline_signer import OfflineSigner
+    from findmy_home.storage import Store
+    from findmy.reports.anisette import CLIENT_IDENTITY
+    import hashlib
+    import uuid
+    state=b"synthetic-private-provisioning-state"
+    library=tmp_path/"owned-libs.bin";library.write_bytes(b"synthetic-library")
+    digest=hashlib.sha256(library.read_bytes()).hexdigest()
+    ids={"uid":str(uuid.uuid4()),"devid":str(uuid.uuid4())}
+    serial="b"*32
+    store=Store(tmp_path)
+    if existing:shared_runtime.SigningIdentityStore(tmp_path,digest).save(state,serial,CLIENT_IDENTITY.to_json(),ids)
+    class SyntheticProcessSigner(OfflineSigner):
+        async def initialize(self):self._engine=SimpleNamespace(is_provisioned=True);self._state=None
+        def snapshot(self):return state
+    monkeypatch.setattr(shared_runtime,"require_shared_backend",lambda:None)
+    monkeypatch.setattr("findmy_home.artifact_policy.reviewed_artifact",lambda value:SimpleNamespace(expected_sha256=digest))
+    monkeypatch.setattr("findmy_home.artifact_policy.verify_artifact",AsyncMock())
+    monkeypatch.setattr("findmy_home.native_worker.ProcessOfflineSigner",SyntheticProcessSigner)
+    provision=AsyncMock(return_value=state)
+    monkeypatch.setattr("findmy_home.controlled_provisioning.provision_new_identity",provision)
+    monkeypatch.setattr("findmy_home.native_worker.IsolatedNativeWorker",lambda **kwargs:SimpleNamespace(identity=kwargs))
+    worker,bridge=await shared_runtime.compose_runtime(store,{"shared_artifact_id":"applemusic-arm64-v8a","create_new_identity":True})
+    first=second=None
+    try:
+        first=await worker.account_factory()
+        second=await worker.account_factory()
+        if not existing:
+            _,serial,identity,ids=shared_runtime.SigningIdentityStore(tmp_path,digest).load()
+            assert identity==CLIENT_IDENTITY.to_json()
+        for account in (first,second):
+            assert isinstance(account._http,OwnedHttpSession)
+            assert account._http.profile=="account"
+            assert account.local_user_uuid==ids["uid"]
+            assert account.device_uuid==ids["devid"]
+            assert account._anisette.serial==serial
+            assert account._anisette.identity==CLIENT_IDENTITY
+            assert account._password is None
+        if existing:provision.assert_not_awaited()
+        else:
+            provision.assert_awaited_once()
+            options=provision.await_args.kwargs
+            assert options["worker"].identity["uid"]==ids["uid"]
+            assert options["worker"].identity["devid"]==ids["devid"]
+            assert options["worker"].identity["client_info"]==first.client_info
+            assert options["user_agent"]==CLIENT_IDENTITY.user_agent("akd/1.0")
+        assert not worker.session_available() # signing state is not an account session
+    finally:
+        if first is not None:await first.close()
+        if second is not None:await second.close()
+        await bridge.close()

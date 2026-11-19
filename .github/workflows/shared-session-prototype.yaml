@@ -47,4 +47,20 @@ jobs:
           cp experiments/shared-session/test_controller_protocol.py "$RUNNER_TEMP/shared-context/test_controller_protocol.py"
           docker build --build-arg TEST_BASE_IMAGE=python:3.12-slim-bookworm -t shared-discovery-test "$RUNNER_TEMP/shared-context"
       - name: Offline protocol and controller tests
-        run: docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,nosuid,size=256m shared-discovery-test
+        run: docker run --rm --user 1000:1000 --network none --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,nosuid,size=256m shared-discovery-test
+
+  shared-runtime-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - name: Build explicit shared runtime
+        run: docker build -f findmy_home/Dockerfile.shared -t findmy-shared-runtime:test findmy_home
+      - name: Non-root production worker and artifact gate smoke
+        run: >-
+          docker run --rm --user 1000:1000 --network none --read-only
+          --cap-drop ALL --security-opt no-new-privileges
+          --tmpfs /tmp:rw,nosuid,size=128m
+          -v "$PWD/tools/shared-runtime-smoke.py:/review-smoke.py:ro"
+          --entrypoint python findmy-shared-runtime:test /review-smoke.py

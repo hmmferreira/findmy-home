@@ -157,3 +157,38 @@ OSV check of 30 locked Python packages found zero unreviewed advisories with thr
 existing applicability notes. This closes synthetic backup rehearsal; target-host
 isolation/native artifact policy and production composition remain open. No Edge
 deployment or household state change.
+
+## Native worker, artifact policy and startup implementation — 2026-11-19
+
+Implemented the previously missing development paths:
+
+- Process-backed native provisioning and signing, with Linux Landlock ABI>=3,
+  libseccomp, minimal environment, private bounded IPC, muted native logs,
+  resource limits, immediate cancellation/termination and process reaping.
+- Immutable release-owned artifact policy and deterministic bundle recipe. Public
+  vendor APK source/version/member/bundle hashes are recorded. Official Android
+  apksigner verifies its v2 signature and its signer matches Apple's published
+  association. No native artifact is committed or redistributed.
+- Explicit shared production startup/image and Edge-only repository rendering.
+  Both account UUIDs, serial, client identity and encrypted native state survive
+  reauthentication. Native provisioning headers and SDK identity agree. Reporting
+  always rechecks fixed artifact policy and requires the process signer in shared
+  mode, with no legacy/provider fallback. Unsupported security boundaries report
+  setup-required rather than asking for another account password.
+
+Validation: 212 app cases pass under UID1000, read-only root, no capabilities and
+network disabled; 877 backend and 14 candidate integration cases pass in the
+non-root offline candidate runtime. All 31 locked Python packages (including the
+shared dependency) have zero unreviewed OSV advisories and three prior applicability
+notes. The actual shared image builds and its production boundary smoke passes.
+The public hash-verified vendor bundle initializes inside that restricted image
+with matching configured identity headers; no Apple login/provisioning request,
+OTP authentication or household state is used by that compatibility probe.
+
+The artifact manifest deliberately remains pending for native-use/distribution
+review. Dragon validation is not a claim of Home Assistant target-kernel support.
+Before activation: resolve the artifact-use policy, verify the actual HA target
+boundary, create a private recovery point, and perform a deliberate protected-UI
+live sign-in/poll/restart comparison. No Edge publication, update, migration or
+Home Assistant restart performed. See ARTIFACT_PROVENANCE.md, SHARED_RUNTIME.md
+and CONTROLLED_PROVISIONING.md for evidence, runnable paths and exact limits.

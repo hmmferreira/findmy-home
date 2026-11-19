@@ -123,7 +123,7 @@ class AppleWorker:
     CONCURRENCY = 2
     START_SPACING = 1.0
     ITEM_TIMEOUT = 120
-    ALLOWED_ERRORS = {"apple_empty_response","authentication_required","poll_failed","item_timeout","rate_limited"}
+    ALLOWED_ERRORS = {"apple_empty_response","authentication_required","poll_failed","item_timeout","rate_limited","setup_required"}
 
     MANUAL_INTERVAL = 60
 
@@ -325,7 +325,7 @@ class AppleWorker:
                     failures.append(error)
                     self.store.health["items_failed"]+=1
                     self.store.health["error_code"]=error
-                    if error in ("authentication_required","rate_limited"):
+                    if error in ("authentication_required","rate_limited","setup_required"):
                         stop.set()
                 elif self.store.items.get(key,{}).get("enabled") and self._accept_report(key,result.get("report")):
                     self.store.health["reports_received"]+=1
@@ -338,7 +338,9 @@ class AppleWorker:
             for _ in range(min(self.CONCURRENCY,len(selected))):
                 group.create_task(update_items())
         received=self.store.health["reports_received"]
-        if "authentication_required" in failures:
+        if "setup_required" in failures:
+            status="setup_required"
+        elif "authentication_required" in failures:
             status="reauth_required"
         elif received:
             status="partial_results" if failures else "searching" if searches else "ok"

@@ -35,7 +35,7 @@ with urllib.request.urlopen(req,timeout=1800) as response:
   if 'error' in event:raise RuntimeError(event['error'])
   value=event.get('stream','').strip()
   if value and any(x in value for x in ('Step ','Successfully ','ERROR')):print(value,flush=True)
-spec={'Image':'dragon/findmy-shared-protocol-tests:prototype','HostConfig':{'NetworkMode':'none','ReadonlyRootfs':True,'CapDrop':['ALL'],'SecurityOpt':['no-new-privileges:true'],'Tmpfs':{'/tmp':'rw,nosuid,size=256m'}}}
+spec={'Image':'dragon/findmy-shared-protocol-tests:prototype','User':'1000:1000','HostConfig':{'NetworkMode':'none','ReadonlyRootfs':True,'CapDrop':['ALL'],'SecurityOpt':['no-new-privileges:true'],'Tmpfs':{'/tmp':'rw,nosuid,size=256m'}}}
 cid=api('/containers/create',spec,'POST')['Id']
 try:
  api('/containers/'+cid+'/start',{},'POST')

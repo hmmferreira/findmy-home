@@ -40,8 +40,10 @@ class SharedDiscoveryUI:
     def _auth_error(error):
         code=getattr(error,"code",None)
         if code in {"session_expired","reauthentication_required"}:return "session_expired"
-        if code in {"session_snapshot_failed","session_key_required"}:return "session_save_failed"
-        if code in {"artifact_unavailable","artifact_digest_mismatch","reviewed_artifact_required","isolated_provisioning_worker_required"}:return "setup_required"
+        if code in {"session_snapshot_failed","session_key_required","session_storage_invalid","session_storage_unavailable","session_save_failed"}:return "session_save_failed"
+        if code in {"artifact_unavailable","artifact_digest_mismatch","artifact_review_required","reviewed_artifact_required",
+                    "isolated_provisioning_worker_required","worker_boundary_unavailable","explicit_new_identity_required",
+                    "signing_identity_missing","signing_identity_invalid"}:return "setup_required"
         return "authentication_required"
 
     async def authenticate(self,owner,operation):

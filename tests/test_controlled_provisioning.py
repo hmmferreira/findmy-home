@@ -52,6 +52,13 @@ class ControlledProvisioningTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.worker.calls[-1],("finish",b"PRIVATE_PTM",b"PRIVATE_TK"))
         self.assertTrue(self.worker.closed);self.assertTrue(self.http.closed)
         self.assertEqual(list(Path(self.tmp.name).iterdir()),[self.path])
+    async def test_explicit_user_agent_is_used_and_injection_refused(self):
+        await self.run_flow(user_agent="Synthetic aligned CFNetwork/1 Darwin/2")
+        for _,_,options in self.http.calls:
+            self.assertEqual(options["headers"]["User-Agent"],"Synthetic aligned CFNetwork/1 Darwin/2")
+        self.worker=Worker();self.http=Http()
+        with self.assertRaises(ProvisioningBlocked):await self.run_flow(user_agent="bad\r\nheader")
+        self.assertFalse(self.worker.calls);self.assertFalse(self.http.calls)
     async def test_missing_worker_or_explicit_creation_never_starts(self):
         for kwargs,code in (({},"explicit_new_identity_required"),({"create_new_identity":True},"isolated_provisioning_worker_required")):
             with self.assertRaises(ProvisioningBlocked) as caught:

@@ -33,7 +33,16 @@ def query(group):
             for (name,version),value in zip(group,values)]
 
 def main():
-    pins=re.findall(r"^([A-Za-z0-9_.-]+)==([^\s\\]+)",(ROOT/"findmy_home/requirements.lock").read_text(),re.M)
+    locks=[ROOT/"findmy_home/requirements.lock",ROOT/"findmy_home/requirements-shared.lock"]
+    pins=[]
+    for lock in locks:
+        if lock.exists():pins.extend(re.findall(r"^([A-Za-z0-9_.-]+)==([^\s\\]+)",lock.read_text(),re.M))
+    versions={}
+    for name,version in pins:
+        normalized=normalize(name)
+        if normalized in versions and versions[normalized]!=version:raise ValueError("Runtime locks disagree")
+        versions[normalized]=version
+    pins=list(versions.items())
     if not pins: raise ValueError("Runtime lock is empty")
     groups=[pins[i:i+10] for i in range(0,len(pins),10)]
     with ThreadPoolExecutor(max_workers=3) as pool:

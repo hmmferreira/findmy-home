@@ -35,3 +35,11 @@ class ChildQueryTests(unittest.IsolatedAsyncioTestCase):
             with patch.dict(os.environ,{"FINDMY_HOME_DATA":tmp}), patch("sys.stdin",SimpleNamespace(buffer=io.BytesIO(json.dumps({"id":item}).encode()))), patch("findmy_home.poll_item.restore_reporting_account",new=AsyncMock(side_effect=SessionBlocked("session_expired"))), patch("findmy.FindMyAccessory.from_json") as accessory:
                 self.assertEqual(await query(),{"ok":False,"error":"authentication_required"})
                 accessory.assert_not_called()
+
+    async def test_missing_worker_boundary_requests_setup_instead_of_apple_login(self):
+        from findmy_home.owned_session import SessionBlocked
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);item="a"*32
+            atomic_json(root/"items.json",{item:{"enabled":True,"key_file":item+".json"}})
+            with patch.dict(os.environ,{"FINDMY_HOME_DATA":tmp}),patch("sys.stdin",SimpleNamespace(buffer=io.BytesIO(json.dumps({"id":item}).encode()))),patch("findmy_home.poll_item.restore_reporting_account",new=AsyncMock(side_effect=SessionBlocked("worker_boundary_unavailable"))):
+                self.assertEqual(await query(),{"ok":False,"error":"setup_required"})

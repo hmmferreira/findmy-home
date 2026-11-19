@@ -68,7 +68,8 @@ def _binary(value):
     return decoded
 
 async def provision_new_identity(library,expected_sha256,*,worker=None,transport=None,
-                                 create_new_identity=False,timeout=90):
+                                 create_new_identity=False,timeout=90,
+                                 user_agent="akd/1.0 CFNetwork/1404.0.5 Darwin/22.3.0"):
     """Return private state bytes, never write them or replace an existing identity.
 
     There is deliberately no production worker fallback. Callers must provide a
@@ -80,6 +81,8 @@ async def provision_new_identity(library,expected_sha256,*,worker=None,transport
     if worker is None:
         raise ProvisioningBlocked("isolated_provisioning_worker_required")
     if not isinstance(timeout,(float,int)) or isinstance(timeout,bool) or not math.isfinite(timeout) or not 0<timeout<=90:
+        raise ProvisioningBlocked("provisioning_options_invalid")
+    if not isinstance(user_agent,str) or not user_agent or len(user_agent)>1024 or any(ord(c)<32 or ord(c)>126 for c in user_agent):
         raise ProvisioningBlocked("provisioning_options_invalid")
     if transport is not None and (not isinstance(transport,OwnedHttpSession) or transport.profile!="provisioning"):
         raise ProvisioningBlocked("owned_transport_required")
@@ -97,7 +100,7 @@ async def provision_new_identity(library,expected_sha256,*,worker=None,transport
             if http is None:http=OwnedHttpSession(profile="provisioning",timeout=min(timeout,30))
             async def request(method,url,payload=None):
                 validate_destination("provisioning",method,url)
-                headers={**identity,"User-Agent":"akd/1.0 CFNetwork/1404.0.5 Darwin/22.3.0",
+                headers={**identity,"User-Agent":user_agent,
                     "Content-Type":"application/x-www-form-urlencoded","X-Apple-Client-App-Name":"Setup",
                     "X-Apple-I-Client-Time":datetime.now(timezone.utc).replace(microsecond=0).isoformat()}
                 options={"headers":headers}

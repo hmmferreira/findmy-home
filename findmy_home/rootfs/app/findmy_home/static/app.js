@@ -34,7 +34,7 @@ function updateButtons(){
   }
 }
 function ago(value){if(!value)return "No sighting yet";const seconds=Math.max(0,Math.floor((Date.now()-Date.parse(value))/1000));return seconds<60?"Just now":seconds<3600?Math.floor(seconds/60)+" minutes ago":seconds<86400?Math.floor(seconds/3600)+" hours ago":Math.floor(seconds/86400)+" days ago";}
-const errors={"rate_limited":"Apple requested a pause.","apple_empty_response":"Apple returned an empty response.","authentication_required":"Reconnect location access.","poll_failed":"Refresh failed.","item_timeout":"This item exceeded its query time limit."};
+const errors={"setup_required":"Secure runtime setup needs attention.","rate_limited":"Apple requested a pause.","apple_empty_response":"Apple returned an empty response.","authentication_required":"Reconnect location access.","poll_failed":"Refresh failed.","item_timeout":"This item exceeded its query time limit."};
 function description(item){
   const parts=[];
   if(item.apple_name&&item.apple_name!==item.name)parts.push(item.apple_name);
@@ -46,7 +46,7 @@ function description(item){
 function render(data){
   snapshot=data;csrf=data.csrf;
   $("app-title").textContent="Find My Home"+(data.channel==="edge"?" Edge":data.channel==="stable"?"":" Edge");
-  $("health").textContent=({"ok":"Tracking","searching":"Tracking; searching remaining items","partial_results":"Some items need attention","no_reports":"No reports returned","reauth_required":"Connect location access","select_items":"Choose tracked items","polling":"Refreshing","error":"Refresh needs attention","starting":"Starting","ready":"Location access connected"})[data.health.status]||"Checking";
+  $("health").textContent=({"ok":"Tracking","searching":"Tracking; searching remaining items","partial_results":"Some items need attention","no_reports":"No reports returned","reauth_required":"Connect location access","setup_required":"Secure runtime setup required","select_items":"Choose tracked items","polling":"Refreshing","error":"Refresh needs attention","starting":"Starting","ready":"Location access connected"})[data.health.status]||"Checking";
   const selected=data.items.filter(item=>item.enabled), known=selected.filter(item=>item.report).length, health=data.health;
   $("poll-summary").textContent=selected.length+" tracked · "+known+" with a saved location · Scheduled check: "+(health.last_poll?ago(health.last_poll):"not completed")+" · Checked "+(health.items_completed??0)+"/"+selected.length+(health.error_code?" · "+(errors[health.error_code]||"Refresh needs attention."):"");
   const cards=$("cards");cards.replaceChildren();

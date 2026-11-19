@@ -10,7 +10,9 @@ import tarfile
 import urllib.request
 
 parser=argparse.ArgumentParser()
-parser.add_argument("mode",choices=["test","build","smoke"])
+parser.add_argument("mode",choices=["test","build","smoke","shared-smoke"])
+parser.add_argument("--shared",action="store_true",help="Build the explicit shared-auth runtime image")
+parser.add_argument("--non-root",action="store_true",help="Run the disposable test container as UID/GID 1000")
 args=parser.parse_args()
 root=Path(__file__).resolve().parents[1]
 key=Path(os.environ.get("PORTAINER_KEY_FILE",Path.home()/".config/portainer/api-key")).read_text().strip()
@@ -24,7 +26,7 @@ def api(path,data=None,method=None):
         return json.loads(data) if data else None
 
 version=next(line.split(":",1)[1].strip() for line in (root/"findmy_home/config.yaml").read_text().splitlines() if line.startswith("version:"))
-image="dragon/findmy-home-tests:"+version if args.mode=="test" else "dragon/findmy-home:"+version
+image="dragon/findmy-home-tests:"+version if args.mode=="test" else ("dragon/findmy-home-shared:" if args.shared or args.mode=="shared-smoke" else "dragon/findmy-home:")+version
 if args.mode in ("test","build"):
     context=root if args.mode=="test" else root/"findmy_home"
     stream=io.BytesIO()
@@ -34,7 +36,7 @@ if args.mode in ("test","build"):
                 continue
             if path.is_file():
                 tar.add(path,arcname=str(path.relative_to(context)))
-    dockerfile="tools/test.Dockerfile" if args.mode=="test" else "Dockerfile"
+    dockerfile="tools/test.Dockerfile" if args.mode=="test" else ("Dockerfile.shared" if args.shared else "Dockerfile")
     request=urllib.request.Request(base+"/build?t="+image+"&dockerfile="+dockerfile+"&rm=1",
         data=stream.getvalue(),headers={"X-API-Key":key,"Content-Type":"application/x-tar"},method="POST")
     with urllib.request.urlopen(request,timeout=1800) as response:
@@ -48,6 +50,7 @@ if args.mode in ("test","build"):
 if args.mode=="test":
     spec={"Image":image,"HostConfig":{"NetworkMode":"none","ReadonlyRootfs":True,
         "CapDrop":["ALL"],"SecurityOpt":["no-new-privileges:true"],"Tmpfs":{"/tmp":"rw,nosuid,size=128m"}}}
+    if args.non_root:spec["User"]="1000:1000"
     cid=api("/containers/create",spec,"POST")["Id"]
     try:
         api("/containers/"+cid+"/start",{},"POST")
@@ -108,3 +111,23 @@ print('Smoke passed: non-root, private empty state, authenticated snapshot, ingr
         if result["ExitCode"]: raise SystemExit(result["ExitCode"])
     finally:
         api("/containers/"+cid+"?force=true",method="DELETE")
+
+
+if args.mode=="shared-smoke":
+    code=(root/"tools/shared-runtime-smoke.py").read_text()
+    spec={"Image":image,"User":"1000:1000","Cmd":["python","-c",code],
+        "HostConfig":{"NetworkMode":"none","ReadonlyRootfs":True,"CapDrop":["ALL"],
+        "SecurityOpt":["no-new-privileges:true"],"Tmpfs":{"/tmp":"rw,nosuid,size=128m"}}}
+    cid=api("/containers/create",spec,"POST")["Id"]
+    try:
+        api("/containers/"+cid+"/start",{},"POST")
+        result=api("/containers/"+cid+"/wait",{},"POST")
+        request=urllib.request.Request(base+"/containers/"+cid+"/logs?stdout=1&stderr=1",headers={"X-API-Key":key})
+        with urllib.request.urlopen(request,timeout=30) as response:raw=response.read()
+        while len(raw)>=8:
+            size=struct.unpack(">I",raw[4:8])[0]
+            print(raw[8:8+size].decode(errors="replace"),end="")
+            raw=raw[8+size:]
+        print("Shared smoke exit:",result["StatusCode"])
+        if result["StatusCode"]:raise SystemExit(result["StatusCode"])
+    finally:api("/containers/"+cid+"?force=true",method="DELETE")

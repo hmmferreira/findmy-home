@@ -16,7 +16,7 @@ import uuid
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from .apple_transport import OwnedHttpSession
-from .offline_signer import OfflineSigner, provider_for
+from .offline_signer import OfflineSigner, SignerBlocked, provider_for
 from .owned_protocol import _replace_http
 
 _MAGIC=b"FMHSESSION\x01"
@@ -120,7 +120,7 @@ async def snapshot_account(account,*,encryption_key,expires_at,now=None):
     except SessionBlocked:raise
     except Exception:raise SessionBlocked("session_snapshot_failed") from None
 
-async def restore_account(data,*,encryption_key,library,expected_sha256,now=None,timeout=30):
+async def restore_account(data,*,encryption_key,library,expected_sha256,now=None,timeout=30,signer_factory=None):
     """Restore locally, preserving identity, with no auth request or SDK fallback."""
     key=_key(encryption_key);now=_now(now)
     signer=None;account=None
@@ -140,7 +140,9 @@ async def restore_account(data,*,encryption_key,library,expected_sha256,now=None
             return state,provision
         state,provision=await asyncio.to_thread(deserialize)
         if state["anisette"]["library_sha256"]!=expected_sha256:raise SessionBlocked("session_artifact_mismatch")
-        signer=OfflineSigner(library,provision,expected_sha256)
+        factory=OfflineSigner if signer_factory is None else signer_factory
+        if not isinstance(factory,type) or not issubclass(factory,OfflineSigner):raise SessionBlocked("owned_signer_required")
+        signer=factory(library,provision,expected_sha256)
         await signer.initialize()
         from .apple import ReportingAccount
         from findmy.reports.anisette import DeviceIdentity
@@ -151,4 +153,5 @@ async def restore_account(data,*,encryption_key,library,expected_sha256,now=None
         if account is not None:await account.close()
         elif signer is not None:await signer.close()
         if isinstance(exc,(SessionBlocked,asyncio.CancelledError)):raise
+        if isinstance(exc,SignerBlocked) and exc.code in {"worker_boundary_unavailable","artifact_digest_mismatch","artifact_unavailable"}:raise SessionBlocked(exc.code) from None
         raise SessionBlocked("session_restore_failed") from None

@@ -37,3 +37,12 @@ class ChannelTests(unittest.TestCase):
             module.render(ROOT,target,"stable","0.1.2")
             self.assertIn("stage: experimental",(target/"findmy_home/config.yaml").read_text())
             self.assertEqual(json.loads((target/"CHANNEL.json").read_text())["channel"],"stable")
+
+    def test_shared_edge_renderer_selects_shared_dockerfile_and_explicit_mode(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target=Path(tmp)/"shared-edge"
+            module.render(ROOT,target,"edge","0.1.12-dev.1.1",runtime="shared")
+            self.assertIn("  runtime_mode: shared",(target/"findmy_home/config.yaml").read_text())
+            self.assertEqual((target/"findmy_home/Dockerfile").read_bytes(),(ROOT/"findmy_home/Dockerfile.shared").read_bytes())
+            self.assertEqual(json.loads((target/"CHANNEL.json").read_text())["runtime"],"shared")
+            with self.assertRaises(ValueError):module.render(ROOT,Path(tmp)/"stable","stable","0.1.12",runtime="shared")

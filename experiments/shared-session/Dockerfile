@@ -2,6 +2,7 @@
 ARG TEST_BASE_IMAGE=dragon/findmy-home:0.1.12
 FROM ${TEST_BASE_IMAGE}
 USER root
+RUN apt-get update && apt-get install -y --no-install-recommends libseccomp2 && rm -rf /var/lib/apt/lists/*
 COPY requirements.lock /review/requirements.lock
 RUN pip install --no-cache-dir --require-hashes --only-binary=:all: -r /review/requirements.lock
 RUN pip install --no-cache-dir --only-binary=:all: pytest==9.0.3 pytest-asyncio==1.4.0 protobuf==7.36.2

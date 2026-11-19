@@ -32,8 +32,11 @@ async def query():
         raise ValueError("Invalid key file")
     try:
         account=await restore_reporting_account(root)
-    except SessionBlocked:
-        return {"ok":False,"error":"authentication_required"}
+    except SessionBlocked as error:
+        setup_codes={"worker_boundary_unavailable","artifact_review_required","artifact_license_review_required",
+            "artifact_not_approved","artifact_architecture_unsupported","artifact_digest_mismatch",
+            "session_artifact_mismatch","artifact_unavailable","artifact_policy_invalid","artifact_source_unverified"}
+        return {"ok":False,"error":"setup_required" if error.code in setup_codes else "authentication_required"}
     account._http=PacedHttp(account._http,root/"request-gate")
     try:
         accessory=FindMyAccessory.from_json(key_file)

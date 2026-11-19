@@ -16,6 +16,7 @@ Discovery refuses accounts with an unprotected account HTTP transport.
 
 | Purpose | Allowed destinations and operations |
 | --- | --- |
+| Machine provisioning | Exact gsa.apple.com lookup GET and MidService start/finish POST routes |
 | Account authentication | Explicit GSA/GSAS authentication paths and setup.icloud.com loginDelegates |
 | Location reports | Explicit gateway.icloud.com Find My report paths |
 | CloudKit reads | Explicit gateway.icloud.com init/database read/code-invoke paths; init allows only the Find My or Keychain container query |
@@ -51,9 +52,10 @@ A Python object wrapper is **not an isolation boundary against malicious Python
 running in the same process**. Such code could read process memory or open a
 separate socket instead of calling this transport. Pinned source/hashes and review
 reduce supply-chain drift; they are not a proof that the initial dependency is
-benign. OS-level egress restriction and credential/codec process isolation still
-need a deployment design and testing. Do not describe these URL checks as that
-sandbox or claim all dependencies are audited.
+benign. The native worker has the explicit OS restrictions described below, but
+account/CloudKit Python orchestration remains in its parent process. Do not
+describe these URL checks as a general-purpose parent process sandbox or claim
+all dependencies are audited.
 
 Anisette remains a separate boundary. Source inspection of anisette 1.2.4 found:
 
@@ -63,14 +65,13 @@ Anisette remains a separate boundary. Source inspection of anisette 1.2.4 found:
 - the bundled alternative helper downloads its native libraries from Apple's
   app CDN, using its own networking implementation.
 
-These paths are not routed through the new transport. This does not establish
-that passwords were sent to them: the library download is an artifact fetch and
-provisioning uses device/provisioning data. But a runtime executable download and
-an additional network implementation must be addressed before the unified UI is
-enabled. A deployment must fail if reviewed local artifacts are missing, enforce
-artifact integrity, constrain provisioning destinations/redirects, and review the
-helper's separate provenance/licensing. No new download, provisioning or Apple
-account operation was run during this review.
+The shared runtime bypasses those default paths: local bytes must pass the
+reviewed artifact policy; native signing/provisioning runs in a no-network worker;
+and provisioning HTTP is owned by the parent. This does not establish that the
+previous defaults leaked passwords: artifact fetches and machine provisioning
+use different data. The working Rust/helper baseline is separate and remains
+unchanged. Native artifact review/approval and distribution rights still gate
+activation. No household provisioning or Apple account operation was run here.
 
 Likewise, POST is used for both reads and writes in Apple's protocol. The owned
 client restricts named operations and write paths, but this is not a complete
@@ -78,8 +79,8 @@ wire-level verification of every protobuf payload from a malicious dependency.
 
 ## Verification
 
-The app regression suite now has 120 passing cases, including 17 transport/DNS/TLS
-cases. Negative URL cases additionally cover deceptive domains, Unicode/userinfo,
+The original owned-transport baseline passed 120 app cases, including 17
+transport/DNS/TLS cases. Subsequent shared-runtime and worker tests extend it. Negative URL cases additionally cover deceptive domains, Unicode/userinfo,
 encoded hosts/paths, local IPs, query injection and destination/profile mismatch.
 Two real local HTTPS tests show that a 307 does not forward the synthetic body or
 authentication, and that a server with an untrusted certificate receives no
@@ -103,8 +104,9 @@ The experimental account factory now requires an initialized app-owned offline
 signer. Its adapter loads a local regular-file artifact only after an explicitly
 supplied SHA-256 matches, requires existing provisioning state, and replaces the
 library's implicit download and provisioning fallbacks with failures. OTP work
-runs in a worker thread and is serialized; only the two required signing fields
-are returned. Private state serialization is explicit, with no automatic file
+is serialized; only the two required signing fields are returned. The original
+thread-backed adapter remains a test implementation; shared startup/restore
+selects ProcessOfflineSigner with a restricted child. Private state serialization is explicit, with no automatic file
 write, and the legacy provider restore entry point is refused.
 
 Nine synthetic signer tests cover artifact tampering/missing files/symlinks,
@@ -113,12 +115,11 @@ thread execution and disabled high-level download fallback. Candidate integratio
 also exercises the owned provider and rejects a default SDK provider before
 account creation. All tests run without network or household credentials.
 
-This is not yet a replacement for fresh provisioning or persistent account
-restore. Those paths, UI handoff, private inventory storage, and process-level
-egress isolation remain required before activation. Native work in a thread
-cannot be forcibly interrupted by cancelling its await; no hard preemption or
-memory zeroization is claimed. An explicitly supplied digest must ultimately come
-from a reviewed release manifest, not from an untrusted downloaded artifact.
+Shared restoration, UI handoff, private inventory storage and the restricted
+native execution paths are implemented elsewhere in this branch. Runtime
+activation still requires approved artifact policy, target compatibility and live
+verification. An explicitly supplied digest must come from a reviewed release
+manifest, not an arbitrary untrusted download. No zeroization is claimed.
 
 ### Offline signer lifecycle review
 
@@ -126,7 +127,25 @@ Cancellation of initialization/signing and explicit close now immediately revoke
 the signer without waiting for its native thread lock. Late initialization cannot
 produce a usable signer and late OTP results are rejected before delivery.
 Synthetic event-controlled tests cover each case. Close drops app references;
-it does not kill a native call or promise destruction/zeroization. A real process
-boundary and reviewed artifact manifest remain activation requirements; see
-CONTROLLED_PROVISIONING.md for the concrete deployment checklist and the
-`isolated_provisioning_worker_required` gate.
+it does not kill a native call or promise destruction/zeroization. The process-backed implementation below is selected for shared runtime. An
+approved artifact manifest and target verification remain activation requirements;
+see CONTROLLED_PROVISIONING.md for the concrete boundary and remaining gates.
+
+
+### Restricted native worker implementation
+
+The native execution boundary is now implemented by native_sandbox.py,
+native_worker_child.py and native_worker.py. Production shared-runtime callers
+can use IsolatedNativeWorker and ProcessOfflineSigner rather than native threads.
+Linux LandlockABI>=3 limits reads to public code/runtime files and denies private
+filesystem access/writes; libseccomp denies sockets, child execution, tracing,
+parent memory/signalling and boundary changes. No privileges are added. Startup
+fails closed when required controls are unavailable, before third-party/native
+execution. Native logs are discarded and bounded private IPC is separate.
+Cancellation/error cleanup terminates and reaps workers; process signing refreshes
+a validated cached private snapshot for nonblocking serialization.
+
+Artifact provenance/release approval,
+real native compatibility and HA target/live verification remain open gates;
+synthetic boundary success does not approve an artifact. Full implemented policy,
+test scope and operational limits are in CONTROLLED_PROVISIONING.md.

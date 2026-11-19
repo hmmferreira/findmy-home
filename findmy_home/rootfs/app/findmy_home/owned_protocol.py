@@ -5,6 +5,7 @@ monkeypatch of shared globals, default session factory or production SDK.
 """
 import asyncio
 import re
+import uuid
 from .apple_transport import OwnedHttpSession,TransportBlocked,validate_destination
 from .offline_signer import OfflineSigner
 
@@ -14,13 +15,20 @@ async def _replace_http(client,profile,timeout):
     client._http=OwnedHttpSession(profile=profile,timeout=timeout)
     return client
 
-async def create_account(provider,*,timeout=30):
+async def create_account(provider,*,timeout=30,uid=None,devid=None):
     """Install HTTP before sign-in; refuse default remote/downloading providers."""
     signer=getattr(provider,"_owned_signer",None)
     if not isinstance(signer,OfflineSigner) or not signer.ready:
         raise TransportBlocked("owned_signer_required")
+    options={}
+    if uid is not None or devid is not None:
+        try:
+            if not isinstance(uid,str) or not isinstance(devid,str):raise ValueError()
+            for value in (uid,devid):uuid.UUID(value)
+        except (ValueError,TypeError,AttributeError):raise TransportBlocked("account_identity_invalid") from None
+        options={"uid":uid,"devid":devid}
     from findmy import AsyncAppleAccount
-    account=AsyncAppleAccount(provider,timeout=timeout)
+    account=AsyncAppleAccount(provider,timeout=timeout,**options)
     try:
         return await _replace_http(account,"account",timeout)
     except BaseException:
