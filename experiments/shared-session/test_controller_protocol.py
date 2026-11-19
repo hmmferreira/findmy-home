@@ -141,15 +141,34 @@ async def test_real_sdk_container_request_uses_owned_routing_and_rejects_untrust
     account.request_pet.assert_not_awaited()
 
 @pytest.mark.asyncio
-async def test_owned_account_transport_is_installed_before_authentication(monkeypatch):
-    from findmy import LocalAnisetteProvider
+async def test_owned_account_transport_is_installed_before_authentication(monkeypatch,tmp_path):
+    import hashlib
+    from findmy_home.offline_signer import OfflineSigner,provider_for
     from findmy_home.owned_protocol import create_account
-    provider=LocalAnisetteProvider()
-    provider.get_headers=AsyncMock(side_effect=AssertionError("Unexpected provisioning during account construction"))
+    path=tmp_path/"library";path.write_bytes(b"synthetic-library")
+    signer=OfflineSigner(path,b"synthetic-existing-state",hashlib.sha256(path.read_bytes()).hexdigest())
+    engine=SimpleNamespace(is_provisioned=True,get_data=lambda:{"X-Apple-I-MD":"synthetic-otp","X-Apple-I-MD-M":"synthetic-machine"},
+        save_provisioning=lambda stream:stream.write(b"synthetic-existing-state"))
+    monkeypatch.setattr("findmy_home.offline_signer._build_engine",lambda state,libraries:engine)
+    await signer.initialize()
+    provider=provider_for(signer,serial="SYNTHETIC-CLIENT")
     account=await create_account(provider,timeout=17)
     try:
         assert isinstance(account._http,OwnedHttpSession)
         assert account._http.profile=="account"
         assert account._http.timeout==17
-        provider.get_headers.assert_not_awaited()
+        headers=await account.get_anisette_headers()
+        assert headers["X-Apple-I-MD"]=="synthetic-otp"
+        assert provider._prepared=={}
     finally:await account.close()
+    assert not signer.ready
+
+@pytest.mark.asyncio
+async def test_default_downloading_or_remote_provider_is_not_admitted():
+    from findmy import LocalAnisetteProvider
+    from findmy_home.owned_protocol import create_account
+    from findmy_home.apple_transport import TransportBlocked
+    provider=LocalAnisetteProvider()
+    try:
+        with pytest.raises(TransportBlocked):await create_account(provider)
+    finally:await provider.close()

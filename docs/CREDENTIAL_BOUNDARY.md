@@ -78,7 +78,7 @@ wire-level verification of every protobuf payload from a malicious dependency.
 
 ## Verification
 
-The app regression suite now has 111 passing cases, including 17 transport/DNS/TLS
+The app regression suite now has 120 passing cases, including 17 transport/DNS/TLS
 cases. Negative URL cases additionally cover deceptive domains, Unicode/userinfo,
 encoded hosts/paths, local IPs, query injection and destination/profile mismatch.
 Two real local HTTPS tests show that a 307 does not forward the synthetic body or
@@ -86,7 +86,7 @@ authentication, and that a server with an untrusted certificate receives no
 credential-bearing HTTP. Local DNS/TLS overrides exist only inside fixtures;
 production DNS rejection is independently tested.
 
-The pinned candidate's 877 offline tests pass. Six app/candidate integration tests
+The pinned candidate's 877 offline tests pass. Seven app/candidate integration tests
 cover actual decryption, owned HTTP installation before authentication, constrained
 client construction, disallowed operations, server-provided third-party gateway
 rejection using real SDK request construction, and cancellation cleanup. Fifteen
@@ -96,3 +96,26 @@ account. No real Apple endpoint or production data is used by these tests.
 References for the transport design:
 - https://docs.aiohttp.org/en/stable/client_reference.html
 - https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
+
+## Offline signing increment — 2026-11-19
+
+The experimental account factory now requires an initialized app-owned offline
+signer. Its adapter loads a local regular-file artifact only after an explicitly
+supplied SHA-256 matches, requires existing provisioning state, and replaces the
+library's implicit download and provisioning fallbacks with failures. OTP work
+runs in a worker thread and is serialized; only the two required signing fields
+are returned. Private state serialization is explicit, with no automatic file
+write, and the legacy provider restore entry point is refused.
+
+Nine synthetic signer tests cover artifact tampering/missing files/symlinks,
+unprovisioned identities, lost provisioning, redacted failures, closure, worker
+thread execution and disabled high-level download fallback. Candidate integration
+also exercises the owned provider and rejects a default SDK provider before
+account creation. All tests run without network or household credentials.
+
+This is not yet a replacement for fresh provisioning or persistent account
+restore. Those paths, UI handoff, private inventory storage, and process-level
+egress isolation remain required before activation. Native work in a thread
+cannot be forcibly interrupted by cancelling its await; no hard preemption or
+memory zeroization is claimed. An explicitly supplied digest must ultimately come
+from a reviewed release manifest, not from an untrusted downloaded artifact.

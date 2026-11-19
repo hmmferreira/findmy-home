@@ -115,3 +115,13 @@ See [credential boundaries and tests](CREDENTIAL_BOUNDARY.md), including the
 separate Anisette network paths and why an in-process wrapper is not a malicious
 code sandbox. UI activation remains gated; Edge and its dependency lock have not
 changed.
+
+## Offline signer increment — 2026-11-19
+
+The prototype refuses the SDK's default downloading/remote signer. It accepts an
+app-owned offline signer with a verified local artifact and existing provisioning
+only. Signing leaves the asyncio event loop, implicit provisioning/downloads stop
+with redacted errors, and transient prepared headers are cleared after use.
+Validation: 120 app cases, 877 candidate cases and seven composition cases pass;
+the 15 controller cases also pass in the candidate environment. Fresh provisioning,
+owned restore, UI wiring and process isolation remain open; no Edge deployment.

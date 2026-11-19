@@ -6,6 +6,7 @@ monkeypatch of shared globals, default session factory or production SDK.
 import asyncio
 import re
 from .apple_transport import OwnedHttpSession,TransportBlocked,validate_destination
+from .offline_signer import OfflineSigner
 
 async def _replace_http(client,profile,timeout):
     previous=client._http
@@ -14,7 +15,10 @@ async def _replace_http(client,profile,timeout):
     return client
 
 async def create_account(provider,*,timeout=30):
-    """Install account HTTP before sign-in. Provider egress is a separate boundary."""
+    """Install HTTP before sign-in; refuse default remote/downloading providers."""
+    signer=getattr(provider,"_owned_signer",None)
+    if not isinstance(signer,OfflineSigner) or not signer.ready:
+        raise TransportBlocked("owned_signer_required")
     from findmy import AsyncAppleAccount
     account=AsyncAppleAccount(provider,timeout=timeout)
     try:
