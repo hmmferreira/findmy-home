@@ -48,8 +48,13 @@ async def python_client(account):
     # Never fall back to Rust or ask for another independent account login.
     try:
         from findmy.icloud import AsyncFindMyClient
+        from .owned_protocol import open_shared_client
     except ImportError:
         raise SharedDiscoveryError("backend_unavailable") from None
+    from .apple_transport import OwnedHttpSession
+    transport=getattr(account,"_http",None)
+    if not isinstance(transport,OwnedHttpSession) or transport.profile!="account":
+        raise SharedDiscoveryError("owned_transport_required")
     if not callable(getattr(account,"request_pet",None)):
         raise SharedDiscoveryError("backend_incompatible")
     try:
@@ -61,7 +66,7 @@ async def python_client(account):
             account._password=None
     lease=TokenLease(account,token)
     try:
-        client=await AsyncFindMyClient.open(lease)
+        client=await open_shared_client(lease)
     except BaseException:
         lease.release()
         raise

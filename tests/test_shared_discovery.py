@@ -4,6 +4,7 @@ import json
 from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock,patch
+from findmy_home.apple_transport import OwnedHttpSession
 from findmy_home.shared_discovery import SharedDiscovery,SharedDiscoveryError,TokenLease,python_client
 
 class SharedDiscoveryTests(unittest.IsolatedAsyncioTestCase):
@@ -11,12 +12,13 @@ class SharedDiscoveryTests(unittest.IsolatedAsyncioTestCase):
         self.record=SimpleNamespace(device_name="iPhone",device_model="Test model",serial="PRIVATE_SERIAL",metadata={"secret":"PRIVATE"})
         self.client=SimpleNamespace(recovery_options=AsyncMock(return_value=SimpleNamespace(recoverable=[self.record])),
             unlock=AsyncMock(),accessories=AsyncMock(return_value=[object()]),close=AsyncMock())
-        self.account=SimpleNamespace(login_state=SimpleNamespace(name="LOGGED_IN"),_password="PRIVATE_PASSWORD",close=AsyncMock())
+        self.account=SimpleNamespace(_http=OwnedHttpSession(),login_state=SimpleNamespace(name="LOGGED_IN"),_password="PRIVATE_PASSWORD",close=AsyncMock())
         self.factory=AsyncMock(return_value=self.client)
         self.commit=AsyncMock()
         self.flow=SharedDiscovery(self.commit,factory=self.factory)
     async def asyncTearDown(self):
         await self.flow.cancel(self.flow.owner)
+        await self.account._http.close()
     async def ready(self):
         await self.flow.start("owner",self.account)
         await self.flow.task
@@ -106,7 +108,7 @@ class SharedDiscoveryTests(unittest.IsolatedAsyncioTestCase):
             opened.append(lease)
             return self.client
         module=SimpleNamespace(AsyncFindMyClient=SimpleNamespace(open=open_client))
-        with patch.dict("sys.modules",{"findmy.icloud":module}):
+        with patch.dict("sys.modules",{"findmy.icloud":module}),patch("findmy_home.owned_protocol.open_shared_client",new=open_client):
             client=await python_client(self.account)
         self.account.request_pet.assert_awaited_once()
         self.assertFalse(hasattr(client,"join"));self.assertFalse(hasattr(client,"rename"));self.assertFalse(hasattr(client,"session"))
@@ -133,3 +135,15 @@ class SharedDiscoveryTests(unittest.IsolatedAsyncioTestCase):
         self.factory.assert_not_awaited()
         self.assertIsNone(self.account._password)
         self.assertIsNone(self.flow._pending_account)
+
+    async def test_unprotected_account_is_refused_before_a_service_token_is_requested(self):
+        await self.account._http.close()
+        self.account._http=SimpleNamespace(close=AsyncMock())
+        self.account.request_pet=AsyncMock(return_value="PRIVATE_TOKEN")
+        module=SimpleNamespace(AsyncFindMyClient=SimpleNamespace())
+        self.flow.factory=python_client
+        with patch.dict("sys.modules",{"findmy.icloud":module}):
+            result=await self.ready()
+        self.assertEqual(result,{"phase":"failed","error":"owned_transport_required"})
+        self.assertIsNone(self.account._password)
+        self.account.request_pet.assert_not_awaited()

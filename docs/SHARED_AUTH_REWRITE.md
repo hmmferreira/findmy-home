@@ -60,10 +60,10 @@ claimed resolved merely by creating an adapter or changing languages.
 
 ## Test evidence
 
-- Existing app regressions plus 14 new controller cases: 93 tests.
+- Existing app regressions, 15 controller cases and 17 transport cases: 111 tests.
 - Candidate backend suite: 877 tests passed in a read-only container, with no
   network, no Apple account and no production mounts.
-- One additional integration test runs our controller over the candidate's real
+- Six integration tests include running our controller over the candidate's real
   key-share/zone/record decryption code and synthetic account fixtures, producing
   an accessory that derives rolling advertising keys.
 - Ownership, no duplicate account input, secret redaction, invalid choices,
@@ -71,9 +71,9 @@ claimed resolved merely by creating an adapter or changing languages.
   cancellation, inventory sink failures and resource closing are covered.
 
 These tests prove local composition and failure handling, not Apple's live
-protocol or a successful import from the household account. The candidate's
-network-client cleanup during cancelled initial open also needs review before
-UI integration. Its own documentation distinguishes synthetic success from
+protocol or a successful import from the household account. The app-owned client construction now closes its resources when initial open
+is cancelled, with explicit coverage. Anisette provisioning and OS-level egress
+isolation still require review before UI integration. See CREDENTIAL_BOUNDARY.md. Its own documentation distinguishes synthetic success from
 live account verification.
 
 Developer-only reproduction (the backend checkout must match backend.json and
@@ -90,8 +90,8 @@ production session files, keys, account exports or a real passcode for fixtures.
 
 ## Before replacing the existing extractor
 
-1. Review/pin the Python backend and its dependencies, including provenance and
-   cancellation cleanup. Retain notices; audit changed SDK behavior.
+1. Review/pin the Python backend and its dependencies, including provenance, provisioning and
+   process/network isolation. Retain notices; audit changed SDK behavior.
 2. Wire main sign-in completion to the owned discovery session and expose one
    unified UI flow. Later discovery requiring a fresh PET must request main-flow
    reauthentication explicitly, without retaining a password.
@@ -102,3 +102,16 @@ production session files, keys, account exports or a real passcode for fixtures.
    join/write calls and compare actual recovered accessories/sightings.
 5. Only then remove the Rust binary/build patches from a tested image. The helper
    image's separate licensing/provenance review does not disappear with Rust.
+
+
+## Owned transport increment — 2026-11-19
+
+Account, CloudKit and escrow HTTP for the prototype now go through the app-owned
+transport with explicit Apple destinations, strict TLS, private-DNS rejection and
+no redirects/environment proxies. Discovery refuses an unprotected account.
+Candidate clients are composed explicitly, without changing shared module globals
+or the production SDK. The public Apple root is bundled and hash-checked.
+See [credential boundaries and tests](CREDENTIAL_BOUNDARY.md), including the
+separate Anisette network paths and why an in-process wrapper is not a malicious
+code sandbox. UI activation remains gated; Edge and its dependency lock have not
+changed.
