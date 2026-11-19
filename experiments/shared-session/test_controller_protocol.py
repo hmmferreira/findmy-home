@@ -275,3 +275,52 @@ async def test_restored_reporting_empty_response_retains_app_error_classificatio
             await restored.fetch_raw_reports([(["synthetic-key"],[])])
         assert len(calls)==6
     finally:await restored.close()
+
+
+@pytest.mark.asyncio
+async def test_complete_encrypted_backup_restores_after_original_directory_removed(monkeypatch,tmp_path):
+    import hashlib,shutil
+    from findmy_home.private_session_store import PrivateSessionStore,restore_reporting_account
+    from findmy_home.storage import Store
+    root=tmp_path/"original";original=Store(root)
+    source=await _restored_reporting_account(monkeypatch,root)
+    identity=source.to_json()["ids"]
+    library=root/"ani_libs.bin";shutil.copyfile(root/"reviewed-library",library)
+    library.chmod(0o600)
+    private=PrivateSessionStore(root,library=library,expected_sha256=hashlib.sha256(library.read_bytes()).hexdigest())
+    try:await private.save(source)
+    finally:await source.close()
+    target=tmp_path/"restored";shutil.copytree(root,target)
+    shutil.rmtree(root)
+    assert Store(target).identity==original.identity
+    restored=await restore_reporting_account(target)
+    calls=_report_reply(monkeypatch,status=200,body=b'{"acsnLocations":{"statusCode":"200","locationPayload":[]}}')
+    try:
+        assert restored.to_json()["ids"]==identity
+        assert restored._password is None
+        assert await restored.fetch_raw_reports([(["synthetic-key"],[])])==[]
+        assert len(calls)==1
+    finally:await restored.close()
+
+@pytest.mark.asyncio
+async def test_mixed_encrypted_generations_and_missing_backup_key_fail_closed(monkeypatch,tmp_path):
+    import hashlib,json
+    from findmy_home.private_session_store import PrivateSessionStore,restore_reporting_account
+    from findmy_home.owned_session import SessionBlocked
+    from findmy_home.storage import atomic_json
+    source=await _restored_reporting_account(monkeypatch,tmp_path)
+    library=tmp_path/"ani_libs.bin";library.write_bytes((tmp_path/"reviewed-library").read_bytes());library.chmod(0o600)
+    private=PrivateSessionStore(tmp_path,library=library,expected_sha256=hashlib.sha256(library.read_bytes()).hexdigest())
+    try:
+        await private.save(source)
+        first=json.loads((tmp_path/"owned-session.json").read_text())["generation"]
+        await private.save(source)
+        second=json.loads((tmp_path/"owned-session.json").read_text())["generation"]
+    finally:await source.close()
+    # An older legacy file must not mask damage to the authoritative owned mode.
+    atomic_json(tmp_path/"account.json",{"fixture":"legacy-must-not-load"})
+    newkey=tmp_path/("session-"+second+".key")
+    newkey.write_bytes((tmp_path/("session-"+first+".key")).read_bytes())
+    with pytest.raises(SessionBlocked):await restore_reporting_account(tmp_path)
+    newkey.unlink()
+    with pytest.raises(SessionBlocked):await restore_reporting_account(tmp_path)

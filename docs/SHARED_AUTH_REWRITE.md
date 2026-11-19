@@ -147,3 +147,13 @@ and bounded private IPC/termination; dependency provenance/licensing sign-off;
 backup/restore rehearsal and deliberate protected-UI live comparison. Production
 main and dependency lock remain unchanged. This checkpoint closes the old report
 restoration gap but is not permission to enable unfinished provisioning.
+
+## Security and recovery rehearsal — 2026-11-19
+
+See SECURITY_RECOVERY_REVIEW.md: 172 app tests, 877 backend tests and 12 candidate
+integration tests pass, including full private-copy recovery after original
+directory deletion, missing/mixed key failures and post-replace fsync failure.
+OSV check of 30 locked Python packages found zero unreviewed advisories with three
+existing applicability notes. This closes synthetic backup rehearsal; target-host
+isolation/native artifact policy and production composition remain open. No Edge
+deployment or household state change.

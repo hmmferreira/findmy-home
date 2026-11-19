@@ -16,6 +16,13 @@ from .storage import atomic_json, read_json
 
 MANIFEST="owned-session.json"
 
+def _unique_pairs(pairs):
+    value={}
+    for key,item in pairs:
+        if key in value:raise SessionBlocked("session_storage_invalid")
+        value[key]=item
+    return value
+
 def session_available(root):
     root=Path(root)
     # Include broken symlinks: they must select owned validation, never fallback.
@@ -79,6 +86,7 @@ class PrivateSessionStore:
 
 async def restore_reporting_account(root):
     root=Path(root)
+    if root.is_symlink():raise SessionBlocked("session_storage_invalid")
     marker=root/MANIFEST
     if not marker.exists() and not marker.is_symlink():
         from .apple import ReportingAccount
@@ -86,7 +94,7 @@ async def restore_reporting_account(root):
         return ReportingAccount.from_json(session,anisette_libs_path=str(root/"ani_libs.bin"))
     def load():
         try:
-            manifest=json.loads(_private_bytes(marker,4096))
+            manifest=json.loads(_private_bytes(marker,4096),object_pairs_hook=_unique_pairs)
             if not isinstance(manifest,dict) or set(manifest)!={"version","generation","library","sha256"} or type(manifest["version"]) is not int or manifest["version"]!=1:
                 raise SessionBlocked("session_storage_invalid")
             generation=manifest["generation"]

@@ -56,3 +56,35 @@ class PrivateSessionStoreTests(unittest.IsolatedAsyncioTestCase):
         with patch('findmy_home.private_session_store.restore_account',new=AsyncMock(side_effect=SessionBlocked('session_expired'))),patch('findmy_home.apple.ReportingAccount.from_json') as legacy:
             with self.assertRaises(SessionBlocked):await restore_reporting_account(self.root)
             legacy.assert_not_called()
+
+    async def test_published_manifest_survives_post_replace_fsync_error(self):
+        def publish_then_fail(path,value):
+            atomic_json(path,value)
+            raise OSError("synthetic post-replace directory fsync failure")
+        with patch('findmy_home.private_session_store.snapshot_account',new=AsyncMock(return_value=b'cipher')),patch('findmy_home.private_session_store.atomic_json',side_effect=publish_then_fail):
+            with self.assertRaises(OSError):await self.store.save(object())
+        manifest=read_json(self.root/'owned-session.json')
+        for suffix in ('key','enc'):self.assertTrue((self.root/('session-'+manifest['generation']+'.'+suffix)).exists())
+        with patch('findmy_home.private_session_store.restore_account',new=AsyncMock(return_value='restored')):
+            self.assertEqual(await restore_reporting_account(self.root),'restored')
+
+    async def test_owner_only_permissions_required_for_every_session_part(self):
+        with patch('findmy_home.private_session_store.snapshot_account',new=AsyncMock(return_value=b'cipher')):await self.store.save(object())
+        manifest=read_json(self.root/'owned-session.json')
+        paths=[self.root/'owned-session.json']+[self.root/('session-'+manifest['generation']+'.'+suffix) for suffix in ('key','enc')]
+        for path in paths:
+            with self.subTest(part=path.suffix):
+                path.chmod(0o644)
+                with self.assertRaises(SessionBlocked):await restore_reporting_account(self.root)
+                path.chmod(0o600)
+
+    async def test_duplicate_manifest_keys_rejected_before_restore(self):
+        path=self.root/'owned-session.json';path.write_text('{"version":1,"version":1}')
+        path.chmod(0o600)
+        with patch('findmy_home.private_session_store.restore_account',new=AsyncMock()) as restore:
+            with self.assertRaises(SessionBlocked):await restore_reporting_account(self.root)
+            restore.assert_not_awaited()
+
+    async def test_symlink_data_root_rejected(self):
+        link=self.root/'alias';link.symlink_to(self.root,target_is_directory=True)
+        with self.assertRaises(SessionBlocked):await restore_reporting_account(link)
