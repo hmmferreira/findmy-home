@@ -1,0 +1,20 @@
+name: Find My Home runtime capability probe
+version: 0.1.0
+slug: findmy_runtime_probe
+description: One-shot synthetic Linux worker capability check; no account or device access
+url: https://github.com/hmmferreira/findmy-home
+arch:
+  - amd64
+startup: application
+boot: manual
+init: false
+ingress: false
+hassio_api: false
+homeassistant_api: false
+docker_api: false
+host_network: false
+full_access: false
+apparmor: true
+options: {}
+schema: {}
+stage: experimental
