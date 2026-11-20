@@ -1,3 +1,11 @@
+# 0.1.14-dev.1.4 — Distinguish Apple refusals from local sign-in errors
+
+- Recognize typed Apple account/password and protocol refusals instead of an
+  unclassified generic sign-in failure.
+- Record fixed login substeps and safe numeric refusal codes, never response
+  prose, credentials, phone numbers or raw tracebacks.
+- Show recent sign-in errors even when an earlier location session is saved.
+
 # 0.1.14-dev.1.3 — Explain and preserve local authentication setup failures
 
 - Preserve setup-required failures through the background authentication flow.

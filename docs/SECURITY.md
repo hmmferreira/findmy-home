@@ -43,6 +43,14 @@ Recovery inputs reject newlines/NUL; ownership prevents cross-user responses.
 CSP/no-store headers are set. Map executable assets are local; OpenStreetMap sees
 browser tile requests. No reverse geocoding is done.
 
+Authentication logs use fixed substeps (account setup, Apple sign-in and method
+listing). Typed Apple refusals can include only the fixed init/complete label and
+a bounded integer error code. Unexpected/protocol/state failures can include a
+fixed exception category and an allowlisted public source-component label/line
+number. Raw tracebacks, local variables, exception messages, response bodies and
+account identifiers are never rendered into these diagnostic events. This helps
+identify a failure without replaying credentials or automatically retrying login.
+
 ## Release review still required
 - Live non-admin browser validation remains outstanding. Supervisor 2026.11.0's
   [ingress handler](https://github.com/home-assistant/supervisor/blob/2026.11.0/supervisor/api/ingress.py)
