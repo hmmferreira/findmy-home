@@ -1,39 +1,52 @@
-# Retrace naming and compatibility
+# Retrace clean installation
 
-Retrace is the product name. The currently implemented tracking source is Apple
-Find My; other ecosystems are a future direction, not an implemented feature.
-Apple Find My, FindMy.py and their upstream authors retain their actual names,
-licenses and attribution. This project is independent and is not endorsed by Apple.
+The owner chose a clean break, accepting a fresh setup rather than retaining old
+technical identifiers. Current project-owned code, package folders, app slugs,
+HA integration domain/discovery service and entity prefixes use `retrace`.
+The canonical repository is https://github.com/hmmferreira/retrace.
 
-## Source and installation names
+- App source and Python package: `retrace/` and `retrace/rootfs/app/retrace/`.
+- Companion integration/domain: `custom_components/retrace`, domain `retrace`.
+- App slug: `retrace`; optional separate evaluation app: `retrace_shared`.
+- Capability probe slug/source: `retrace_runtime_probe`.
+- Private data root: `/data/retrace`; optional override: `RETRACE_DATA`.
+- Internal runtime settings: `RETRACE_RUNTIME_MODE`, `RETRACE_PRIVATE_EVALUATION`.
+- Native profile: `retrace-native`; pinned protocol source: `/opt/retrace-protocol`.
+- Encrypted session/signing format markers use Retrace names. Old ciphertext,
+  identity manifests and app data are deliberately not auto-imported.
+- New entity IDs are suggested as `retrace_edge_…` / `retrace_stable_…`.
 
-The canonical repository is https://github.com/hmmferreira/retrace. App source is
-`retrace/`, its Python package is `retrace/rootfs/app/retrace/`, and the synthetic
-capability probe is `retrace_runtime_probe/`. Shared delivery uses the
-`retrace_shared/` folder. Build/test workflows and import paths use these names.
-The native isolation child profile is `retrace-native`; its restrictions remain
-unchanged. The container account is retrace, retaining numeric UID/GID 1000.
+## Existing household replacement
 
-## Compatibility anchors
+1. Decide whether to take a Home Assistant backup before uninstalling apps or
+   integration entries. Teardown loses saved sessions and registry identities;
+   Git source is not a backup of them. Backups contain sensitive data and stay
+   in the user's normal private backup system, never in Git or chat.
+2. Add the canonical `https://github.com/hmmferreira/retrace#edge` app repository.
+   Install Retrace Edge. This is a fresh app, not an in-place upgrade of the
+   pre-rename slugs. Keep old services stopped while using the new poller.
+3. Install/redownload the companion through Marketplace. Remove old integration
+   entries through HA's supported API/UI before removing their old component
+   files. Update dashboard/automation consumers or remove obsolete references.
+   Activate the new component with the normal Core restart; no .storage edits.
+4. Configure explicit private-evaluation setup options for this experimental
+   runtime, open protected ingress and authenticate again. Recovery consent,
+   factors and trusted-device unlock stay in the UI. Select the items anew.
+5. Approve the discovered Retrace integration. Verify fresh entities, polling,
+   zone behavior and new Recorder history. Old history is not automatically
+   transferred to the new IDs; do not purge the Recorder database to rename it.
+6. Once the chosen backup/teardown conditions are met, remove old app/integration
+   installations and the old repository registration through supported controls.
+   Do not delete unrelated MQTT tracking, iCloud3 or other household integrations.
 
-Existing installations keep the app slugs `findmy_home`, `findmy_home_shared` and
-`findmy_runtime_probe`, HA integration domain/folder `custom_components/findmy_home`,
-discovery service `findmy_home`, private `/data/findmy_home` and optional
-`FINDMY_HOME_DATA` setting. Entity/device/instance identifiers and cryptographic
-format markers remain unchanged. These are deliberate upgrade compatibility
-anchors, not stale product branding. Do not text-replace them or uninstall/re-add
-an integration to change its name: doing so can lose session access and detach
-Recorder history. User-selected integration titles remain preserved. The companion
-update changes known default entry titles to Retrace when activated in Core.
+Private evaluation and release/security gates remain unchanged. This is not a
+stable-release promotion. Setup may require the user to accept the Marketplace
+warning and enter Apple credentials; agents must not bypass either requirement.
 
-The installed HA repository can retain its original `findmy-home#edge` registration
-because GitHub redirects Git fetch/clone operations. This preserves Supervisor's
-repository prefix, installed app identity and data. Do not remove/re-add it or
-create a new GitHub repository at the old name, which disables that redirect.
-New install links use `retrace#edge`; their Supervisor prefix differs. Never
-hardcode either prefix. Verify store refresh and app update after the rename.
-Local Git remotes use `git@github.com:hmmferreira/retrace.git`.
+## Names that belong to others
 
-An app update does not replace custom integration files in Core. The companion
-update remains a separate Marketplace action and its activation requires Core
-restart. Shared stable promotion remains blocked by the documented release gates.
+Apple Find My, iCloud, FindMy.py, findmy-export and other third-party projects
+retain their real names, import namespaces, copyright/license notices and source
+URLs. They are dependencies/services, not former Retrace branding. Renaming them
+would obscure provenance and can break protocol compatibility. Retrace currently
+supports Apple Find My; other ecosystems remain a future direction.

@@ -36,7 +36,9 @@ progress and cancellation. Respect rate limits and per-item cooldowns. Do not
 replay authentication/passcode operations automatically or block the event loop.
 Keep action feedback by its control and setup feedback in Setup; show durable
 account/recovery/tracking/check status separately. Use accessible text, not color
-alone, and verify mobile layout. Preserve HA integration and channel identities.
+alone, and verify mobile layout. Keep stable and Edge identities distinct. The owner explicitly chose a clean-break
+rename: current app/domain/data/entity identifiers use retrace, with no legacy
+aliases or automatic secret/history migration. See docs/BRANDING.md.
 
 Run focused synthetic tests and the appropriate container regression suite
 (`python3 tools/docker-check.py test --non-root`). Protocol, storage, native policy
@@ -52,6 +54,6 @@ packages alone or force-push. Shared stable rendering is deliberately blocked.
 Do not remove that gate or enable private evaluation by default to ship a release.
 Native rights/provenance and credential-boundary reviews remain release gates.
 Verify installed version, protection and readiness through HA after deployment;
-an uncertain lifecycle result must be read back before retry. Preserve sessions,
-selected items and setup switches. Record verified results without private data.
+an uncertain lifecycle result must be read back before retry. Preserve sessions and selected items within the current Retrace installation;
+never import pre-rename sessions or identities implicitly. Record verified results without private data.
 Do not contact upstream maintainers without explicit user instructions.

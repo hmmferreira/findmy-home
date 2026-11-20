@@ -22,7 +22,7 @@ def render(source,target,version):
         app=stage/'retrace'
         config=app/'config.yaml'
         text=config.read_text()
-        for key,value in (('slug','findmy_home_shared'),('name','Retrace Shared Edge'),('panel_title','Retrace Shared Edge')):
+        for key,value in (('slug','retrace_shared'),('name','Retrace Shared Edge'),('panel_title','Retrace Shared Edge')):
             text=re.sub(r'(?m)^'+key+r':.*$',key+': '+value,text)
         config.write_text(text)
         (app/'EVALUATION.json').write_text(json.dumps({'channel':'edge','scope':'side-by-side-private-evaluation','version':version},indent=2)+'\n')

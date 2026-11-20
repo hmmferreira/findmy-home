@@ -16,7 +16,7 @@ from .storage import atomic_json
 BACKEND_REVISION="8ecfae6cb34b29caf0bd8176ee73155ca81415a8"
 BACKEND_ARCHIVE_SHA256="676e871098ec60a9c5e6718ea8cc18215631b036b99117a814ac1eb87d4e99e7"
 SIGNING_MANIFEST="owned-signing.json"
-AAD=b"findmy-home-owned-signing-v1"
+AAD=b"retrace-owned-signing-v1"
 
 class RuntimeBlocked(RuntimeError):
     def __init__(self,code):self.code=code;super().__init__(code)
@@ -54,15 +54,15 @@ def require_shared_backend():
         import findmy
         from findmy.icloud import AsyncFindMyClient
         from findmy.reports.anisette import DeviceIdentity
-        if Path(findmy.__file__).resolve().parent!=Path('/opt/findmy-shared/findmy'):raise ValueError()
+        if Path(findmy.__file__).resolve().parent!=Path('/opt/retrace-protocol/findmy'):raise ValueError()
     except Exception:raise RuntimeBlocked("shared_image_required") from None
 
 def configure_runtime(options):
     mode=options['runtime_mode']
     if mode=='shared':require_shared_backend()
     elif Path(__file__).with_name('shared_backend.json').exists():raise RuntimeBlocked('legacy_image_required')
-    os.environ['FINDMY_RUNTIME_MODE']=mode
-    os.environ['FINDMY_PRIVATE_EVALUATION']='1' if mode=='shared' and options.get('private_evaluation',False) is True else '0'
+    os.environ['RETRACE_RUNTIME_MODE']=mode
+    os.environ['RETRACE_PRIVATE_EVALUATION']='1' if mode=='shared' and options.get('private_evaluation',False) is True else '0'
     return mode
 
 def owned_session_available(root):

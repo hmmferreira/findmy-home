@@ -46,11 +46,11 @@ class StartupTests(unittest.TestCase):
     def test_private_evaluation_environment_only_comes_from_shared_checked_options(self):
         with patch.dict(os.environ,{},clear=False),patch('retrace.shared_runtime.require_shared_backend'):
             configure_runtime({'runtime_mode':'shared','private_evaluation':True})
-            self.assertEqual(os.environ['FINDMY_PRIVATE_EVALUATION'],'1')
+            self.assertEqual(os.environ['RETRACE_PRIVATE_EVALUATION'],'1')
             configure_runtime({'runtime_mode':'shared','private_evaluation':False})
-            self.assertEqual(os.environ['FINDMY_PRIVATE_EVALUATION'],'0')
+            self.assertEqual(os.environ['RETRACE_PRIVATE_EVALUATION'],'0')
             configure_runtime({'runtime_mode':'legacy','private_evaluation':True})
-            self.assertEqual(os.environ['FINDMY_PRIVATE_EVALUATION'],'0')
+            self.assertEqual(os.environ['RETRACE_PRIVATE_EVALUATION'],'0')
 
     def test_shared_mode_never_falls_back_if_image_marker_is_missing(self):
         with patch('retrace.shared_runtime.require_shared_backend',side_effect=RuntimeBlocked('shared_image_required')):

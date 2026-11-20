@@ -14,7 +14,7 @@ with tempfile.TemporaryDirectory() as temp:
     stage=Path(temp)/name
     stage.mkdir()
     for source,target in ((root/"retrace",stage/"payload/retrace"),
-                          (root/"custom_components/findmy_home",stage/"payload/custom_components/findmy_home")):
+                          (root/"custom_components/retrace",stage/"payload/custom_components/retrace")):
         shutil.copytree(source,target,ignore=shutil.ignore_patterns("__pycache__","*.pyc"))
     shutil.copyfile(root/"tools/installer.py",stage/"install.py")
     shutil.copytree(root/"docs",stage/"docs")

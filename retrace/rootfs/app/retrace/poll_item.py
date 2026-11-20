@@ -17,7 +17,7 @@ from .search import fetch_bounded
 async def query():
     from findmy import FindMyAccessory
     from findmy.errors import InvalidCredentialsError, UnauthorizedError
-    root=Path(os.environ.get("FINDMY_HOME_DATA","/data/findmy_home"))
+    root=Path(os.environ.get("RETRACE_DATA","/data/retrace"))
     request=json.loads(sys.stdin.buffer.read(4096))
     item_id=request["id"]
     if not isinstance(item_id,str) or not re.fullmatch("[a-f0-9]{32}",item_id):

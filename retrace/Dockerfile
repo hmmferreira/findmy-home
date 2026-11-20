@@ -51,7 +51,7 @@ FROM dadoum/anisette-v3-server@sha256:d551c75454bcbee68dc262d4247d5f87fa309dfc8f
 FROM python:3.12-slim-bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libssl3 libstdc++6 curl libplist-dev \
     && rm -rf /var/lib/apt/lists/*
-RUN useradd --uid 1000 --home-dir /data/findmy_home/home --no-create-home retrace
+RUN useradd --uid 1000 --home-dir /data/retrace/home --no-create-home retrace
 COPY --from=build /src/target/release/findmy-export /usr/local/bin/findmy-export
 COPY --from=anisette /opt/ /opt/
 COPY requirements.lock /app/requirements.lock

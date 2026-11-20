@@ -9,7 +9,7 @@ same-process code. Shared stable promotion remains blocked.
 
 ## Isolation
 The app runs web/polling processes as uid/gid 1000 after preparing its own private
-/data/findmy_home directory. No Docker socket, host network, device access,
+/data/retrace directory. No Docker socket, host network, device access,
 privileged mode, /config mount or Core administrator API token is requested.
 The local helper is bundled in the app container, binds only loopback, and has no published port. Helper/exporter child environments do not inherit the Supervisor token.
 

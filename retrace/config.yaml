@@ -1,6 +1,6 @@
 name: Retrace (experimental)
-version: 0.1.12
-slug: findmy_home
+version: 0.1.14
+slug: retrace
 description: Location history in Home Assistant with Apple Find My support
 url: https://github.com/hmmferreira/retrace
 homeassistant: 2026.9.3

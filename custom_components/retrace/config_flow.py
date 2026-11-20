@@ -7,7 +7,7 @@ from .const import DOMAIN, normalize_channel, entry_title
 from .api import Api, Unauthorized
 from .discovery import connection_data
 
-class FindMyHomeFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class RetraceFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     _connection = None
 

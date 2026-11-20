@@ -7,7 +7,7 @@ class Unauthorized(Exception):
     pass
 
 def validate_host(host):
-    if not isinstance(host, str) or not re.fullmatch(r"[a-z0-9-]+-findmy-home(?:\.local\.hass\.io)?", host):
+    if not isinstance(host, str) or not re.fullmatch(r"[a-z0-9-]+-retrace(?:\.local\.hass\.io)?", host):
         raise ValueError("Use the discovered Supervisor app host")
     return host
 

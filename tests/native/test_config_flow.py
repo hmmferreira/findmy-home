@@ -8,17 +8,17 @@ from unittest.mock import AsyncMock,patch
 from homeassistant.data_entry_flow import AbortFlow
 
 ROOT=Path(__file__).resolve().parents[2]
-package=ModuleType("custom_components.findmy_home")
-package.__path__=[str(ROOT/"custom_components/findmy_home")]
+package=ModuleType("custom_components.retrace")
+package.__path__=[str(ROOT/"custom_components/retrace")]
 sys.modules[package.__name__]=package
 spec=importlib.util.spec_from_file_location(package.__name__+".config_flow",Path(package.__path__[0])/"config_flow.py")
 module=importlib.util.module_from_spec(spec);sys.modules[spec.name]=module;spec.loader.exec_module(module)
 
 class DiscoveryTests(unittest.IsolatedAsyncioTestCase):
     def setup_flow(self):
-        flow=module.FindMyHomeFlow()
+        flow=module.RetraceFlow()
         flow.hass=SimpleNamespace()
-        info=SimpleNamespace(slug="fixture_retrace",config={"host":"fixture-findmy-home","token":"n"*64,"instance_id":"a"*32,"channel":"edge","unrelated":"DO_NOT_RETAIN"})
+        info=SimpleNamespace(slug="fixture_retrace",config={"host":"fixture-retrace","token":"n"*64,"instance_id":"a"*32,"channel":"edge","unrelated":"DO_NOT_RETAIN"})
         existing=SimpleNamespace(unique_id="a"*32)
         return flow,info,existing
 

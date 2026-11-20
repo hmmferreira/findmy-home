@@ -17,7 +17,7 @@ class ItemEntity(CoordinatorEntity):
     def suggested_object_id(self):
         # New registry IDs explicitly carry their channel; existing registry IDs
         # and stable unique IDs are preserved rather than silently renamed.
-        return "findmy_home_"+self.channel+"_"+self.item_id[:12]+self._object_suffix
+        return "retrace_"+self.channel+"_"+self.item_id[:12]+self._object_suffix
 
     @property
     def item(self):

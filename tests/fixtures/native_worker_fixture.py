@@ -69,7 +69,7 @@ class Provider:
         try:subprocess.run(["/bin/true"],check=True)
         except PermissionError:pass
         else:raise RuntimeError("PRIVATE_BOUNDARY_FAILURE")
-        if "FINDMY_SYNTHETIC_PARENT_SECRET" in os.environ:raise RuntimeError("PRIVATE_BOUNDARY_FAILURE")
+        if "RETRACE_SYNTHETIC_PARENT_SECRET" in os.environ:raise RuntimeError("PRIVATE_BOUNDARY_FAILURE")
         # Public code remains readable, while native stdout/stderr are discarded.
         with open(native_worker_child.__file__,"rb") as stream:assert stream.read(1)
         print("PRIVATE_NATIVE_STDOUT",flush=True)

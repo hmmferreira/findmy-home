@@ -1,5 +1,5 @@
 {
-  "domain": "findmy_home",
+  "domain": "retrace",
   "name": "Retrace",
   "codeowners": [
     "@hmmferreira"
@@ -13,5 +13,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/hmmferreira/retrace/issues",
   "requirements": [],
-  "version": "0.1.10"
+  "version": "0.1.14"
 }

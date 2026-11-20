@@ -77,7 +77,7 @@ if args.mode=="smoke":
 from pathlib import Path
 for _ in range(30):
  try:
-  identity=json.loads(Path('/data/findmy_home/identity.json').read_text())
+  identity=json.loads(Path('/data/retrace/identity.json').read_text())
   req=urllib.request.Request('http://127.0.0.1:8100/v1/snapshot',headers={'Authorization':'Bearer '+identity['read_token']})
   with urllib.request.urlopen(req,timeout=3) as f: snapshot=json.load(f)
   break

@@ -10,7 +10,7 @@ No existing household data or services are changed by building it.
 Build the shared image intentionally from the app directory:
 
 ```sh
-docker build -f retrace/Dockerfile.shared -t findmy-home:shared retrace
+docker build -f retrace/Dockerfile.shared -t retrace:shared retrace
 ```
 
 `Dockerfile.shared` fetches exactly protocol revision
@@ -30,7 +30,7 @@ Set the app options explicitly (or `/data/options.json` for a standalone test):
 The default remains `legacy`. Shared mode refuses the legacy image, and the shared
 image refuses legacy mode. Bootstrap drops root before any account operation,
 starts only the web/worker process in shared mode, and fails visibly if startup
-exits. `FINDMY_RUNTIME_MODE` comes from validated options rather than an inherited
+exits. `RETRACE_RUNTIME_MODE` comes from validated options rather than an inherited
 environment override. Changing modes is not an automatic data migration; keep a
 complete app backup. Legacy startup refuses an owned-session marker so it cannot
 silently use an old plaintext account session after shared mode was selected.
@@ -38,7 +38,7 @@ silently use an old plaintext account session after shared mode was selected.
 ## Reviewed artifact and first identity
 
 Shared startup requires a release-approved bundled artifact policy and a matching
-private `/data/findmy_home/owned-libs.bin`. It verifies the artifact before opening
+private `/data/retrace/owned-libs.bin`. It verifies the artifact before opening
 listeners. Users cannot approve a binary by supplying its hash in the options or
 a private session manifest. **Default selection refuses the private-evaluation entry with
 `artifact_review_required`. Explicit private Edge evaluation selects the fixed

@@ -60,7 +60,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply",action="store_true")
     parser.add_argument("--target",type=Path)
-    parser.add_argument("--backup-root",type=Path,default=Path("/config/findmy-home-code-backups"))
+    parser.add_argument("--backup-root",type=Path,default=Path("/config/retrace-code-backups"))
     args=parser.parse_args()
     target=args.target
     if target is None:

@@ -58,7 +58,7 @@ class DescriptionTests(unittest.TestCase):
             self.assertEqual(store.items[item_id]["model_name"],"iPhone 17 Pro Max")
 
     def test_legacy_channel_is_edge_and_stable_stays_stable(self):
-        path=Path(__file__).resolve().parents[1]/"custom_components/findmy_home/const.py"
+        path=Path(__file__).resolve().parents[1]/"custom_components/retrace/const.py"
         spec=importlib.util.spec_from_file_location("findmy_constants",path)
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
         self.assertEqual(module.normalize_channel("beta"),"edge")
@@ -67,11 +67,11 @@ class DescriptionTests(unittest.TestCase):
         self.assertEqual(module.entry_title("stable"),"Retrace")
 
     def test_retrace_default_title_migration_preserves_custom_titles_and_domain(self):
-        path=Path(__file__).resolve().parents[1]/"custom_components/findmy_home/const.py"
+        path=Path(__file__).resolve().parents[1]/"custom_components/retrace/const.py"
         spec=importlib.util.spec_from_file_location("retrace_constants",path)
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
-        self.assertEqual(module.DOMAIN,"findmy_home")
-        for title in ("Find My Home", "Find My Home Edge", "Find My Home (Beta)"):
+        self.assertEqual(module.DOMAIN,"retrace")
+        for title in ("Retrace (Beta)", "Retrace (Edge)", "Retrace (Stable)"):
             self.assertEqual(module.migrated_entry_title(title,"edge"),"Retrace Edge")
             self.assertEqual(module.migrated_entry_title(title,"stable"),"Retrace")
         self.assertEqual(module.migrated_entry_title("My personal tracker","edge"),"My personal tracker")

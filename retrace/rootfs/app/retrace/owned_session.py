@@ -19,7 +19,7 @@ from .apple_transport import OwnedHttpSession
 from .offline_signer import OfflineSigner, SignerBlocked, provider_for
 from .owned_protocol import _replace_http
 
-_MAGIC=b"FMHSESSION\x01"
+_MAGIC=b"RETRACESESSION\x01"
 _MAX_BYTES=24*1024*1024
 _MAX_LIFETIME=30*24*60*60
 _TOKEN_FIELDS={"searchPartyToken","cloudKitToken","mmeAuthToken"}

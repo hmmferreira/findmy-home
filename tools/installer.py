@@ -44,7 +44,7 @@ def install(root,addon,component,apply=False):
     staged=[]
     published=[]
     try:
-        for source,target in ((root/"payload/retrace",addon),(root/"payload/custom_components/findmy_home",component)):
+        for source,target in ((root/"payload/retrace",addon),(root/"payload/custom_components/retrace",component)):
             target.parent.mkdir(parents=True,exist_ok=True)
             stage=Path(tempfile.mkdtemp(prefix=".retrace-stage-",dir=target.parent))
             staged.append(stage)
@@ -68,7 +68,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply",action="store_true")
     parser.add_argument("--addon-target",type=Path,default=None)
-    parser.add_argument("--integration-target",type=Path,default=Path("/config/custom_components/findmy_home"))
+    parser.add_argument("--integration-target",type=Path,default=Path("/config/custom_components/retrace"))
     args=parser.parse_args()
     try:
         addon=args.addon_target

@@ -92,7 +92,7 @@ class PrivateSessionStoreTests(unittest.IsolatedAsyncioTestCase):
     async def test_shared_mode_never_restores_legacy_account(self):
         import os
         atomic_json(self.root/'account.json',{'legacy':True})
-        with patch.dict(os.environ,{'FINDMY_RUNTIME_MODE':'shared'}),patch('retrace.apple.ReportingAccount.from_json') as legacy:
+        with patch.dict(os.environ,{'RETRACE_RUNTIME_MODE':'shared'}),patch('retrace.apple.ReportingAccount.from_json') as legacy:
             with self.assertRaises(SessionBlocked):await restore_reporting_account(self.root)
             legacy.assert_not_called()
 
@@ -101,7 +101,7 @@ class PrivateSessionStoreTests(unittest.IsolatedAsyncioTestCase):
         class SyntheticProcessSigner:pass
         module=types.ModuleType('retrace.native_worker');module.ProcessOfflineSigner=SyntheticProcessSigner
         with patch('retrace.private_session_store.snapshot_account',new=AsyncMock(return_value=b'cipher')):await self.store.save(object())
-        with patch.dict(os.environ,{'FINDMY_RUNTIME_MODE':'shared'}),patch.dict(sys.modules,{'retrace.native_worker':module}),patch('retrace.artifact_policy.reviewed_artifact',return_value=types.SimpleNamespace(expected_sha256='a'*64)),patch('retrace.artifact_policy.verify_artifact',new=AsyncMock()),patch('retrace.private_session_store.restore_account',new=AsyncMock(return_value='isolated')) as restore:
+        with patch.dict(os.environ,{'RETRACE_RUNTIME_MODE':'shared'}),patch.dict(sys.modules,{'retrace.native_worker':module}),patch('retrace.artifact_policy.reviewed_artifact',return_value=types.SimpleNamespace(expected_sha256='a'*64)),patch('retrace.artifact_policy.verify_artifact',new=AsyncMock()),patch('retrace.private_session_store.restore_account',new=AsyncMock(return_value='isolated')) as restore:
             self.assertEqual(await restore_reporting_account(self.root),'isolated')
             self.assertIs(restore.call_args.kwargs['signer_factory'],SyntheticProcessSigner)
 
@@ -109,7 +109,7 @@ class PrivateSessionStoreTests(unittest.IsolatedAsyncioTestCase):
         import os,sys,types
         module=types.ModuleType('retrace.native_worker');module.ProcessOfflineSigner=type('SyntheticProcessSigner',(),{})
         with patch('retrace.private_session_store.snapshot_account',new=AsyncMock(return_value=b'cipher')):await self.store.save(object())
-        with patch.dict(os.environ,{'FINDMY_RUNTIME_MODE':'shared'}),patch.dict(sys.modules,{'retrace.native_worker':module}),patch('retrace.artifact_policy.reviewed_artifact',return_value=types.SimpleNamespace(expected_sha256='b'*64)),patch('retrace.private_session_store.restore_account',new=AsyncMock()) as restore:
+        with patch.dict(os.environ,{'RETRACE_RUNTIME_MODE':'shared'}),patch.dict(sys.modules,{'retrace.native_worker':module}),patch('retrace.artifact_policy.reviewed_artifact',return_value=types.SimpleNamespace(expected_sha256='b'*64)),patch('retrace.private_session_store.restore_account',new=AsyncMock()) as restore:
             with self.assertRaises(SessionBlocked) as raised:await restore_reporting_account(self.root)
             self.assertEqual(raised.exception.code,'session_artifact_mismatch')
             restore.assert_not_awaited()

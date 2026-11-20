@@ -12,7 +12,7 @@ from retrace.shared_runtime import read_options,configure_runtime,RuntimeBlocked
 def main():
     os.umask(0o077)
     options=read_options()
-    root=Path('/data/findmy_home')
+    root=Path('/data/retrace')
     prepare_private_root(root,1000 if os.geteuid()==0 else None,1000)
     publish_runtime_options(root,options,uid=1000 if os.geteuid()==0 else None,gid=1000)
     if os.geteuid()==0:

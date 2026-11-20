@@ -78,7 +78,12 @@ jobs:
           if [ "$REQUESTED_CHANNEL" = edge ]; then
             VERSION="$VERSION-dev.$GITHUB_RUN_NUMBER.$GITHUB_RUN_ATTEMPT"
           fi
-          python tools/render-channel.py "$REQUESTED_CHANNEL" "$VERSION" "$RUNNER_TEMP/channel-tree"
+          if [ "$REQUESTED_CHANNEL" = edge ]; then
+            python tools/render-channel.py edge "$VERSION" "$RUNNER_TEMP/channel-tree" --runtime shared
+          else
+            echo 'Stable runtime promotion remains blocked pending the release review.' >&2
+            exit 1
+          fi
           echo "CHANNEL=$REQUESTED_CHANNEL" >> "$GITHUB_ENV"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
       - name: Publish channel with normal fast-forward Git history

@@ -13,11 +13,11 @@ class InstallerTests(unittest.TestCase):
         self.root=Path(self.tmp.name)/"package"
         self.root.mkdir()
         shutil.copyfile(Path(__file__).parents[1]/"tools/installer.py",self.root/"install.py")
-        for name in ("payload/retrace/config.yaml","payload/custom_components/findmy_home/manifest.json"):
+        for name in ("payload/retrace/config.yaml","payload/custom_components/retrace/manifest.json"):
             p=self.root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text("fixture")
         self.manifest()
         self.app=Path(self.tmp.name)/"addons/local/retrace"
-        self.integration=Path(self.tmp.name)/"config/custom_components/findmy_home"
+        self.integration=Path(self.tmp.name)/"config/custom_components/retrace"
     def tearDown(self):
         self.tmp.cleanup()
     def manifest(self):

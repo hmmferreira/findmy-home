@@ -37,8 +37,8 @@ with tempfile.TemporaryDirectory() as directory:
     atomic_json(root/'runtime-options.json',options)
     configure_runtime(options)
     command,environment=report_launch(root)
-    assert environment['FINDMY_RUNTIME_MODE']=='shared'
-    assert environment['FINDMY_PRIVATE_EVALUATION']=='1'
+    assert environment['RETRACE_RUNTIME_MODE']=='shared'
+    assert environment['RETRACE_PRIVATE_EVALUATION']=='1'
     assert 'PYTHONPATH' not in environment and 'SUPERVISOR_TOKEN' not in environment
     child=subprocess.run(command,input=b'{"id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}',
         capture_output=True,env=environment,timeout=15,check=False)

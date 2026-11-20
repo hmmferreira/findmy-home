@@ -6,14 +6,14 @@ still need their first end-to-end trial. Do not publish the bundled exporter
 before its license/redistribution rights have been resolved.
 
 ## Copy the package
-1. Download the findmy-home-local-0.1.0.tar.gz package to your computer.
+1. Download the retrace-local-0.1.0.tar.gz package to your computer.
 2. Open Home Assistant → Studio Code Server. Upload it to /config using
    Explorer's Upload action (or drag the archive into the Explorer).
 3. Open Terminal → New Terminal and extract it:
 
     cd /config
-    tar -xzf findmy-home-local-0.1.0.tar.gz
-    cd findmy-home-local-0.1.0
+    tar -xzf retrace-local-0.1.0.tar.gz
+    cd retrace-local-0.1.0
     python3 install.py
 
 The last command is a dry run. It verifies every packaged file and prints the

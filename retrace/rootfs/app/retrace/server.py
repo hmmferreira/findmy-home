@@ -198,7 +198,7 @@ async def announce(store):
         return
     async with ClientSession(timeout=ClientTimeout(total=15)) as session:
         async with session.post("http://supervisor/discovery", headers={"Authorization": "Bearer " + token},
-            json={"service": "findmy_home", "config": {"host": socket.gethostname(), "port": 8100,
+            json={"service": "retrace", "config": {"host": socket.gethostname(), "port": 8100,
                   "token": store.identity["read_token"], "instance_id": store.identity["instance_id"], "channel":store.channel}}) as response:
             return response.status == 200
 
@@ -206,7 +206,7 @@ async def announce(store):
 async def main():
     os.umask(0o077)
     logging.disable(logging.CRITICAL)
-    store = Store(Path(os.environ.get("FINDMY_HOME_DATA", "/data/findmy_home")))
+    store = Store(Path(os.environ.get("RETRACE_DATA", "/data/retrace")))
     await asyncio.to_thread(enrich_metadata,store)
     from .shared_runtime import read_options,configure_runtime,compose_runtime
     runtime_options=read_options(store.root/"runtime-options.json")

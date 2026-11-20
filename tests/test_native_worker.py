@@ -30,7 +30,7 @@ class NativeWorkerTests(unittest.IsolatedAsyncioTestCase):
         self.patch.stop();self.tmp.cleanup()
     async def prepare(self):
         worker=IsolatedNativeWorker();self.workers.append(worker)
-        with patch.dict(os.environ,{"FINDMY_SYNTHETIC_PARENT_SECRET":"PRIVATE_ENV"}):
+        with patch.dict(os.environ,{"RETRACE_SYNTHETIC_PARENT_SECRET":"PRIVATE_ENV"}):
             identity=await worker.prepare(self.artifact)
         self.assertEqual(identity["X-Mme-Device-Id"],"SYNTHETIC-UUID")
         return worker

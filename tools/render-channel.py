@@ -37,7 +37,7 @@ def render(source, target, channel, version, *, runtime="legacy"):
     # Channel name alone never removes experimental status: live validation is required.
     repo=target/"repository.yaml"
     repo.write_text(repo.read_text().replace("Retrace — development", "Retrace — "+channel))
-    manifest=target/"custom_components/findmy_home/manifest.json"
+    manifest=target/"custom_components/retrace/manifest.json"
     data=json.loads(manifest.read_text())
     data["version"]=version
     manifest.write_text(json.dumps(data,indent=2)+"\n")

@@ -10,7 +10,7 @@ def connection_data(config,slug):
         raise ValueError("Invalid instance identity")
     if not isinstance(token,str) or not 32 <= len(token) <= 256:
         raise ValueError("Invalid pairing credential")
-    if not isinstance(host,str) or not re.fullmatch(r"[a-z0-9-]+-findmy-home(?:\.local\.hass\.io)?",host):
+    if not isinstance(host,str) or not re.fullmatch(r"[a-z0-9-]+-retrace(?:\.local\.hass\.io)?",host):
         raise ValueError("Invalid discovered host")
     if not isinstance(slug,str) or not re.fullmatch(r"[a-zA-Z0-9_]+",slug):
         raise ValueError("Invalid app slug")

@@ -89,7 +89,7 @@ async def restore_reporting_account(root):
     if root.is_symlink():raise SessionBlocked("session_storage_invalid")
     marker=root/MANIFEST
     if not marker.exists() and not marker.is_symlink():
-        if os.environ.get("FINDMY_RUNTIME_MODE")=="shared":raise SessionBlocked("reauthentication_required")
+        if os.environ.get("RETRACE_RUNTIME_MODE")=="shared":raise SessionBlocked("reauthentication_required")
         from .apple import ReportingAccount
         session=await asyncio.to_thread(read_json,root/"account.json")
         return ReportingAccount.from_json(session,anisette_libs_path=str(root/"ani_libs.bin"))
@@ -109,11 +109,11 @@ async def restore_reporting_account(root):
         except Exception:raise SessionBlocked("session_storage_invalid") from None
     data,key,policy=await asyncio.to_thread(load)
     options={}
-    if os.environ.get("FINDMY_RUNTIME_MODE")=="shared":
+    if os.environ.get("RETRACE_RUNTIME_MODE")=="shared":
         from .native_worker import ProcessOfflineSigner
         from .artifact_policy import ArtifactBlocked,reviewed_artifact,verify_artifact
         try:
-            approved=reviewed_artifact("applemusic-arm64-v8a",private_evaluation=os.environ.get("FINDMY_PRIVATE_EVALUATION")=="1")
+            approved=reviewed_artifact("applemusic-arm64-v8a",private_evaluation=os.environ.get("RETRACE_PRIVATE_EVALUATION")=="1")
             if approved.expected_sha256!=policy.digest:raise SessionBlocked("session_artifact_mismatch")
             await verify_artifact(root/policy.library,approved)
         except ArtifactBlocked as exc:raise SessionBlocked(exc.code) from None

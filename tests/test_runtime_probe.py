@@ -20,7 +20,7 @@ class RuntimeProbeTests(unittest.TestCase):
         # This diagnostic manifest uses flat scalars plus its one architecture;
         # no YAML parser/dependency is needed to verify its security contract.
         config=dict(re.findall(r"^([a-z_]+):[ \t]*(.*)$",text,re.MULTILINE))
-        self.assertEqual(config["slug"],"findmy_runtime_probe")
+        self.assertEqual(config["slug"],"retrace_runtime_probe")
         self.assertEqual(config["version"],"0.1.5")
         self.assertEqual(config["boot"],"manual")
         self.assertRegex(text,r"(?m)^arch:\n  - amd64\n")
