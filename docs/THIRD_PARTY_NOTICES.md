@@ -55,7 +55,7 @@ Project-owned code currently also uses MIT, so others can reuse it under those
 terms too. Keep upstream origins visible if maintaining a fork; copied code is
 not an original clean-room implementation.
 
-An optional external support link can support Find My Home development without
+An optional external support link can support Retrace development without
 claiming upstream/Apple/Home Assistant endorsement. Prefer a plain external link
 over an embedded payment widget on the account UI, so no third-party scripts or
 payment requests run there. Do not send account/item data in that link. No payment

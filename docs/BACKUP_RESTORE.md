@@ -1,7 +1,7 @@
 # Private app-data backup and restore
 
 Use Home Assistant's supported encrypted backup and restore UI. Include the
-Find My Home app and, for an HA recovery, the companion integration/Core config.
+Retrace app and, for an HA recovery, the companion integration/Core config.
 Keep the backup encryption key securely outside this installation. App private
 data contains Apple session tokens, item keys and a location-read pairing token;
 file permissions alone do not encrypt them. Never attach that archive to an

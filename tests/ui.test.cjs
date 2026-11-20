@@ -112,7 +112,7 @@ test("per-item refresh queues only the clicked item and shows progress",async()=
     assert.match(env.document.getElementById("refresh-status-a").textContent,/Queued for the next available worker/);
     assert.equal(env.document.querySelector("[data-refresh]").disabled,true);
     assert.match(env.document.querySelector(".item-status").textContent,/Queued/);
-    assert.equal(env.document.getElementById("app-title").textContent,"Find My Home Edge");
+    assert.equal(env.document.getElementById("app-title").textContent,"Retrace Edge");
   }finally{env.close();}
 });
 
@@ -130,7 +130,7 @@ test("same-name items have descriptive secondary labels",async()=>{
 test("legacy channel labels are shown as Edge",async()=>{
   const env=await setup();try{
     env.data.channel="beta";await env.refresh();
-    assert.equal(env.document.getElementById("app-title").textContent,"Find My Home Edge");
+    assert.equal(env.document.getElementById("app-title").textContent,"Retrace Edge");
   }finally{env.close();}
 });
 

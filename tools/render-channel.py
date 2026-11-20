@@ -25,7 +25,7 @@ def render(source, target, channel, version, *, runtime="legacy"):
     config=target/"findmy_home/config.yaml"
     text=config.read_text()
     text=re.sub(r"(?m)^version:.*$", "version: "+version, text)
-    title="Find My Home Edge" if channel=="edge" else "Find My Home"
+    title="Retrace Edge" if channel=="edge" else "Retrace"
     text=re.sub(r"(?m)^name:.*$", "name: "+title, text)
     text=re.sub(r"(?m)^panel_title:.*$", "panel_title: "+title, text)
     if runtime=="shared":
@@ -36,7 +36,7 @@ def render(source, target, channel, version, *, runtime="legacy"):
     config.write_text(text)
     # Channel name alone never removes experimental status: live validation is required.
     repo=target/"repository.yaml"
-    repo.write_text(repo.read_text().replace("Find My Home — development", "Find My Home — "+channel))
+    repo.write_text(repo.read_text().replace("Retrace — development", "Retrace — "+channel))
     manifest=target/"custom_components/findmy_home/manifest.json"
     data=json.loads(manifest.read_text())
     data["version"]=version

@@ -216,7 +216,7 @@ no main password/session extraction from the existing setup is performed.
 
 ## Side-by-side deployment verified — 2026-11-20
 
-Deployed `9c579022_findmy_home_shared` as **Find My Home Shared Edge**
+Deployed `9c579022_findmy_home_shared` as **Retrace Shared Edge**
 `0.1.13-dev.1.3`, source `3a88835429bf86656b3ca9857853ffc1f28962c2`,
 Edge delivery commit `b83140c`. Supervisor reports started, protection enabled and
 custom AppArmor profile loaded. Its credential-free `/health` returns HTTP200

@@ -15,7 +15,7 @@ class EvaluationChannelTests(unittest.TestCase):
             self.assertEqual((old/'config.yaml').read_text(),'existing working app')
             config=(app/'config.yaml').read_text()
             self.assertIn('slug: findmy_home_shared',config)
-            self.assertIn('name: Find My Home Shared Edge',config)
+            self.assertIn('name: Retrace Shared Edge',config)
             self.assertIn('  runtime_mode: shared',config)
             self.assertIn('  private_evaluation: false',config)
             self.assertIn('  install_reviewed_component: false',config)

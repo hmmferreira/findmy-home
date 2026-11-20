@@ -1,4 +1,4 @@
-# Find My Home
+# Retrace
 
 Open Web UI to set up the polling account, discover accessory keys and select
 items. Newly discovered items are unselected. The integration is offered under

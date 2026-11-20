@@ -36,10 +36,10 @@ class AuthDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
     async def login(self):return await self.worker.login("owner","PRIVATE_EMAIL","PRIVATE_PASSWORD")
     def events(self):
         lines=self.output.getvalue().splitlines()
-        self.assertTrue(all(line.startswith("Find My Home auth: ") for line in lines))
+        self.assertTrue(all(line.startswith("Retrace auth: ") for line in lines))
         self.assertTrue(all(len(line)<512 for line in lines))
         self.assertNotIn("PRIVATE",self.output.getvalue())
-        return [json.loads(line.removeprefix("Find My Home auth: ")) for line in lines]
+        return [json.loads(line.removeprefix("Retrace auth: ")) for line in lines]
     async def success(self,*args):
         self.account.login_state=LoginState.LOGGED_IN
         return LoginState.LOGGED_IN

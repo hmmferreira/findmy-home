@@ -142,7 +142,7 @@ explicit request. Return installation/new-identity options to false after setup.
 ## Side-by-side private evaluation
 
 `tools/render-evaluation.py VERSION OUTPUT` emits only `findmy_home_shared` with
-slug `findmy_home_shared` and title **Find My Home Shared Edge**. It leaves an
+slug `findmy_home_shared` and title **Retrace Shared Edge**. It leaves an
 existing `findmy_home` app/version untouched and installs the shared AppArmor
 profile as `apparmor.txt`. This is the evaluation/rollback path: separate app data,
 identity and integration instance, with the original working Edge app retained.

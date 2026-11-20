@@ -1,4 +1,4 @@
-# Find My Home contributor instructions
+# Retrace contributor instructions
 
 Read README.md, docs/DEPENDENCY_BOUNDARY.md, docs/SECURITY.md and the topic notes
 before changes. Check origin and GitHub updates first; preserve dirty work and

@@ -54,7 +54,7 @@ def update(package,target,backup_root,apply=False):
             else:dest.unlink(missing_ok=True)
         raise
     print("Source patch applied. Code backup:",backup)
-    print("Reload the app store and update Find My Home to 0.1.1. Do not uninstall it.")
+    print("Reload the app store and update Retrace to 0.1.1. Do not uninstall it.")
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)

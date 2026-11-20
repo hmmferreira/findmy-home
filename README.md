@@ -1,7 +1,16 @@
-# Find My Home — experimental app + integration
+# Retrace
 
-A separate prototype for friendly Apple Find My item setup in Home Assistant.
-Runs independently of an existing MQTT tracker.
+Location history for your belongings in Home Assistant. **Currently supports
+Apple Find My items and devices**, with guided account setup, latest reported
+locations and timestamped sightings recorded through Home Assistant. Other
+tracking sources are a future direction, not currently implemented.
+
+Retrace is an independent community project, not affiliated with or endorsed by
+Apple. It runs independently of an existing MQTT tracker. Development remains
+experimental; sparse sightings are not continuous GPS tracking.
+
+Formerly named Find My Home. See [rename compatibility](docs/BRANDING.md) for
+existing installations and technical identifiers.
 
 ## User journey
 1. Open the app through Home Assistant ingress.
@@ -41,7 +50,7 @@ is promised. Sparse sightings are not a continuous GPS track.
 
 ## Install and update through Home Assistant
 
-Add the [Edge app repository](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fhmmferreira%2Ffindmy-home%23edge), then install **Find My Home Edge**.
+Add the [Edge app repository](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fhmmferreira%2Ffindmy-home%23edge), then install **Retrace Edge**.
 Updates appear in Settings → Apps. No terminal archive copying is needed.
 The initial source build can take a while; subsequent builds reuse cached layers.
 

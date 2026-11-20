@@ -1,6 +1,6 @@
 # Draft licensing clarification request — not submitted
 
-We are developing Find My Home, a Home Assistant app for guided Find My item
+We are developing Retrace, a Home Assistant app for guided Find My item
 setup and tracking. It currently builds findmy-export at
 29f44e20da97e98ebac8083b5a542a571551f26a locally and includes private-session,
 service-discovery and export-filename fixes maintained as build patches.

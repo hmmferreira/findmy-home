@@ -111,7 +111,7 @@ class AppleWorker:
                        "dns_destination_blocked","redirect_blocked","response_invalid","response_too_large"}:value["reason"]=reason
         # Bounded structured print deliberately survives global SDK logging disable.
         # No caller can supply owner/email/phone/code/token, body or exception text.
-        print("Find My Home auth: "+json.dumps(value,separators=(",",":")),flush=True)
+        print("Retrace auth: "+json.dumps(value,separators=(",",":")),flush=True)
 
     async def _auth_step(self,stage,operation,*,method=None):
         self._auth_event(stage,"started",method=method)
@@ -325,7 +325,7 @@ class AppleWorker:
                 process.kill()
                 await process.communicate()
                 progress=safe_progress(read_json(progress_path,{}))
-                print("Find My Home query timeout: "+json.dumps(progress),flush=True)
+                print("Retrace query timeout: "+json.dumps(progress),flush=True)
                 return {"ok":False,"error":"item_timeout","progress":progress}
             if process.returncode or len(output)>8192:
                 return {"ok":False,"error":"poll_failed"}
@@ -338,11 +338,11 @@ class AppleWorker:
             diagnostic=safe_query_diagnostic(result.get("diagnostic"))
             if diagnostic:
                 result["diagnostic"]=diagnostic
-                print("Find My Home query diagnostic: "+json.dumps(diagnostic),flush=True)
+                print("Retrace query diagnostic: "+json.dumps(diagnostic),flush=True)
             progress=safe_progress(read_json(progress_path,{}))
             if progress:
                 result["progress"]=progress
-                print("Find My Home query completed: "+json.dumps(progress),flush=True)
+                print("Retrace query completed: "+json.dumps(progress),flush=True)
             return result
         finally:
             if process.returncode is None:
@@ -375,7 +375,7 @@ class AppleWorker:
     def _summary(self,event):
         allowed=("status","selected_count","reports_received","items_with_locations",
                  "items_completed","items_failed","error_code")
-        print("Find My Home "+event+": "+json.dumps(
+        print("Retrace "+event+": "+json.dumps(
             {key:self.store.health.get(key) for key in allowed}),flush=True)
 
     async def poll(self):

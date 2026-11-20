@@ -1,4 +1,4 @@
-name: Find My Home runtime capability probe
+name: Retrace runtime capability probe
 version: 0.1.4
 slug: findmy_runtime_probe
 description: One-shot synthetic Linux worker capability check; no account or device access

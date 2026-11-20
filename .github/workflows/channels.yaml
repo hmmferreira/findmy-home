@@ -111,6 +111,6 @@ jobs:
           FLAGS=()
           if [ "$CHANNEL" = edge ]; then FLAGS+=(--prerelease); fi
           gh release create "v$VERSION" --target "$(git rev-parse HEAD)" \
-            --title "Find My Home $CHANNEL $VERSION" \
+            --title "Retrace $CHANNEL $VERSION" \
             --notes "Tested source and companion integration. App repository: https://github.com/$GH_REPO#$CHANNEL. Experimental: review docs/SECURITY.md and docs/RELEASE.md. No public container binary is included." \
             "${FLAGS[@]}"

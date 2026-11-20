@@ -16,7 +16,7 @@ class ChannelTests(unittest.TestCase):
             module.render(ROOT,target,"edge","0.1.2-dev.2.1")
             config=(target/"findmy_home/config.yaml").read_text()
             self.assertEqual(json.loads((target/"findmy_home/rootfs/app/findmy_home/channel.json").read_text())["channel"],"edge")
-            self.assertIn("name: Find My Home Edge",config)
+            self.assertIn("name: Retrace Edge",config)
             self.assertIn("version: 0.1.2-dev.2.1",config)
             self.assertIn("stage: experimental",config)
             manifest=json.loads((target/"custom_components/findmy_home/manifest.json").read_text())

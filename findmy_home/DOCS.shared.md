@@ -1,4 +1,4 @@
-# Find My Home Shared Edge
+# Retrace Shared Edge
 
 This private evaluation runs beside the existing Edge app with its own app data,
 account session and integration instance. Keep the existing app while comparing.

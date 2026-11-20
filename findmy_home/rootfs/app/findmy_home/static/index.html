@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Find My Home</title><link rel="stylesheet" href="static/style.css"><link rel="stylesheet" href="static/vendor/leaflet.css"><script defer src="static/vendor/leaflet.js"></script><script defer src="static/app.js"></script></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Retrace</title><link rel="stylesheet" href="static/style.css"><link rel="stylesheet" href="static/vendor/leaflet.css"><script defer src="static/vendor/leaflet.js"></script><script defer src="static/app.js"></script></head>
 <body><main>
-<header><div><h1 id="app-title">Find My Home</h1><p>Item locations and account setup</p></div><span id="health" role="status">Connecting…</span></header>
+<header><div><h1 id="app-title">Retrace</h1><p>Location history · Apple Find My support</p></div><span id="health" role="status">Connecting…</span></header>
 <nav aria-label="Views"><button data-tab="overview" aria-selected="true">Items</button><button data-tab="setup" aria-selected="false">Setup</button></nav>
 <ul id="status-overview" class="status-overview" aria-label="Account and tracking status">
 <li id="account-badge" class="status-chip">Account: checking</li><li id="keys-badge" class="status-chip">Item keys: checking</li><li id="tracking-badge" class="status-chip">Tracking: checking</li><li id="checks-badge" class="status-chip">Checks: waiting</li>
@@ -9,7 +9,7 @@
 <div id="message" class="notice" role="status" aria-live="polite" hidden></div>
 <section id="overview">
 <p id="poll-summary" class="muted" role="status"></p>
-<div class="notice info"><strong>Home Assistant map and history</strong><p>Approve the discovered Find My Home integration to create native trackers, zones and history. Edge devices are separate from your other trackers.</p><a href="/config/integrations/dashboard" target="_top">Open Devices &amp; services</a> · <a href="/map" target="_top">Open Home Assistant map</a></div>
+<div class="notice info"><strong>Home Assistant map and history</strong><p>Approve the discovered Retrace integration to create native trackers, zones and history. Edge devices are separate from your other trackers.</p><a href="/config/integrations/dashboard" target="_top">Open Devices &amp; services</a> · <a href="/map" target="_top">Open Home Assistant map</a></div>
 <div id="cards" class="cards"></div>
 <details id="map-preview"><summary>Preview last known locations in this app</summary><div id="map" aria-label="Last known item locations"></div><p class="muted">Optional OpenStreetMap preview. This does not use Home Assistant's map card. Map tiles load when you open the preview.</p></details>
 <p class="muted">Refresh asks Apple for its latest report; it cannot make an AirTag report live. Each item can be requested once per minute. Apple rate-limit pauses always apply.</p>

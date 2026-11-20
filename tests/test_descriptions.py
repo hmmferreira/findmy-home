@@ -63,5 +63,15 @@ class DescriptionTests(unittest.TestCase):
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
         self.assertEqual(module.normalize_channel("beta"),"edge")
         self.assertEqual(module.normalize_channel(None),"edge")
-        self.assertEqual(module.entry_title("edge"),"Find My Home Edge")
-        self.assertEqual(module.entry_title("stable"),"Find My Home")
+        self.assertEqual(module.entry_title("edge"),"Retrace Edge")
+        self.assertEqual(module.entry_title("stable"),"Retrace")
+
+    def test_retrace_default_title_migration_preserves_custom_titles_and_domain(self):
+        path=Path(__file__).resolve().parents[1]/"custom_components/findmy_home/const.py"
+        spec=importlib.util.spec_from_file_location("retrace_constants",path)
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        self.assertEqual(module.DOMAIN,"findmy_home")
+        for title in ("Find My Home", "Find My Home Edge", "Find My Home (Beta)"):
+            self.assertEqual(module.migrated_entry_title(title,"edge"),"Retrace Edge")
+            self.assertEqual(module.migrated_entry_title(title,"stable"),"Retrace")
+        self.assertEqual(module.migrated_entry_title("My personal tracker","edge"),"My personal tracker")
