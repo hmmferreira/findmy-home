@@ -31,6 +31,9 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
 
     @web.middleware
     async def security(request, handler):
+        if request.method=="GET" and request.path=="/health":
+            # Fixed readiness only: listeners open after runtime/component checks.
+            return await handler(request)
         if management:
             groups = {group.strip() for group in request.headers.get("X-Remote-User-Groups", "").split(",")}
             if (request.remote != trusted_peer or not request.headers.get("X-Remote-User-Id")
@@ -83,6 +86,10 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
                 data["auth"]=shared_ui.auth_visible(owner)
         return web.json_response(data)
 
+    async def health(request):
+        return web.json_response({"status":"ready"},headers={"Cache-Control":"no-store"})
+
+    app.router.add_get("/health", health)
     app.router.add_get("/v1/snapshot", snapshot)
     if not management:
         return app

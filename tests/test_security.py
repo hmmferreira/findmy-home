@@ -92,6 +92,15 @@ class HttpTests(unittest.IsolatedAsyncioTestCase):
         await client.start_server()
         self.clients.append(client)
         return client
+    async def test_readiness_has_no_private_data_and_does_not_unlock_snapshot(self):
+        for management in (False,True):
+            client=await self.client(management,peer="172.30.32.2")
+            response=await client.get('/health')
+            self.assertEqual(response.status,200)
+            self.assertEqual(await response.json(),{'status':'ready'})
+            self.assertEqual(response.headers['Cache-Control'],'no-store')
+            self.assertEqual((await client.get('/v1/snapshot')).status,403 if management else 401)
+            self.assertIn((await client.post('/health',json={})).status,(401,403))
     async def test_data_api_requires_token_and_is_read_only(self):
         client=await self.client()
         self.assertEqual((await client.get("/v1/snapshot")).status,401)
