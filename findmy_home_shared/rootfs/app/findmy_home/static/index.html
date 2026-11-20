@@ -3,6 +3,9 @@
 <body><main>
 <header><div><h1 id="app-title">Find My Home</h1><p>Item locations and account setup</p></div><span id="health" role="status">Connecting…</span></header>
 <nav aria-label="Views"><button data-tab="overview" aria-selected="true">Items</button><button data-tab="setup" aria-selected="false">Setup</button></nav>
+<ul id="status-overview" class="status-overview" aria-label="Account and tracking status">
+<li id="account-badge" class="status-chip">Account: checking</li><li id="keys-badge" class="status-chip">Item keys: checking</li><li id="tracking-badge" class="status-chip">Tracking: checking</li><li id="checks-badge" class="status-chip">Checks: waiting</li>
+</ul>
 <div id="message" class="notice" role="status" aria-live="polite" hidden></div>
 <section id="overview">
 <p id="poll-summary" class="muted" role="status"></p>

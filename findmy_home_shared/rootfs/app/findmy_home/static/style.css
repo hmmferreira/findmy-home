@@ -7,3 +7,9 @@
 .save-bar{flex-wrap:wrap}.save-bar .inline-feedback{flex-basis:100%;margin:0}.steps h3{font-size:18px;font-weight:500;margin:24px 0 8px}
 #recovery-consent{line-height:1.5}#account-step .notice{font-size:14px}#account-step #discovery-controls{border-top:1px solid var(--border);margin-top:20px;padding-top:4px}
 @media(max-width:600px){.steps article{padding:16px}.steps form>button,.save-bar>button{width:100%}.save-bar{gap:10px}.step-heading h2{flex:1;min-width:0}.inline-feedback{padding:10px;font-size:14px}.steps{margin:16px 0}}
+
+header>div{min-width:0}header h1{overflow-wrap:anywhere}
+.status-overview{display:flex;flex-wrap:wrap;gap:8px;list-style:none;padding:0;margin:0 0 18px}
+.status-chip{border:1px solid var(--border);border-radius:16px;background:var(--surface);padding:7px 11px;font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+.status-chip[data-kind=success]{border-color:#248343}.status-chip[data-kind=warning]{border-color:#b97900}.status-chip[data-kind=error]{border-color:#c62828;font-weight:600}
+@media(max-width:600px){header{flex-direction:column;gap:10px}header h1{font-size:24px}header #health{align-self:flex-start;white-space:normal;max-width:100%}.status-overview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.status-chip{border-radius:8px}nav{margin-top:18px}}
