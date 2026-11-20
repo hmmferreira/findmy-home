@@ -16,6 +16,7 @@ EXPECTED_CHECKS={"private_file_open_denied","private_write_denied","parent_proc_
 REASONS={"worker_platform_unsupported","worker_seccomp_unavailable","worker_landlock_unavailable",
     "worker_privilege_restriction_failed","worker_landlock_rule_failed","worker_landlock_restriction_failed",
     "worker_seccomp_rule_failed","worker_seccomp_restriction_failed","worker_seccomp_syscall_unavailable",
+    "worker_apparmor_unavailable","worker_apparmor_profile_invalid","worker_apparmor_transition_failed",
     "unclassified_boundary_failure"}
 
 def validate_result(value):
@@ -26,7 +27,8 @@ def validate_result(value):
         if set(value)!={"result"}:raise ValueError()
         return value
     details=value.get("diagnostics")
-    if not isinstance(details,dict) or set(details)!={"platform","uid","landlock_abi","landlock_errno","boundary_errno"}:raise ValueError()
+    if not isinstance(details,dict) or set(details)!={"platform","uid","landlock_abi","landlock_errno","boundary_errno","boundary"}:raise ValueError()
+    if details["boundary"] not in {"unavailable","landlock3-seccomp-v1","apparmor-seccomp-v1"}:raise ValueError()
     if details["platform"] not in {"linux-amd64","linux-arm64","unsupported"}:raise ValueError()
     if type(details["uid"]) is not int or not 0<=details["uid"]<=2**32-1:raise ValueError()
     if type(details["landlock_abi"]) is not int or not -1<=details["landlock_abi"]<=1024:raise ValueError()
@@ -76,5 +78,5 @@ async def run_probe():
 
 if __name__=="__main__":
     result=asyncio.run(run_probe())
-    print(json.dumps({"probe":"findmy_runtime_probe","version":"0.1.1",**result},separators=(",",":")),flush=True)
+    print(json.dumps({"probe":"findmy_runtime_probe","version":"0.1.2",**result},separators=(",",":")),flush=True)
     raise SystemExit(0 if result["result"]=="supported" else 1)

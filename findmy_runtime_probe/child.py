@@ -17,12 +17,13 @@ from native_sandbox import restrict_worker,SandboxUnavailable
 
 REASONS={"worker_platform_unsupported","worker_seccomp_unavailable","worker_landlock_unavailable",
     "worker_privilege_restriction_failed","worker_landlock_rule_failed","worker_landlock_restriction_failed",
-    "worker_seccomp_rule_failed","worker_seccomp_restriction_failed","worker_seccomp_syscall_unavailable"}
+    "worker_seccomp_rule_failed","worker_seccomp_restriction_failed","worker_seccomp_syscall_unavailable",
+    "worker_apparmor_unavailable","worker_apparmor_profile_invalid","worker_apparmor_transition_failed"}
 
 def preflight():
     system=platform.system();machine=platform.machine()
     label="linux-amd64" if system=="Linux" and machine=="x86_64" else "linux-arm64" if system=="Linux" and machine=="aarch64" else "unsupported"
-    details={"platform":label,"uid":os.geteuid(),"landlock_abi":-1,"landlock_errno":0,"boundary_errno":0}
+    details={"platform":label,"uid":os.geteuid(),"landlock_abi":-1,"landlock_errno":0,"boundary_errno":0,"boundary":"unavailable"}
     if label!="unsupported":
         libc=ctypes.CDLL(None,use_errno=True);libc.syscall.restype=ctypes.c_long
         ctypes.set_errno(0)
@@ -57,7 +58,7 @@ def main():
     details=preflight()
     try:
         values=read_input()
-        restrict_worker([CODE,"/usr/lib","/usr/local/lib","/lib","/lib64","/etc/ld.so.cache","/dev/urandom"])
+        details["boundary"]=restrict_worker([CODE,"/usr/lib","/usr/local/lib","/lib","/lib64","/etc/ld.so.cache","/dev/urandom"])
         def open_only(path,flags):
             fd=os.open(path,flags)
             os.close(fd)

@@ -1,5 +1,5 @@
 name: Find My Home runtime capability probe
-version: 0.1.1
+version: 0.1.2
 slug: findmy_runtime_probe
 description: One-shot synthetic Linux worker capability check; no account or device access
 url: https://github.com/hmmferreira/findmy-home
