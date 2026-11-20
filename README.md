@@ -1,5 +1,7 @@
 # Retrace
 
+<img src="retrace/icon.png" alt="Retrace icon" width="96" height="96">
+
 Location history for your belongings in Home Assistant. **Currently supports
 Apple Find My items and devices**, with guided account setup, latest reported
 locations and timestamped sightings recorded through Home Assistant. Other
