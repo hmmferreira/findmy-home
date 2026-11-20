@@ -1,6 +1,6 @@
 # Shared authentication and Python discovery prototype
 
-Status: private evaluation implementation; target sandbox verified, live sign-in comparison pending; not a completed extractor
+Status: Shared Edge private evaluation deployed side by side; target sandbox and readiness verified; live sign-in/location comparison pending
 rewrite. Edge remains on its working Rust-backed implementation. No production
 Python dependency, Apple session, Keychain membership or item inventory changed.
 
@@ -212,3 +212,29 @@ or unsupported boundaries stop startup before download or sign-in.
 A separate Shared Edge app render keeps the existing Edge app/data untouched.
 Account authentication and trusted-device unlock still require the protected UI;
 no main password/session extraction from the existing setup is performed.
+
+
+## Side-by-side deployment verified — 2026-11-20
+
+Deployed `9c579022_findmy_home_shared` as **Find My Home Shared Edge**
+`0.1.13-dev.1.3`, source `3a88835429bf86656b3ca9857853ffc1f28962c2`,
+Edge delivery commit `b83140c`. Supervisor reports started, protection enabled and
+custom AppArmor profile loaded. Its credential-free `/health` returns HTTP200
+with exactly `{"status":"ready"}`. Listener startup follows native-boundary and
+component verification. Setup uses explicit private evaluation and fixed-component
+installation, with first-identity creation authorized; Apple account sign-in and
+trusted-device unlock remain protected-UI actions.
+
+The original `9c579022_findmy_home` remains started at `0.1.12-dev.16.1`, unchanged.
+Separate app data/identity provide the comparison/rollback path; no existing app
+was stopped, migrated, backed up destructively or restored. Diagnostic0.1.4 is
+installed, stopped and manual-boot after all ten target restrictions passed.
+No Core restart or household Apple credential/session extraction occurred.
+
+The first Shared Edge build stopped with `runtime_options_invalid` before setup.
+The launcher now validates Supervisor options before dropping root and publishes
+an owner-only app snapshot for the unprivileged web process. The final app passes
+247 isolated non-root tests. CI44646322640 passed all three jobs for deployed
+source3a88835, including real pinned SDK composition and shared-image boundary
+smoke. Live discovery and location refresh still require the user's UI sign-in;
+readiness is not a claim of successful Apple authentication or sightings.
