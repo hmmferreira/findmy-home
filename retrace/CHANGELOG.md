@@ -1,3 +1,10 @@
+# 0.1.14-dev.1.3 — Explain and preserve local authentication setup failures
+
+- Preserve setup-required failures through the background authentication flow.
+- Show Configuration guidance beside Connect and in the status badges.
+- Log only allowlisted setup reason codes, without account details.
+- Clarify that first identity creation happens on Connect, not app startup.
+
 # 0.1.14-dev.1.2 — Retrace artwork
 
 - Add the project owner's icon to the app store, integration branding and web UI.

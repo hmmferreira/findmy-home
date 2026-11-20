@@ -108,7 +108,10 @@ class AppleWorker:
         if isinstance(kind,str) and kind in {"storage","handoff","verification_refused","verification_code_rejected","network","setup","transport_blocked","service_unavailable","unclassified"}:value["kind"]=kind
         if type(status) is int and status in {400,401,403,429,500,502,503,504}:value["status"]=status
         if isinstance(reason,str) and reason in {"destination_blocked","request_failed","transport_closed","transport_options_blocked",
-                       "dns_destination_blocked","redirect_blocked","response_invalid","response_too_large"}:value["reason"]=reason
+                       "dns_destination_blocked","redirect_blocked","response_invalid","response_too_large",
+                       "explicit_new_identity_required","signing_identity_missing","signing_identity_invalid",
+                       "artifact_unavailable","artifact_digest_mismatch","artifact_review_required","reviewed_artifact_required",
+                       "isolated_provisioning_worker_required","worker_boundary_unavailable"}:value["reason"]=reason
         # Bounded structured print deliberately survives global SDK logging disable.
         # No caller can supply owner/email/phone/code/token, body or exception text.
         print("Retrace auth: "+json.dumps(value,separators=(",",":")),flush=True)
