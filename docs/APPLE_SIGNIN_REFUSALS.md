@@ -38,3 +38,14 @@ substitute somebody else's hardware identifiers, or add an unreviewed remote
 signing provider. Direct sign-in on Apple's own website is a separate human check
 for account-level problems. It must not put credentials or verification codes in
 chat, logs, fixtures or Git. No upstream maintainer message has been sent.
+
+## Verified household check
+
+Edge0.1.14-dev.1.5 completed the offline check on Home Assistant: device ID,
+local-user ID and client-info comparisons all returned true (`consistent`).
+This eliminates those saved-native-vs-account mismatches as an explanation for
+this installation's observed refusal. It does not establish the server's reason
+or validate the account through Apple's web flow; that human check is pending.
+Private signing identity and account session were retained without another login.
+Validation: 280 app regressions, 877 upstream cases, 17 controller cases and
+15 discovery cases passed, along with the isolated worker/report-child smoke.
