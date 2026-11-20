@@ -413,3 +413,13 @@ async def test_real_sdk_sms_challenge_uses_owned_put_and_submission_uses_post(mo
         assert calls[1][2]['json']['securityCode']['code']=='000123'
         assert all(options['allow_redirects'] is False for _,_,options in calls)
     finally:await account.close()
+
+
+@pytest.mark.parametrize("step,code",[("init","apple_signin_refused"),("complete","credentials_rejected")])
+def test_candidate_typed_grandslam_refusal_distinguishes_password_step(step,code):
+    from findmy.errors import GrandSlamRefusedError
+    from retrace.worker import _auth_classification
+    error=GrandSlamRefusedError(step,-22406,"SYNTHETIC_PRIVATE_RESPONSE")
+    result=_auth_classification(error,"login")
+    assert result[0]==code
+    assert result[1] is False

@@ -396,3 +396,13 @@ test("local setup failure explains Configuration instead of asking for another A
     assert.equal(env.document.getElementById("message").hidden,true);
   }finally{env.close();}
 });
+
+test("Apple pre-password refusal is explained even when an earlier location session exists",async()=>{
+  const env=await setup({shared:true,connected:true,auth:{phase:"failed",error:"apple_signin_refused"}});try{
+    assert.match(env.document.getElementById("login-status").textContent,/before checking the password/);
+    assert.equal(env.document.getElementById("account-badge").textContent,"Account: sign-in needs attention");
+    assert.equal(env.document.getElementById("account-badge").dataset.kind,"error");
+    assert.equal(env.data.setup.locations_connected,true);
+    assert.equal(env.document.getElementById("message").hidden,true);
+  }finally{env.close();}
+});

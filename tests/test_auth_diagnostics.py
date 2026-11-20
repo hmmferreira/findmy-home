@@ -142,7 +142,7 @@ class AuthDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(_auth_classification(InvalidCodeError("PRIVATE_CODE"),"2fa_submit"),
             ("verification_rejected",False,"unclassified"))
     def test_event_whitelist_drops_injected_values(self):
-        self.worker._auth_event("2fa_submit","failed",method="PRIVATE_PHONE",error="PRIVATE_CODE",kind="PRIVATE_TOKEN",status=123456,reason={"PRIVATE":"VALUE"})
+        self.worker._auth_event("2fa_submit","failed",method="PRIVATE_PHONE",error="PRIVATE_CODE",kind="PRIVATE_TOKEN",status=123456,reason={"PRIVATE":"VALUE"},step="PRIVATE_STEP",apple_step="PRIVATE",apple_code="PRIVATE_CODE",fault="PRIVATE",component="PRIVATE",line="PRIVATE")
         self.assertEqual(self.events(),[{"stage":"2fa_submit","event":"failed"}])
 
     async def test_first_identity_gate_survives_background_error_mapping_without_apple_login(self):
@@ -154,3 +154,41 @@ class AuthDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.bridge.auth_visible("owner"),{"phase":"failed","error":"setup_required"})
         self.account.login.assert_not_awaited();self.writer.assert_not_awaited()
         self.assertEqual(self.events()[-1]["reason"],"explicit_new_identity_required")
+
+    async def test_typed_apple_refusal_reports_before_password_without_response_prose(self):
+        class TypedRefusal(sdk_errors.InvalidCredentialsError):
+            def __init__(self):
+                self.step="init";self.ec=-22406
+                super().__init__("PRIVATE_RESPONSE_BODY")
+        with patch.object(sdk_errors,"GrandSlamRefusedError",TypedRefusal,create=True):
+            self.account.login.side_effect=TypedRefusal()
+            self.bridge=SharedDiscoveryUI(AsyncMock());self.bridge.bind(self.worker)
+            await self.bridge.authenticate("owner",self.login);await self.bridge.auth_task
+        self.assertEqual(self.bridge.auth_visible("owner"),{"phase":"failed","error":"apple_signin_refused"})
+        event=self.events()[-1]
+        self.assertEqual(event["step"],"apple_signin")
+        self.assertEqual(event["apple_step"],"init");self.assertEqual(event["apple_code"],-22406)
+        self.assertEqual(event["kind"],"apple_refused")
+        self.account.login.assert_awaited_once();self.writer.assert_not_awaited()
+
+    async def test_known_credentials_refusal_is_preserved_by_background_flow(self):
+        self.account.login.side_effect=sdk_errors.InvalidCredentialsError("PRIVATE_ACCOUNT_DETAILS")
+        self.bridge=SharedDiscoveryUI(AsyncMock());self.bridge.bind(self.worker)
+        await self.bridge.authenticate("owner",self.login);await self.bridge.auth_task
+        self.assertEqual(self.bridge.auth_visible("owner"),{"phase":"failed","error":"credentials_rejected"})
+        self.assertEqual(self.events()[-1]["step"],"apple_signin")
+        self.account.login.assert_awaited_once();self.assertIsNone(self.account._password)
+
+    async def test_unexpected_local_factory_fault_has_safe_phase_without_password_attempt(self):
+        self.worker.account_factory.side_effect=AttributeError("PRIVATE_KEY_AND_PATH")
+        with self.assertRaises(AuthenticationError):await self.login()
+        event=self.events()[-1]
+        self.assertEqual(event["step"],"account_setup");self.assertEqual(event["fault"],"attribute_error")
+        self.account.login.assert_not_awaited();self.writer.assert_not_awaited()
+
+    async def test_verification_method_failure_is_distinct_from_password_failure(self):
+        self.account.get_2fa_methods.side_effect=TypeError("PRIVATE_PHONE_NUMBER")
+        with self.assertRaises(AuthenticationError):await self.login()
+        event=self.events()[-1]
+        self.assertEqual(event["step"],"verification_methods");self.assertEqual(event["fault"],"type_error")
+        self.assertIsNone(self.worker.pending);self.assertIsNone(self.account._password)

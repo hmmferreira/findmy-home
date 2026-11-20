@@ -31,8 +31,8 @@ function renderStatus(data){
   const setupBlocked=auth==="failed"&&data.auth?.error==="setup_required";
   const pending=["working","choose_method","verification_code"].includes(auth);
   statusBadge("account-badge",pending?(auth==="working"?"Account: connecting":"Account: verification needed"):
-    setupBlocked?"Account: setup required":data.setup?.locations_connected?"Account: connected":auth==="failed"?"Account: sign-in needs attention":"Account: not connected",
-    setupBlocked?"error":pending?"info":data.setup?.locations_connected?"success":auth==="failed"?"error":"info");
+    setupBlocked?"Account: setup required":auth==="failed"?"Account: sign-in needs attention":data.setup?.locations_connected?"Account: connected":"Account: not connected",
+    setupBlocked?"error":pending?"info":auth==="failed"?"error":data.setup?.locations_connected?"success":"info");
   const recoveryIssue=["failed","expired","timed_out"].includes(flow);
   statusBadge("keys-badge",flow==="working"?"Item keys: recovering":flow==="input"?"Item keys: unlock needed":recoveryIssue?"Item keys: recovery needs attention":
     data.items.length?"Item keys: ready":"Item keys: not recovered",recoveryIssue?"error":flow==="input"?"warning":data.items.length&&flow!=="working"?"success":"info");
@@ -257,6 +257,11 @@ function showFactor(result){
   result=result||{phase:"idle"};authKey=JSON.stringify(result);
   const form=$("factor"),shared=Boolean(snapshot?.setup?.shared_auth);
   const reasons={
+    "apple_signin_refused":"Apple declined to start sign-in for this account or device before checking the password. Wait before retrying; repeatedly reconnecting may not help.",
+    "credentials_rejected":"Apple did not accept the sign-in credentials. Check the account email and password before retrying.",
+    "authentication_protocol_error":"Apple’s sign-in response could not be processed. Retrace’s app log records the failure stage without your credentials.",
+    "authentication_state_error":"The sign-in sequence could not continue. Cancel sign-in, then reconnect using the account form.",
+    "authentication_failed":"Sign-in stopped unexpectedly. Retrace’s app log records the failure stage without your credentials.",
     "sign_in_expired":"The verification step expired. Sign in again using the Apple account form above.",
     "session_expired":"The saved session expired. Reconnect using the Apple account form above.",
     "session_save_failed":"Your account session could not be saved securely. Check app storage before signing in again.",

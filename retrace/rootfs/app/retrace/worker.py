@@ -13,7 +13,8 @@ from .progress import safe_progress
 AUTH_ERRORS={"authentication_failed","authentication_network_error","verification_rejected",
     "verification_not_accepted","verification_rate_limited","code_request_failed",
     "invalid_verification_code","session_save_failed","discovery_handoff_failed",
-    "setup_required","sign_in_expired"}
+    "setup_required","sign_in_expired","apple_signin_refused","credentials_rejected",
+    "authentication_protocol_error","authentication_state_error"}
 
 class AuthenticationError(RuntimeError):
     """Stable public code only; never keep the underlying SDK exception/message."""
@@ -51,6 +52,20 @@ def _auth_classification(error,stage):
     unavailable=getattr(sdk_errors,"AppleServiceUnavailableError",None)
     if isinstance(unavailable,type) and isinstance(error,unavailable):
         return "verification_rate_limited" if getattr(error,"status_code",None)==429 else "authentication_network_error",False,"service_unavailable"
+    refused=getattr(sdk_errors,"GrandSlamRefusedError",None)
+    if isinstance(refused,type) and isinstance(error,refused):
+        if getattr(error,"step",None)=="init":return "apple_signin_refused",False,"apple_refused"
+        if getattr(error,"step",None)=="complete":return "credentials_rejected",False,"credentials_refused"
+        return "authentication_protocol_error",False,"protocol"
+    for name,code,kind in (("InvalidCredentialsError","credentials_rejected","credentials_refused"),
+                           ("UnhandledProtocolError","authentication_protocol_error","protocol"),
+                           ("InvalidStateError","authentication_state_error","state")):
+        cls=getattr(sdk_errors,name,None)
+        if isinstance(cls,type) and isinstance(error,cls):
+            # A factor refusal must not be presented as a wrong account password.
+            if name in {"InvalidCredentialsError","UnhandledProtocolError"} and stage in {"2fa_request","2fa_submit"}:
+                code="code_request_failed" if stage=="2fa_request" else "verification_rejected"
+            return code,False,kind
     code=getattr(error,"code",None)
     if isinstance(code,str) and code in {"artifact_unavailable","artifact_digest_mismatch","artifact_review_required","reviewed_artifact_required",
                 "isolated_provisioning_worker_required","worker_boundary_unavailable","explicit_new_identity_required",
@@ -99,24 +114,31 @@ class AppleWorker:
                 for n,method in enumerate(self.methods)]
 
     @staticmethod
-    def _auth_event(stage,event,*,method=None,error=None,kind=None,status=None,reason=None):
+    def _auth_event(stage,event,*,method=None,error=None,kind=None,status=None,reason=None,step=None,apple_step=None,apple_code=None,fault=None,component=None,line=None):
         if stage not in {"login","2fa_request","2fa_submit","session_save","discovery_handoff"}:return
         if event not in {"started","completed","failed","cancelled"}:return
         value={"stage":stage,"event":event}
         if isinstance(method,str) and method in {"sms","trusted_device","unknown"}:value["method"]=method
         if isinstance(error,str) and error in AUTH_ERRORS:value["error"]=error
-        if isinstance(kind,str) and kind in {"storage","handoff","verification_refused","verification_code_rejected","network","setup","transport_blocked","service_unavailable","unclassified"}:value["kind"]=kind
+        if isinstance(kind,str) and kind in {"storage","handoff","verification_refused","verification_code_rejected","network","setup","transport_blocked","service_unavailable","unclassified","apple_refused","credentials_refused","protocol","state"}:value["kind"]=kind
         if type(status) is int and status in {400,401,403,429,500,502,503,504}:value["status"]=status
         if isinstance(reason,str) and reason in {"destination_blocked","request_failed","transport_closed","transport_options_blocked",
                        "dns_destination_blocked","redirect_blocked","response_invalid","response_too_large",
                        "explicit_new_identity_required","signing_identity_missing","signing_identity_invalid",
                        "artifact_unavailable","artifact_digest_mismatch","artifact_review_required","reviewed_artifact_required",
                        "isolated_provisioning_worker_required","worker_boundary_unavailable"}:value["reason"]=reason
+        if isinstance(step,str) and step in {"account_setup","apple_signin","verification_methods"}:value["step"]=step
+        if isinstance(apple_step,str) and apple_step in {"init","complete"}:value["apple_step"]=apple_step
+        if type(apple_code) is int and -1000000<=apple_code<=1000000:value["apple_code"]=apple_code
+        if isinstance(fault,str) and fault in {"attribute_error","type_error","key_error","value_error","runtime_error","other"}:value["fault"]=fault
+        if isinstance(component,str) and component in {"account_protocol","account_factory","owned_transport","offline_signer","native_worker","worker"}:
+            value["component"]=component
+            if type(line) is int and 0<line<100000:value["line"]=line
         # Bounded structured print deliberately survives global SDK logging disable.
         # No caller can supply owner/email/phone/code/token, body or exception text.
         print("Retrace auth: "+json.dumps(value,separators=(",",":")),flush=True)
 
-    async def _auth_step(self,stage,operation,*,method=None):
+    async def _auth_step(self,stage,operation,*,method=None,context=None):
         self._auth_event(stage,"started",method=method)
         try:result=await operation()
         except asyncio.CancelledError:
@@ -124,8 +146,24 @@ class AppleWorker:
             raise
         except Exception as error:
             code,retry,kind=_auth_classification(error,stage)
+            details={}
+            from findmy import errors as sdk_errors
+            refused=getattr(sdk_errors,"GrandSlamRefusedError",None)
+            if isinstance(refused,type) and isinstance(error,refused):
+                details={"apple_step":getattr(error,"step",None),"apple_code":getattr(error,"ec",None)}
+            if kind in {"unclassified","protocol","state"}:
+                details["fault"]=next((label for cls,label in ((AttributeError,"attribute_error"),(TypeError,"type_error"),(KeyError,"key_error"),(ValueError,"value_error"),(RuntimeError,"runtime_error")) if isinstance(error,cls)),"other")
+                origins={"findmy.reports.account":"account_protocol","retrace.shared_runtime":"account_factory",
+                         "retrace.owned_protocol":"account_factory","retrace.apple_transport":"owned_transport",
+                         "retrace.offline_signer":"offline_signer","retrace.native_worker":"native_worker","retrace.worker":"worker"}
+                frame=error.__traceback__
+                while frame is not None:
+                    origin=origins.get(frame.tb_frame.f_globals.get("__name__"))
+                    if origin:details.update(component=origin,line=frame.tb_lineno)
+                    frame=frame.tb_next
             self._auth_event(stage,"failed",method=method,error=code,kind=kind,
-                status=getattr(error,"status",getattr(error,"status_code",None)),reason=getattr(error,"code",None))
+                status=getattr(error,"status",getattr(error,"status_code",None)),reason=getattr(error,"code",None),
+                step=context.get("step") if isinstance(context,dict) else None,**details)
             raise AuthenticationError(code,stage,retry_factor=retry) from None
         self._auth_event(stage,"completed",method=method)
         return result
@@ -167,6 +205,7 @@ class AppleWorker:
         async with self.lock:
             if self.pending:
                 raise ValueError("Finish or cancel the current sign-in")
+            context={"step":"account_setup"}
             async def start():
                 async with asyncio.timeout(90):
                     account = (await self.account_factory() if self.account_factory is not None else
@@ -174,14 +213,16 @@ class AppleWorker:
                 self.pending, self.owner = account, owner
                 self.auth_task = asyncio.create_task(self._expire())
                 async with asyncio.timeout(90):
+                    context["step"]="apple_signin"
                     state=await account.login(email,password)
                     if state==LoginState.REQUIRE_2FA:
+                        context["step"]="verification_methods"
                         self.methods=list(await account.get_2fa_methods())
                         return {"phase":"choose_method","methods":self._method_choices()}
                     if state!=LoginState.LOGGED_IN:raise ValueError("Authentication incomplete")
                     return None
             try:
-                result=await self._auth_step("login",start)
+                result=await self._auth_step("login",start,context=context)
                 return result if result is not None else await self._complete_signin()
             except BaseException:
                 await self._clear_pending()
