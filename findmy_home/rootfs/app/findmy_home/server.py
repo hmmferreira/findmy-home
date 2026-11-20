@@ -202,7 +202,7 @@ async def main():
     store = Store(Path(os.environ.get("FINDMY_HOME_DATA", "/data/findmy_home")))
     await asyncio.to_thread(enrich_metadata,store)
     from .shared_runtime import read_options,configure_runtime,compose_runtime
-    runtime_options=read_options()
+    runtime_options=read_options(store.root/"runtime-options.json")
     mode=configure_runtime(runtime_options)
     shared_ui=None
     flow=ExportFlow(store.root)

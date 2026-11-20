@@ -18,6 +18,20 @@ DIGEST='a'*64
 IDS={'uid':'00000000-0000-4000-8000-000000000001','devid':'00000000-0000-4000-8000-000000000002'}
 
 class StartupTests(unittest.TestCase):
+    def test_validated_options_are_handed_off_privately_before_privilege_drop(self):
+        from findmy_home.shared_runtime import publish_runtime_options
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/'private';root.mkdir(mode=0o700)
+            source=Path(tmp)/'supervisor-options.json'
+            source.write_text(json.dumps({'runtime_mode':'shared','private_evaluation':True}))
+            source.chmod(0o600)
+            options=read_options(source)
+            path=publish_runtime_options(root,options)
+            source.unlink()  # web process must not depend on Supervisor file access.
+            self.assertEqual(read_options(path),options)
+            self.assertEqual(path.stat().st_mode&0o777,0o600)
+            self.assertEqual(root.stat().st_mode&0o777,0o700)
+
     def test_options_are_explicit_and_default_preserves_legacy(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'options.json'

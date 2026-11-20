@@ -17,7 +17,7 @@ def render(source, target, channel, version, *, runtime="legacy"):
         raise ValueError("Edge must use a development version")
     target.mkdir(parents=True, exist_ok=False)
     for name in ("findmy_home", "custom_components", "docs"):
-        shutil.copytree(source/name, target/name, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.apk", "*.bin", "*.enc", "*.key", "*.plist", "account.json", "owned-session.json", "owned-signing.json", "identity.json"))
+        shutil.copytree(source/name, target/name, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.apk", "*.bin", "*.enc", "*.key", "*.plist", "runtime-options.json", "account.json", "owned-session.json", "owned-signing.json", "identity.json"))
     for name in ("README.md", "repository.yaml", "hacs.json", "LICENSE"):
         shutil.copyfile(source/name, target/name)
     (target/"findmy_home/rootfs/app/findmy_home/channel.json").write_text(

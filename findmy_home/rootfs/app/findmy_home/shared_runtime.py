@@ -38,6 +38,15 @@ def read_options(path=Path('/data/options.json')):
         return {"runtime_mode":mode,"shared_artifact_id":artifact,"create_new_identity":create,"install_reviewed_component":install,"private_evaluation":private_evaluation}
     except Exception:raise RuntimeBlocked("runtime_options_invalid") from None
 
+def publish_runtime_options(root,options,*,uid=None,gid=None):
+    """Hand off validated non-secret options before the launcher drops root."""
+    root=Path(root)
+    if root.is_symlink() or not root.is_dir():raise RuntimeBlocked("runtime_options_invalid")
+    path=root/'runtime-options.json'
+    atomic_json(path,options)
+    if uid is not None:os.chown(path,uid,gid,follow_symlinks=False)
+    return path
+
 def require_shared_backend():
     try:
         marker=json.loads(Path(__file__).with_name('shared_backend.json').read_text())

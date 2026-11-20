@@ -1,7 +1,7 @@
 """Allow source files into build contexts; exclude private runtime artifacts."""
 from pathlib import PurePath
 
-PRIVATE_NAMES={"account.json","owned-session.json","owned-signing.json","identity.json",".env"}
+PRIVATE_NAMES={"runtime-options.json","account.json","owned-session.json","owned-signing.json","identity.json",".env"}
 PRIVATE_SUFFIXES={".apk",".bin",".enc",".key",".plist",".sqlite",".sqlite3"}
 EXCLUDED_PARTS={".git","__pycache__",".venv",".pytest_cache","node_modules","data"}
 

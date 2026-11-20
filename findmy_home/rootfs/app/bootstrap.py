@@ -6,18 +6,20 @@ import subprocess
 import sys
 import time
 from findmy_home.private_data import prepare_private_root
-from findmy_home.shared_runtime import read_options,configure_runtime,RuntimeBlocked,owned_session_available
+from findmy_home.shared_runtime import read_options,configure_runtime,RuntimeBlocked,owned_session_available,publish_runtime_options
 
 
 def main():
     os.umask(0o077)
+    options=read_options()
     root=Path('/data/findmy_home')
     prepare_private_root(root,1000 if os.geteuid()==0 else None,1000)
+    publish_runtime_options(root,options,uid=1000 if os.geteuid()==0 else None,gid=1000)
     if os.geteuid()==0:
         os.setgroups([]);os.setgid(1000);os.setuid(1000)
     os.environ['XDG_CONFIG_HOME']=str(root/'config')
     (root/'config').mkdir(exist_ok=True,mode=0o700)
-    mode=configure_runtime(read_options())
+    mode=configure_runtime(options)
     if mode=='legacy' and owned_session_available(root):
         raise RuntimeBlocked('owned_runtime_required')
     children=[]
