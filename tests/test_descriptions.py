@@ -6,8 +6,8 @@ import plistlib
 import tempfile
 import unittest
 from unittest.mock import patch
-from findmy_home.storage import Store,atomic_json,read_json
-from findmy_home.descriptions import metadata,enrich_metadata
+from retrace.storage import Store,atomic_json,read_json
+from retrace.descriptions import metadata,enrich_metadata
 
 class DescriptionTests(unittest.TestCase):
     def test_model_date_and_original_name_without_hardware_identifiers(self):

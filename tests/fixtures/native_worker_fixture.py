@@ -14,7 +14,7 @@ import sys
 import time
 from types import ModuleType,SimpleNamespace
 
-APP=Path(__file__).resolve().parents[2]/"findmy_home/rootfs/app/findmy_home"
+APP=Path(__file__).resolve().parents[2]/"retrace/rootfs/app/retrace"
 sys.path.insert(0,str(APP))
 import native_worker_child
 

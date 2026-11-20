@@ -14,7 +14,7 @@ import stat
 import tarfile
 import zipfile
 
-MANIFEST=Path(__file__).resolve().parents[1]/"findmy_home/rootfs/app/findmy_home/trusted_artifacts.json"
+MANIFEST=Path(__file__).resolve().parents[1]/"retrace/rootfs/app/retrace/trusted_artifacts.json"
 MAX_APK=200*1024*1024
 MAX_LIBRARY=16*1024*1024
 

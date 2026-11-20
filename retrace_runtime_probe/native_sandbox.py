@@ -49,7 +49,7 @@ def _restrict_apparmor(libc):
     before,state=context()
     if state!="enforce" or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,254}",before):
         raise SandboxUnavailable("worker_apparmor_profile_invalid")
-    target=before+"//findmy-native"
+    target=before+"//retrace-native"
     if apparmor.aa_change_profile(target.encode("ascii"))!=0:
         raise SandboxUnavailable("worker_apparmor_transition_failed")
     after,state=context()

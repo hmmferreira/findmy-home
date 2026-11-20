@@ -9,12 +9,12 @@ import unittest
 from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[1]
-PROBE=ROOT/"findmy_runtime_probe"
+PROBE=ROOT/"retrace_runtime_probe"
 
 class RuntimeProbeTests(unittest.TestCase):
     def test_probe_copies_exact_production_boundary(self):
         self.assertEqual((PROBE/"native_sandbox.py").read_bytes(),
-            (ROOT/"findmy_home/rootfs/app/findmy_home/native_sandbox.py").read_bytes())
+            (ROOT/"retrace/rootfs/app/retrace/native_sandbox.py").read_bytes())
     def test_probe_requests_no_apis_privileges_ports_or_host_mounts(self):
         text=(PROBE/"config.yaml").read_text()
         # This diagnostic manifest uses flat scalars plus its one architecture;

@@ -123,5 +123,5 @@ async def run_probe():
 
 if __name__=="__main__":
     result=asyncio.run(run_probe())
-    print(json.dumps({"probe":"findmy_runtime_probe","version":"0.1.4",**result},separators=(",",":")),flush=True)
+    print(json.dumps({"probe":"retrace_runtime_probe","version":"0.1.4",**result},separators=(",",":")),flush=True)
     raise SystemExit(0 if result["result"]=="supported" else 1)

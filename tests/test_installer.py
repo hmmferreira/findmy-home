@@ -13,10 +13,10 @@ class InstallerTests(unittest.TestCase):
         self.root=Path(self.tmp.name)/"package"
         self.root.mkdir()
         shutil.copyfile(Path(__file__).parents[1]/"tools/installer.py",self.root/"install.py")
-        for name in ("payload/findmy_home/config.yaml","payload/custom_components/findmy_home/manifest.json"):
+        for name in ("payload/retrace/config.yaml","payload/custom_components/findmy_home/manifest.json"):
             p=self.root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text("fixture")
         self.manifest()
-        self.app=Path(self.tmp.name)/"addons/local/findmy_home"
+        self.app=Path(self.tmp.name)/"addons/local/retrace"
         self.integration=Path(self.tmp.name)/"config/custom_components/findmy_home"
     def tearDown(self):
         self.tmp.cleanup()
@@ -35,7 +35,7 @@ class InstallerTests(unittest.TestCase):
         self.assertTrue((self.app/"config.yaml").is_file())
         self.assertTrue((self.integration/"manifest.json").is_file())
     def test_refuses_tampered_package(self):
-        (self.root/"payload/findmy_home/config.yaml").write_text("tampered")
+        (self.root/"payload/retrace/config.yaml").write_text("tampered")
         self.assertNotEqual(self.run_install(True).returncode,0)
         self.assertFalse(self.app.exists())
     def test_refuses_existing_target(self):
@@ -44,6 +44,6 @@ class InstallerTests(unittest.TestCase):
         self.assertNotEqual(self.run_install(True).returncode,0)
         self.assertEqual(marker.read_text(),"existing")
     def test_rejects_symlink(self):
-        p=self.root/"payload/findmy_home/config.yaml"
+        p=self.root/"payload/retrace/config.yaml"
         p.unlink();p.symlink_to(self.root/"install.py")
         self.assertNotEqual(self.run_install(True).returncode,0)

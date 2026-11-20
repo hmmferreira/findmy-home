@@ -9,9 +9,9 @@ from types import SimpleNamespace
 import tempfile
 import unittest
 from unittest.mock import patch
-from findmy_home.storage import Store,atomic_json,read_json
-from findmy_home.worker import AppleWorker
-from findmy_home.descriptions import enrich_metadata
+from retrace.storage import Store,atomic_json,read_json
+from retrace.worker import AppleWorker
+from retrace.descriptions import enrich_metadata
 
 class RestoreTests(unittest.TestCase):
     def test_complete_private_state_copy_preserves_identity_and_resets_health(self):
@@ -57,7 +57,7 @@ class RestoreTests(unittest.TestCase):
             store=Store(Path(tmp));store.items={"a":{"name":"Fixture","enabled":False}}
             atomic_json(store.root/"items.json",store.items)
             before=copy.deepcopy(store.items)
-            with patch("findmy_home.storage.atomic_json",side_effect=OSError("synthetic disk full")):
+            with patch("retrace.storage.atomic_json",side_effect=OSError("synthetic disk full")):
                 with self.assertRaises(OSError): store.select(["a"])
             self.assertEqual(store.items,before)
             self.assertEqual(read_json(store.root/"items.json"),before)
@@ -66,7 +66,7 @@ class RestoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store=Store(Path(tmp));worker=AppleWorker(store)
             report={"latitude":1.,"longitude":2.,"accuracy":10.,"timestamp":datetime.now(timezone.utc).isoformat()}
-            with patch("findmy_home.worker.atomic_json",side_effect=OSError("synthetic disk full")):
+            with patch("retrace.worker.atomic_json",side_effect=OSError("synthetic disk full")):
                 with self.assertRaises(OSError): worker._accept_report("a",report)
             self.assertEqual(store.reports,{})
             self.assertFalse((store.root/"reports.json").exists())
@@ -77,12 +77,12 @@ class RestoreTests(unittest.TestCase):
             store.items={"a":{"name":"Fixture","enabled":True,"key_file":"a.json"}}
             atomic_json(store.root/"keys/a.json",{"model":"iPhone17,2"})
             before=copy.deepcopy(store.items)
-            with patch("findmy_home.descriptions.atomic_json",side_effect=OSError("synthetic disk full")):
+            with patch("retrace.descriptions.atomic_json",side_effect=OSError("synthetic disk full")):
                 with self.assertRaises(OSError): enrich_metadata(store)
             self.assertEqual(store.items,before)
 
     def test_failed_inventory_write_does_not_publish_imported_items(self):
-        from findmy_home.importer import import_exports
+        from retrace.importer import import_exports
         with tempfile.TemporaryDirectory() as tmp:
             store=Store(Path(tmp)/"data")
             source=Path(tmp)/"exports";source.mkdir()
@@ -91,7 +91,7 @@ class RestoreTests(unittest.TestCase):
                 if path.name=="items.json": raise OSError("synthetic disk full")
                 atomic_json(path,value)
             accessory=SimpleNamespace(to_json=lambda:{"fixture":"PRIVATE_KEY"})
-            with patch("findmy.FindMyAccessory.from_plist",return_value=accessory), patch("findmy_home.importer.atomic_json",side_effect=write):
+            with patch("findmy.FindMyAccessory.from_plist",return_value=accessory), patch("retrace.importer.atomic_json",side_effect=write):
                 with self.assertRaises(OSError): import_exports(store,source)
             self.assertEqual(store.items,{})
             self.assertFalse((store.root/"items.json").exists())

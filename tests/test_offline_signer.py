@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import tempfile
 import unittest
 from unittest.mock import Mock,patch
-from findmy_home.offline_signer import OfflineSigner,SignerBlocked,NoProvisioning,_build_engine
+from retrace.offline_signer import OfflineSigner,SignerBlocked,NoProvisioning,_build_engine
 
 class OfflineSignerTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -19,7 +19,7 @@ class OfflineSignerTests(unittest.IsolatedAsyncioTestCase):
             save_provisioning=lambda stream:stream.write(b"PRIVATE_SYNTHETIC_UPDATED_STATE"))
     async def asyncTearDown(self):await self.signer.close();self.tmp.cleanup()
     async def ready(self):
-        with patch("findmy_home.offline_signer._build_engine",return_value=self.engine) as build:
+        with patch("retrace.offline_signer._build_engine",return_value=self.engine) as build:
             await self.signer.initialize()
         build.assert_called_once_with(b"PRIVATE_SYNTHETIC_STATE",b"synthetic-reviewed-library")
     async def test_verified_artifact_and_existing_state_can_sign_without_network_interface(self):
@@ -36,12 +36,12 @@ class OfflineSignerTests(unittest.IsolatedAsyncioTestCase):
                 elif kind=="symlink":path.symlink_to(self.path)
                 elif kind=="directory":path.mkdir()
                 signer=OfflineSigner(path,b"state",self.digest)
-                with patch("findmy_home.offline_signer._build_engine") as build:
+                with patch("retrace.offline_signer._build_engine") as build:
                     with self.assertRaises(SignerBlocked):await signer.initialize()
                 build.assert_not_called();await signer.close()
     async def test_unprovisioned_state_never_requests_automatic_provisioning(self):
         self.engine.is_provisioned=False
-        with patch("findmy_home.offline_signer._build_engine",return_value=self.engine):
+        with patch("retrace.offline_signer._build_engine",return_value=self.engine):
             with self.assertRaises(SignerBlocked) as caught:await self.signer.initialize()
         self.assertEqual(str(caught.exception),"provisioning_required")
         self.assertFalse(self.signer.ready)
@@ -77,7 +77,7 @@ class OfflineSignerTests(unittest.IsolatedAsyncioTestCase):
                 if not release.wait(2):raise RuntimeError("test worker release timeout")
                 return self.engine
             finally:finished.set()
-        with patch("findmy_home.offline_signer._build_engine",side_effect=build):
+        with patch("retrace.offline_signer._build_engine",side_effect=build):
             task=asyncio.create_task(self.signer.initialize())
             try:
                 self.assertTrue(await asyncio.to_thread(entered.wait,1))

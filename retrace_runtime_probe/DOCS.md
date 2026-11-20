@@ -45,7 +45,7 @@ kernel security module that is absent or disabled at boot.
 
 Version 0.1.2 adds a custom, enforced nested AppArmor profile for HAOS hosts whose
 kernel does not provide Landlock. The child permanently changes from its app's
-profile to `findmy-native`, verifies the exact enforced destination, then applies
+profile to `retrace-native`, verifies the exact enforced destination, then applies
 the same no-new-privileges, resource limits and syscall filter. The child profile
 allows public interpreter/library/code reads and private control-pipe traffic;
 it grants no private data access, networking, executable launches or transition

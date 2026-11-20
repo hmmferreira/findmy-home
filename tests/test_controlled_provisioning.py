@@ -9,8 +9,8 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from findmy_home.apple_transport import OwnedHttpSession,Response,TransportBlocked,validate_destination
-from findmy_home.controlled_provisioning import (provision_new_identity,ProvisioningBlocked,LOOKUP,START,FINISH)
+from retrace.apple_transport import OwnedHttpSession,Response,TransportBlocked,validate_destination
+from retrace.controlled_provisioning import (provision_new_identity,ProvisioningBlocked,LOOKUP,START,FINISH)
 
 class Worker:
     def __init__(self):self.calls=[];self.closed=False
@@ -125,7 +125,7 @@ class ControlledProvisioningTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.worker.closed);self.assertTrue(self.http.closed)
         self.assertEqual(len(self.http.calls),2)
     async def test_artifact_file_io_runs_off_event_loop(self):
-        from findmy_home import controlled_provisioning as module
+        from retrace import controlled_provisioning as module
         real=module._artifact;threads=[]
         def check(*args):threads.append(threading.get_ident());return real(*args)
         with patch.object(module,"_artifact",side_effect=check):await self.run_flow()

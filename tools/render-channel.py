@@ -16,22 +16,22 @@ def render(source, target, channel, version, *, runtime="legacy"):
     if (channel == "edge") != ("-dev." in version):
         raise ValueError("Edge must use a development version")
     target.mkdir(parents=True, exist_ok=False)
-    for name in ("findmy_home", "custom_components", "docs"):
+    for name in ("retrace", "custom_components", "docs"):
         shutil.copytree(source/name, target/name, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.apk", "*.bin", "*.enc", "*.key", "*.plist", "runtime-options.json", "account.json", "owned-session.json", "owned-signing.json", "identity.json"))
     for name in ("README.md", "repository.yaml", "hacs.json", "LICENSE"):
         shutil.copyfile(source/name, target/name)
-    (target/"findmy_home/rootfs/app/findmy_home/channel.json").write_text(
+    (target/"retrace/rootfs/app/retrace/channel.json").write_text(
         json.dumps({"channel":channel,"version":version})+"\n")
-    config=target/"findmy_home/config.yaml"
+    config=target/"retrace/config.yaml"
     text=config.read_text()
     text=re.sub(r"(?m)^version:.*$", "version: "+version, text)
     title="Retrace Edge" if channel=="edge" else "Retrace"
     text=re.sub(r"(?m)^name:.*$", "name: "+title, text)
     text=re.sub(r"(?m)^panel_title:.*$", "panel_title: "+title, text)
     if runtime=="shared":
-        shutil.copyfile(target/"findmy_home/Dockerfile.shared",target/"findmy_home/Dockerfile")
-        shutil.copyfile(target/"findmy_home/apparmor.shared.txt",target/"findmy_home/apparmor.txt")
-        shutil.copyfile(target/"findmy_home/DOCS.shared.md",target/"findmy_home/DOCS.md")
+        shutil.copyfile(target/"retrace/Dockerfile.shared",target/"retrace/Dockerfile")
+        shutil.copyfile(target/"retrace/apparmor.shared.txt",target/"retrace/apparmor.txt")
+        shutil.copyfile(target/"retrace/DOCS.shared.md",target/"retrace/DOCS.md")
         text=text.replace("  runtime_mode: legacy","  runtime_mode: shared",1)
     config.write_text(text)
     # Channel name alone never removes experimental status: live validation is required.

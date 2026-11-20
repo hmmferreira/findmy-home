@@ -7,13 +7,13 @@ import tarfile
 import tempfile
 import zipfile
 root=Path(__file__).resolve().parents[1]
-output=root.parent/"findmy-home-dist"
+output=root.parent/"retrace-dist"
 output.mkdir(exist_ok=True)
-name="findmy-home-local-0.1.0"
+name="retrace-local-0.1.0"
 with tempfile.TemporaryDirectory() as temp:
     stage=Path(temp)/name
     stage.mkdir()
-    for source,target in ((root/"findmy_home",stage/"payload/findmy_home"),
+    for source,target in ((root/"retrace",stage/"payload/retrace"),
                           (root/"custom_components/findmy_home",stage/"payload/custom_components/findmy_home")):
         shutil.copytree(source,target,ignore=shutil.ignore_patterns("__pycache__","*.pyc"))
     shutil.copyfile(root/"tools/installer.py",stage/"install.py")

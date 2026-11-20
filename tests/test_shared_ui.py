@@ -10,11 +10,11 @@ import unittest
 from unittest.mock import AsyncMock,patch
 from aiohttp.test_utils import TestClient,TestServer
 from findmy import FindMyAccessory,LoginState
-from findmy_home.storage import Store,read_json,atomic_json
-from findmy_home.worker import AppleWorker
-from findmy_home.shared_ui import SharedDiscoveryUI,compose_shared_ui
-from findmy_home.shared_inventory import PrivateInventorySink
-from findmy_home.server import make_app
+from retrace.storage import Store,read_json,atomic_json
+from retrace.worker import AppleWorker
+from retrace.shared_ui import SharedDiscoveryUI,compose_shared_ui
+from retrace.shared_inventory import PrivateInventorySink
+from retrace.server import make_app
 
 class SharedUI(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -81,7 +81,7 @@ class SharedUI(unittest.IsolatedAsyncioTestCase):
         self.account.login.assert_not_awaited()
 
     async def test_session_save_failure_closes_account_before_discovery(self):
-        from findmy_home.owned_session import SessionBlocked
+        from retrace.owned_session import SessionBlocked
         self.writer.side_effect=SessionBlocked("session_snapshot_failed")
         await self.ui.authenticate("owner",lambda:self.worker.login("owner","fixture@example.invalid","synthetic-password"))
         await self.ui.auth_task
@@ -146,7 +146,7 @@ class Inventory(unittest.IsolatedAsyncioTestCase):
         def write(path,data):
             if path.name=="items.json":raise OSError("synthetic disk failure")
             original(path,data)
-        with patch("findmy_home.shared_inventory.atomic_json",side_effect=write):
+        with patch("retrace.shared_inventory.atomic_json",side_effect=write):
             with self.assertRaises(OSError):await self.sink([self.accessory("new")])
         self.assertEqual(self.store.items,before)
         self.assertEqual(read_json(self.store.root/"items.json"),before)

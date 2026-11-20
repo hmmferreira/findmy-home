@@ -28,14 +28,14 @@ jobs:
         with:
           python-version: '3.12'
       - run: |
-          pip install --require-hashes --only-binary=:all: -r findmy_home/requirements.lock
+          pip install --require-hashes --only-binary=:all: -r retrace/requirements.lock
       - run: pip check
       - name: Check runtime advisories and expiring applicability notes
         run: python tools/audit-python.py
       - run: npm ci --prefix tools/ui-tests --ignore-scripts --no-audit --no-fund
       - name: Isolated synthetic tests (no Apple credentials)
         env:
-          PYTHONPATH: findmy_home/rootfs/app
+          PYTHONPATH: retrace/rootfs/app
         run: python -m unittest discover -s tests -v
   native:
     runs-on: ubuntu-latest
@@ -55,7 +55,7 @@ jobs:
         run: docker run --rm -v "$PWD:/github/workspace" ghcr.io/home-assistant/hassfest@sha256:b200bb178c5c62f984c2c705c820bd991e5308d6cba6987d24c7d643919ab5cc
   deliver:
     needs: [test, native, hassfest]
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -74,7 +74,7 @@ jobs:
             echo 'Stable requires the documented live validation.' >&2
             exit 1
           fi
-          VERSION=$(sed -n 's/^version: *//p' findmy_home/config.yaml)
+          VERSION=$(sed -n 's/^version: *//p' retrace/config.yaml)
           if [ "$REQUESTED_CHANNEL" = edge ]; then
             VERSION="$VERSION-dev.$GITHUB_RUN_NUMBER.$GITHUB_RUN_ATTEMPT"
           fi

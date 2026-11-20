@@ -1,9 +1,9 @@
 """Public-code-only shared image probe. Never load a native artifact or session."""
 import asyncio
 import os
-from findmy_home.shared_runtime import require_shared_backend,configure_runtime
-from findmy_home.artifact_policy import reviewed_artifact,ArtifactBlocked
-from findmy_home.native_worker import _NativeChannel
+from retrace.shared_runtime import require_shared_backend,configure_runtime
+from retrace.artifact_policy import reviewed_artifact,ArtifactBlocked
+from retrace.native_worker import _NativeChannel
 
 assert os.getuid()==1000
 require_shared_backend()
@@ -29,8 +29,8 @@ import json
 from pathlib import Path
 import subprocess
 import tempfile
-from findmy_home.reporting_runtime import report_launch
-from findmy_home.storage import atomic_json
+from retrace.reporting_runtime import report_launch
+from retrace.storage import atomic_json
 with tempfile.TemporaryDirectory() as directory:
     root=Path(directory)
     options={'runtime_mode':'shared','private_evaluation':True}

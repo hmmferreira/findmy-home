@@ -11,10 +11,10 @@ import tempfile
 import unittest
 from unittest.mock import AsyncMock,patch
 import zipfile
-from findmy_home import artifact_policy
-from findmy_home.artifact_policy import ArtifactBlocked,reviewed_artifact
-from findmy_home.apple_transport import OwnedHttpSession,TransportBlocked,ARTIFACT_URL,validate_destination
-from findmy_home.component_installer import ensure_component,MAX_APK
+from retrace import artifact_policy
+from retrace.artifact_policy import ArtifactBlocked,reviewed_artifact
+from retrace.apple_transport import OwnedHttpSession,TransportBlocked,ARTIFACT_URL,validate_destination
+from retrace.component_installer import ensure_component,MAX_APK
 
 class Fixture:
     def __init__(self):
@@ -38,7 +38,7 @@ class Fixture:
         entry['license'].update(native_review='approved',redistribution='local-use-only')
         self.manifest=manifest
     def policy(self):
-        with patch('findmy_home.artifact_policy._load_manifest',return_value=self.manifest):
+        with patch('retrace.artifact_policy._load_manifest',return_value=self.manifest):
             return reviewed_artifact('applemusic-arm64-v8a',host_architecture='amd64')
 
 class FakeDownload(OwnedHttpSession):
@@ -79,7 +79,7 @@ class ComponentTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(target.is_symlink());self.assertFalse(http.calls);await http.close()
     async def test_full_source_hash_is_checked_before_zip_is_opened(self):
         http=FakeDownload(b'corrupt source')
-        with patch('findmy_home.component_installer.zipfile.ZipFile',side_effect=AssertionError('must not open')) as open_zip:
+        with patch('retrace.component_installer.zipfile.ZipFile',side_effect=AssertionError('must not open')) as open_zip:
             with self.assertRaisesRegex(ArtifactBlocked,'artifact_source_digest_mismatch'):
                 await ensure_component(self.root,self.policy,install=True,transport=http)
             open_zip.assert_not_called()
@@ -140,7 +140,7 @@ class ComponentTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(list(self.root.iterdir()));self.assertTrue(http._closed)
     async def test_oversized_stream_is_bounded_and_cleans_up(self):
         http=FakeDownload(self.fixture.apk)
-        with patch('findmy_home.component_installer.MAX_APK',32):
+        with patch('retrace.component_installer.MAX_APK',32):
             with self.assertRaisesRegex(ArtifactBlocked,'artifact_source_too_large'):
                 await ensure_component(self.root,self.policy,install=True,transport=http)
         self.assertFalse(list(self.root.iterdir()))

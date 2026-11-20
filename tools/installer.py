@@ -44,9 +44,9 @@ def install(root,addon,component,apply=False):
     staged=[]
     published=[]
     try:
-        for source,target in ((root/"payload/findmy_home",addon),(root/"payload/custom_components/findmy_home",component)):
+        for source,target in ((root/"payload/retrace",addon),(root/"payload/custom_components/findmy_home",component)):
             target.parent.mkdir(parents=True,exist_ok=True)
-            stage=Path(tempfile.mkdtemp(prefix=".findmy-home-stage-",dir=target.parent))
+            stage=Path(tempfile.mkdtemp(prefix=".retrace-stage-",dir=target.parent))
             staged.append(stage)
             shutil.copytree(source,stage/"content")
         for stage,target in zip(staged,(addon,component)):
@@ -76,7 +76,7 @@ def main():
             mount=next((p for p in (Path("/local_apps"),Path("/addons")) if p.is_dir()),None)
             if mount is None:
                 raise ValueError("No local app mount found: expected /local_apps or /addons in the editor")
-            addon=mount/"findmy_home"
+            addon=mount/"retrace"
         install(Path(__file__).resolve().parent,addon,args.integration_target,args.apply)
     except (ValueError,OSError) as error:
         parser.exit(1,str(error)+chr(10))

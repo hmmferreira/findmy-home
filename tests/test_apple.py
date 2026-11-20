@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import AsyncMock,patch
 from findmy import AsyncAppleAccount
 from findmy.errors import EmptyResponseError
-from findmy_home.apple import ReportingAccount,ReportSourceUnavailable
+from retrace.apple import ReportingAccount,ReportSourceUnavailable
 
 class AppleResponseTests(unittest.IsolatedAsyncioTestCase):
     async def test_empty_response_escapes_the_library_no_sighting_fallback(self):
@@ -24,7 +24,7 @@ class AppleResponseTests(unittest.IsolatedAsyncioTestCase):
 
 class PacingTests(unittest.IsolatedAsyncioTestCase):
     async def test_http_429_is_not_retried_or_exposed(self):
-        from findmy_home.apple import PacedHttp,RateLimited
+        from retrace.apple import PacedHttp,RateLimited
         from types import SimpleNamespace
         delegate=SimpleNamespace(post=AsyncMock(return_value=SimpleNamespace(status_code=429)))
         client=PacedHttp(delegate,None)
@@ -36,7 +36,7 @@ class PacingTests(unittest.IsolatedAsyncioTestCase):
     async def test_cross_worker_reservations_are_spaced(self):
         import asyncio,tempfile
         from pathlib import Path
-        from findmy_home.apple import PacedHttp
+        from retrace.apple import PacedHttp
         with tempfile.TemporaryDirectory() as tmp:
             gate=Path(tmp)/"gate"
             clients=[PacedHttp(None,gate),PacedHttp(None,gate)]
@@ -49,7 +49,7 @@ class PacingTests(unittest.IsolatedAsyncioTestCase):
         import tempfile
         from pathlib import Path
         from types import SimpleNamespace
-        from findmy_home.apple import PacedHttp,RateLimited
+        from retrace.apple import PacedHttp,RateLimited
         with tempfile.TemporaryDirectory() as tmp:
             delegate=SimpleNamespace(post=AsyncMock(return_value=SimpleNamespace(status_code=429)))
             gate=Path(tmp)/"gate"

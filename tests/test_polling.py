@@ -5,8 +5,8 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import AsyncMock, patch
-from findmy_home.storage import Store, atomic_json
-from findmy_home.worker import AppleWorker
+from retrace.storage import Store, atomic_json
+from retrace.worker import AppleWorker
 
 class PollTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):

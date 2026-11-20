@@ -1,7 +1,7 @@
 # Python dependency updates
 
-`findmy_home/requirements.txt` records direct dependency intent.
-`findmy_home/requirements.lock` records the complete tested CPython 3.12 Linux
+`retrace/requirements.txt` records direct dependency intent.
+`retrace/requirements.lock` records the complete tested CPython 3.12 Linux
 runtime set. Production Docker builds, the test image and GitHub CI install this
 lock with `--require-hashes --only-binary=:all:` and run `pip check`.
 

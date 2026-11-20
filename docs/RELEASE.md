@@ -4,7 +4,7 @@ The live Dragon bridge and dashboard remain the baseline. This repository has no
 deployment hook. Nothing is pushed to the homelab main branch.
 
 ## Legacy local Supervisor trial
-Copy findmy_home to the local-app mount (/local_apps/findmy_home or /addons/findmy_home) on the HA host; reload the app store,
+Copy retrace to the local-app mount (/local_apps/retrace or /addons/retrace) on the HA host; reload the app store,
 build and install it. Copy custom_components/findmy_home to the matching directory
 under /config/custom_components, then restart Core. Use supported file/SSH access;
 do not edit .storage. Open the app in ingress, complete setup, choose a small test

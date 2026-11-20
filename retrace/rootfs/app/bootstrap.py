@@ -5,8 +5,8 @@ import signal
 import subprocess
 import sys
 import time
-from findmy_home.private_data import prepare_private_root
-from findmy_home.shared_runtime import read_options,configure_runtime,RuntimeBlocked,owned_session_available,publish_runtime_options
+from retrace.private_data import prepare_private_root
+from retrace.shared_runtime import read_options,configure_runtime,RuntimeBlocked,owned_session_available,publish_runtime_options
 
 
 def main():
@@ -37,7 +37,7 @@ def main():
         children.append(subprocess.Popen(['/opt/anisette-v3-server','--host','127.0.0.1','--adi-path',str(root/'config'/'anisette-v3')],
             cwd=state,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
             env={key:os.environ[key] for key in ('PATH','LANG','LC_ALL','SSL_CERT_FILE','SSL_CERT_DIR','XDG_CONFIG_HOME') if key in os.environ}))
-    children.append(subprocess.Popen([sys.executable,'-m','findmy_home.server']))
+    children.append(subprocess.Popen([sys.executable,'-m','retrace.server']))
     while all(child.poll() is None for child in children):time.sleep(1)
     stop(exit_code=1)
 

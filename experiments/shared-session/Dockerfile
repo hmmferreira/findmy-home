@@ -1,5 +1,5 @@
 # Test-only image. No private state or Apple credentials belong in this context.
-ARG TEST_BASE_IMAGE=dragon/findmy-home:0.1.12
+ARG TEST_BASE_IMAGE=python:3.12-slim-bookworm
 FROM ${TEST_BASE_IMAGE}
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends libseccomp2 && rm -rf /var/lib/apt/lists/*

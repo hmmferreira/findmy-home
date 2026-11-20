@@ -26,10 +26,10 @@ def api(path,data=None,method=None):
         data=response.read()
         return json.loads(data) if data else None
 
-version=next(line.split(":",1)[1].strip() for line in (root/"findmy_home/config.yaml").read_text().splitlines() if line.startswith("version:"))
-image="dragon/findmy-home-tests:"+version if args.mode=="test" else ("dragon/findmy-home-shared:" if args.shared or args.mode=="shared-smoke" else "dragon/findmy-home:")+version
+version=next(line.split(":",1)[1].strip() for line in (root/"retrace/config.yaml").read_text().splitlines() if line.startswith("version:"))
+image="dragon/retrace-tests:"+version if args.mode=="test" else ("dragon/retrace-shared:" if args.shared or args.mode=="shared-smoke" else "dragon/retrace:")+version
 if args.mode in ("test","build"):
-    context=root if args.mode=="test" else root/"findmy_home"
+    context=root if args.mode=="test" else root/"retrace"
     stream=io.BytesIO()
     with tarfile.open(fileobj=stream,mode="w") as tar:
         for path in sorted(context.rglob("*")):

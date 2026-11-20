@@ -5,8 +5,8 @@ from types import SimpleNamespace
 import tempfile
 import unittest
 from unittest.mock import AsyncMock
-from findmy_home.progress import QueryProgress,safe_progress
-from findmy_home.storage import read_json
+from retrace.progress import QueryProgress,safe_progress
+from retrace.storage import read_json
 
 class ProgressTests(unittest.IsolatedAsyncioTestCase):
     async def test_instrumentation_retains_async_results_and_only_counts(self):

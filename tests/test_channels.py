@@ -14,8 +14,8 @@ class ChannelTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             target=Path(tmp)/"edge"
             module.render(ROOT,target,"edge","0.1.2-dev.2.1")
-            config=(target/"findmy_home/config.yaml").read_text()
-            self.assertEqual(json.loads((target/"findmy_home/rootfs/app/findmy_home/channel.json").read_text())["channel"],"edge")
+            config=(target/"retrace/config.yaml").read_text()
+            self.assertEqual(json.loads((target/"retrace/rootfs/app/retrace/channel.json").read_text())["channel"],"edge")
             self.assertIn("name: Retrace Edge",config)
             self.assertIn("version: 0.1.2-dev.2.1",config)
             self.assertIn("stage: experimental",config)
@@ -35,38 +35,38 @@ class ChannelTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             target=Path(tmp)/"stable"
             module.render(ROOT,target,"stable","0.1.2")
-            self.assertIn("stage: experimental",(target/"findmy_home/config.yaml").read_text())
+            self.assertIn("stage: experimental",(target/"retrace/config.yaml").read_text())
             self.assertEqual(json.loads((target/"CHANNEL.json").read_text())["channel"],"stable")
 
     def test_shared_edge_renderer_selects_shared_dockerfile_and_explicit_mode(self):
         with tempfile.TemporaryDirectory() as tmp:
             target=Path(tmp)/"shared-edge"
             module.render(ROOT,target,"edge","0.1.12-dev.1.1",runtime="shared")
-            self.assertIn("  runtime_mode: shared",(target/"findmy_home/config.yaml").read_text())
-            self.assertEqual((target/"findmy_home/Dockerfile").read_bytes(),(ROOT/"findmy_home/Dockerfile.shared").read_bytes())
+            self.assertIn("  runtime_mode: shared",(target/"retrace/config.yaml").read_text())
+            self.assertEqual((target/"retrace/Dockerfile").read_bytes(),(ROOT/"retrace/Dockerfile.shared").read_bytes())
             self.assertEqual(json.loads((target/"CHANNEL.json").read_text())["runtime"],"shared")
-            self.assertIn("same authenticated account",(target/"findmy_home/DOCS.md").read_text())
-            self.assertEqual((target/"findmy_home/apparmor.txt").read_bytes(),(ROOT/"findmy_home/apparmor.shared.txt").read_bytes())
+            self.assertIn("same authenticated account",(target/"retrace/DOCS.md").read_text())
+            self.assertEqual((target/"retrace/apparmor.txt").read_bytes(),(ROOT/"retrace/apparmor.shared.txt").read_bytes())
             with self.assertRaises(ValueError):module.render(ROOT,Path(tmp)/"stable","stable","0.1.12",runtime="shared")
 
     def test_channel_render_excludes_private_component_and_session_files(self):
         import shutil
         with tempfile.TemporaryDirectory() as tmp:
             source=Path(tmp)/"source";source.mkdir()
-            for folder in ('findmy_home','custom_components','docs'):
+            for folder in ('retrace','custom_components','docs'):
                 shutil.copytree(ROOT/folder,source/folder,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
             for name in ('README.md','repository.yaml','hacs.json','LICENSE'):shutil.copyfile(ROOT/name,source/name)
-            private=source/'findmy_home/rootfs/app/private-fixture';private.mkdir()
+            private=source/'retrace/rootfs/app/private-fixture';private.mkdir()
             for name in ('owned-libs.bin','source.apk','session.key','session.enc','account.json','owned-signing.json'):(private/name).write_text('SYNTHETIC_PRIVATE')
             target=Path(tmp)/'rendered'
             module.render(source,target,'edge','0.1.12-dev.1.1',runtime='shared')
-            self.assertEqual(list((target/'findmy_home/rootfs/app/private-fixture').iterdir()),[])
+            self.assertEqual(list((target/'retrace/rootfs/app/private-fixture').iterdir()),[])
 
     def test_shared_packages_preserve_exact_upstream_license_and_attribution(self):
         import hashlib
         spec=importlib.util.spec_from_file_location("render_evaluation",ROOT/"tools/render-evaluation.py")
         evaluation=importlib.util.module_from_spec(spec);spec.loader.exec_module(evaluation)
-        expected=ROOT/"findmy_home/rootfs/app/licenses/FindMy.py-MIT.txt"
+        expected=ROOT/"retrace/rootfs/app/licenses/FindMy.py-MIT.txt"
         self.assertEqual(hashlib.sha256(expected.read_bytes()).hexdigest(),
                          "51396fd82204e1d844bbff2019054d8c3712e53c3ed8485c9f19dd73990eb46e")
         with tempfile.TemporaryDirectory() as tmp:
@@ -74,7 +74,7 @@ class ChannelTests(unittest.TestCase):
             module.render(ROOT,normal,"edge","0.1.13-dev.1.6",runtime="shared")
             separate=Path(tmp)/"evaluation"
             evaluation.render(ROOT,separate,"0.1.13-dev.1.6")
-            for app in (normal/"findmy_home",separate/"findmy_home_shared"):
+            for app in (normal/"retrace",separate/"retrace_shared"):
                 self.assertEqual((app/"rootfs/app/licenses/FindMy.py-MIT.txt").read_bytes(),expected.read_bytes())
                 self.assertIn("Copyright (c) 2023 FindMy.py Contributors",
                               (app/"rootfs/app/licenses/NOTICE.md").read_text())

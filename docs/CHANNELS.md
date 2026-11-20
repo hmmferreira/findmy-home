@@ -3,8 +3,9 @@
 ## Channels
 
 Development source lives on main. CI runs synthetic tests without Apple secrets,
-then renders only allowlisted app, integration and documentation files into the
-edge branch. Versions are unique (`0.1.2-dev.RUN.ATTEMPT`), never a mutable `latest`.
+and explicit delivery renders only allowlisted app, integration and documentation
+files into the edge branch. Source pushes never overwrite the side-by-side Shared
+Edge package; use the reviewed evaluation renderer for that app. Versions are unique (`0.1.2-dev.RUN.ATTEMPT`), never a mutable `latest`.
 App store URL: https://github.com/hmmferreira/retrace#edge
 
 Stable URL (after the first validated promotion):

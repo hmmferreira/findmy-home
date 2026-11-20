@@ -10,9 +10,9 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from findmy_home.apple_transport import OwnedHttpSession
-from findmy_home.offline_signer import OfflineSigner
-from findmy_home.owned_session import snapshot_account,restore_account,SessionBlocked,_MAGIC
+from retrace.apple_transport import OwnedHttpSession
+from retrace.offline_signer import OfflineSigner
+from retrace.owned_session import snapshot_account,restore_account,SessionBlocked,_MAGIC
 
 class Account:
     def __init__(self,provider,state_info=None,timeout=30):
@@ -29,7 +29,7 @@ class OwnedSessionTests(unittest.IsolatedAsyncioTestCase):
         self.key=b"synthetic-private-key-32-bytes!!!!"[:32]
         self.engine=SimpleNamespace(is_provisioned=True)
         self.signer=OfflineSigner(self.library,b"synthetic state",self.digest)
-        self.build=patch("findmy_home.offline_signer._build_engine",return_value=self.engine);self.build.start()
+        self.build=patch("retrace.offline_signer._build_engine",return_value=self.engine);self.build.start()
         await self.signer.initialize()
         self.state={"type":"account","ids":{"uid":"00000000-0000-4000-8000-000000000001","devid":"00000000-0000-4000-8000-000000000002"},
             "account":{"username":"synthetic@example.invalid","password":"PRIVATE_PASSWORD","info":{}},
@@ -55,7 +55,7 @@ class OwnedSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.account.state["account"]["password"],"PRIVATE_PASSWORD")
     async def test_restore_preserves_identity_and_installs_owned_transport_without_network_or_sdk_deserializer(self):
         data=await self.save()
-        with patch("findmy_home.apple.ReportingAccount",Account),patch("findmy.reports.anisette.DeviceIdentity",lambda **kwargs:kwargs,create=True),patch("findmy_home.owned_session.provider_for",side_effect=lambda signer,**kwargs:SimpleNamespace(_owned_signer=signer,**kwargs)):
+        with patch("retrace.apple.ReportingAccount",Account),patch("findmy.reports.anisette.DeviceIdentity",lambda **kwargs:kwargs,create=True),patch("retrace.owned_session.provider_for",side_effect=lambda signer,**kwargs:SimpleNamespace(_owned_signer=signer,**kwargs)):
             restored=await self.restore(data)
         try:
             self.assertEqual(restored.state["ids"],self.state["ids"])
@@ -67,7 +67,7 @@ class OwnedSessionTests(unittest.IsolatedAsyncioTestCase):
     async def test_tampering_wrong_key_truncation_and_unknown_version_fail_before_native_work(self):
         data=await self.save();self.build.stop()
         for bad,key in ((data[:-1]+bytes([data[-1]^1]),self.key),(data,b"k"*32),(data[:20],self.key),(b"unknown"+data,self.key)):
-            with self.subTest(length=len(bad)),patch("findmy_home.owned_session.OfflineSigner") as signer:
+            with self.subTest(length=len(bad)),patch("retrace.owned_session.OfflineSigner") as signer:
                 with self.assertRaises(SessionBlocked) as caught:await self.restore(bad,encryption_key=key)
                 signer.assert_not_called();self.assertNotIn("PRIVATE",str(caught.exception))
         self.build.start()
@@ -90,7 +90,7 @@ class OwnedSessionTests(unittest.IsolatedAsyncioTestCase):
     async def test_constructor_failure_closes_signer_and_redacts_error(self):
         data=await self.save();created=[]
         def provider(signer,**kwargs):created.append(signer);raise RuntimeError("PRIVATE_EXCEPTION")
-        with patch("findmy_home.owned_session.provider_for",side_effect=provider),patch("findmy.reports.anisette.DeviceIdentity",lambda **kwargs:kwargs,create=True):
+        with patch("retrace.owned_session.provider_for",side_effect=provider),patch("findmy.reports.anisette.DeviceIdentity",lambda **kwargs:kwargs,create=True):
             with self.assertRaisesRegex(SessionBlocked,"session_restore_failed"):await self.restore(data)
         self.assertFalse(created[0].ready)
     async def test_cancelled_initialization_is_closed(self):
@@ -100,7 +100,7 @@ class OwnedSessionTests(unittest.IsolatedAsyncioTestCase):
             def __init__(self,*args):pass
             async def initialize(self):entered.set();await asyncio.Future()
             async def close(self):closed.set()
-        with patch("findmy_home.owned_session.OfflineSigner",PendingSigner):
+        with patch("retrace.owned_session.OfflineSigner",PendingSigner):
             task=asyncio.create_task(self.restore(data));await entered.wait();task.cancel()
             with self.assertRaises(asyncio.CancelledError):await task
             self.assertTrue(closed.is_set())

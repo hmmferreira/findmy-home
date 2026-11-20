@@ -5,8 +5,8 @@ from types import SimpleNamespace
 import tempfile
 import unittest
 from unittest.mock import AsyncMock, patch
-from findmy_home.search import fetch_bounded, RECENT_INDICES, OLDER_INDICES
-from findmy_home.storage import atomic_json,read_json
+from retrace.search import fetch_bounded, RECENT_INDICES, OLDER_INDICES
+from retrace.storage import atomic_json,read_json
 
 class SearchTests(unittest.IsolatedAsyncioTestCase):
     def accessory(self,top=10000,floor=0):
@@ -86,7 +86,7 @@ class SearchTests(unittest.IsolatedAsyncioTestCase):
             return reports[-1] if reports else None
         account.fetch_location=fetch
         original=(accessory.get_min_index,accessory.get_max_index)
-        with tempfile.TemporaryDirectory() as tmp, patch("findmy_home.search.RECENT_INDICES",10), patch("findmy_home.search.OLDER_INDICES",20):
+        with tempfile.TemporaryDirectory() as tmp, patch("retrace.search.RECENT_INDICES",10), patch("retrace.search.OLDER_INDICES",20):
             self.assertEqual(await fetch_bounded(account,accessory,Path(tmp)/"search.json"),(None,True))
         self.assertEqual(raw.await_count,2)
         primary_counts=[len(call.args[0][0][0]) for call in raw.await_args_list]

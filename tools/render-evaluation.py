@@ -13,13 +13,13 @@ channels=importlib.util.module_from_spec(spec);spec.loader.exec_module(channels)
 
 def render(source,target,version):
     target=Path(target)
-    destination=target/'findmy_home_shared'
+    destination=target/'retrace_shared'
     if destination.exists():raise ValueError('Evaluation app already exists; review its update explicitly')
     target.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='findmy-evaluation-') as tmp:
         stage=Path(tmp)/'rendered'
         channels.render(Path(source),stage,'edge',version,runtime='shared')
-        app=stage/'findmy_home'
+        app=stage/'retrace'
         config=app/'config.yaml'
         text=config.read_text()
         for key,value in (('slug','findmy_home_shared'),('name','Retrace Shared Edge'),('panel_title','Retrace Shared Edge')):

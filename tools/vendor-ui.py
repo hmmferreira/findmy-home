@@ -3,7 +3,7 @@ from pathlib import Path
 import hashlib
 import json
 import urllib.request
-root = Path(__file__).resolve().parents[1] / "findmy_home/rootfs/app/findmy_home/static/vendor"
+root = Path(__file__).resolve().parents[1] / "retrace/rootfs/app/retrace/static/vendor"
 files = ["leaflet.js","leaflet.css","images/marker-icon.png","images/marker-icon-2x.png","images/marker-shadow.png","images/layers.png","images/layers-2x.png"]
 hashes = {}
 for name in files:

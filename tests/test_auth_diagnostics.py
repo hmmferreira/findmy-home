@@ -12,10 +12,10 @@ from unittest.mock import AsyncMock,patch
 
 from findmy import LoginState,errors as sdk_errors
 from findmy.reports.twofactor import AsyncSmsSecondFactor,AsyncTrustedDeviceSecondFactor
-from findmy_home.apple_transport import VerificationFailure,TransportBlocked
-from findmy_home.worker import AppleWorker,AuthenticationError,_auth_classification
-from findmy_home.shared_ui import SharedDiscoveryUI
-from findmy_home.storage import Store
+from retrace.apple_transport import VerificationFailure,TransportBlocked
+from retrace.worker import AppleWorker,AuthenticationError,_auth_classification
+from retrace.shared_ui import SharedDiscoveryUI
+from retrace.storage import Store
 
 class AuthDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):

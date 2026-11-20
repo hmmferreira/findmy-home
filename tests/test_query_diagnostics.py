@@ -1,6 +1,6 @@
 import json
 import unittest
-from findmy_home.progress import safe_query_diagnostic
+from retrace.progress import safe_query_diagnostic
 
 class QueryDiagnosticTests(unittest.TestCase):
     def test_diagnostics_cannot_include_arbitrary_native_or_server_messages(self):

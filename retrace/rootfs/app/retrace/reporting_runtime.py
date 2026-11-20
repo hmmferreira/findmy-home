@@ -7,11 +7,11 @@ from .shared_runtime import read_options,require_shared_backend,RuntimeBlocked
 _SHARED_ENTRY="""import os,sys
 from pathlib import Path
 sys.path[:0]=['/opt/findmy-shared','/app']
-from findmy_home.shared_runtime import read_options,configure_runtime
+from retrace.shared_runtime import read_options,configure_runtime
 options=read_options(Path(os.environ['FINDMY_HOME_DATA'])/'runtime-options.json')
 if options['runtime_mode']!='shared':raise RuntimeError('shared_runtime_required')
 configure_runtime(options)
-from findmy_home.poll_item import main
+from retrace.poll_item import main
 main()
 """
 
@@ -31,6 +31,6 @@ def report_launch(root):
         env['FINDMY_PRIVATE_EVALUATION']='1' if options['private_evaluation'] else '0'
         env.pop('SSL_CERT_FILE',None);env.pop('SSL_CERT_DIR',None)
     elif mode=='legacy' and not marker.exists():
-        command=[sys.executable,'-m','findmy_home.poll_item']
+        command=[sys.executable,'-m','retrace.poll_item']
     else:raise RuntimeBlocked('shared_runtime_required')
     return command,env

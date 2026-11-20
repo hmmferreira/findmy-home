@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock
 import pytest
 from fake_account import Accessory,a_whole_account
 from findmy.icloud import AsyncFindMyClient
-from findmy_home.apple_transport import OwnedHttpSession
-from findmy_home.shared_discovery import SharedDiscovery
+from retrace.apple_transport import OwnedHttpSession
+from retrace.shared_discovery import SharedDiscovery
 
 @pytest.mark.asyncio
 async def test_controller_delivers_decrypted_accessories_without_rust_or_second_login(monkeypatch):
@@ -26,7 +26,7 @@ async def test_controller_delivers_decrypted_accessories_without_rust_or_second_
             return await unlock(record,passcode,views=("Manatee",))
         client.unlock=fixture_view
         return client
-    monkeypatch.setattr("findmy_home.owned_protocol.open_shared_client",open_client)
+    monkeypatch.setattr("retrace.owned_protocol.open_shared_client",open_client)
     saved=[]
     async def commit(accessories): saved.extend(accessories)
     flow=SharedDiscovery(commit)
@@ -50,8 +50,8 @@ async def test_controller_delivers_decrypted_accessories_without_rust_or_second_
 async def test_owned_composition_guards_all_clients_and_denies_write_methods(monkeypatch):
     from test_cloudkit import FakeAccount
     from findmy.cloudkit.client import AsyncCloudKitClient
-    from findmy_home.owned_protocol import open_shared_client
-    from findmy_home.apple_transport import TransportBlocked
+    from retrace.owned_protocol import open_shared_client
+    from retrace.apple_transport import TransportBlocked
     account=FakeAccount();account.request_pet=AsyncMock(return_value="synthetic-pet")
     seen=[]
     async def container(client):
@@ -78,7 +78,7 @@ async def test_cancellation_during_initial_container_open_closes_all_owned_trans
     import asyncio
     from test_cloudkit import FakeAccount
     from findmy.cloudkit.client import AsyncCloudKitClient
-    from findmy_home.owned_protocol import open_shared_client
+    from retrace.owned_protocol import open_shared_client
     captured=[];entered=asyncio.Event()
     original=OwnedHttpSession.__init__
     def init(transport,**kwargs):
@@ -98,8 +98,8 @@ async def test_cancellation_during_initial_container_open_closes_all_owned_trans
 async def test_server_supplied_third_party_gateway_is_rejected_before_operation(monkeypatch):
     from test_cloudkit import FakeAccount
     from findmy.cloudkit.client import AsyncCloudKitClient
-    from findmy_home.owned_protocol import open_shared_client
-    from findmy_home.apple_transport import TransportBlocked
+    from retrace.owned_protocol import open_shared_client
+    from retrace.apple_transport import TransportBlocked
     account=FakeAccount();account.request_pet=AsyncMock(return_value="synthetic-pet")
     async def metadata(client):
         return SimpleNamespace(partition="24",database_gateway_url="https://evil.invalid/ckdatabase",code_gateway_url="https://gateway.icloud.com/ckcoderouter")
@@ -111,8 +111,8 @@ async def test_server_supplied_third_party_gateway_is_rejected_before_operation(
 async def test_real_sdk_container_request_uses_owned_routing_and_rejects_untrusted_reply(monkeypatch):
     import json
     from test_cloudkit import FakeAccount,app_init_response
-    from findmy_home.owned_protocol import open_shared_client
-    from findmy_home.apple_transport import TransportBlocked
+    from retrace.owned_protocol import open_shared_client
+    from retrace.apple_transport import TransportBlocked
     metadata=app_init_response().json()
     metadata["cloudKitDatabaseGatewayUrl"]="https://third-party.invalid/collect"
     calls=[]
@@ -143,13 +143,13 @@ async def test_real_sdk_container_request_uses_owned_routing_and_rejects_untrust
 @pytest.mark.asyncio
 async def test_owned_account_transport_is_installed_before_authentication(monkeypatch,tmp_path):
     import hashlib
-    from findmy_home.offline_signer import OfflineSigner,provider_for
-    from findmy_home.owned_protocol import create_account
+    from retrace.offline_signer import OfflineSigner,provider_for
+    from retrace.owned_protocol import create_account
     path=tmp_path/"library";path.write_bytes(b"synthetic-library")
     signer=OfflineSigner(path,b"synthetic-existing-state",hashlib.sha256(path.read_bytes()).hexdigest())
     engine=SimpleNamespace(is_provisioned=True,get_data=lambda:{"X-Apple-I-MD":"synthetic-otp","X-Apple-I-MD-M":"synthetic-machine"},
         save_provisioning=lambda stream:stream.write(b"synthetic-existing-state"))
-    monkeypatch.setattr("findmy_home.offline_signer._build_engine",lambda state,libraries:engine)
+    monkeypatch.setattr("retrace.offline_signer._build_engine",lambda state,libraries:engine)
     await signer.initialize()
     provider=provider_for(signer,serial="SYNTHETIC-CLIENT")
     account=await create_account(provider,timeout=17)
@@ -166,8 +166,8 @@ async def test_owned_account_transport_is_installed_before_authentication(monkey
 @pytest.mark.asyncio
 async def test_default_downloading_or_remote_provider_is_not_admitted():
     from findmy import LocalAnisetteProvider
-    from findmy_home.owned_protocol import create_account
-    from findmy_home.apple_transport import TransportBlocked
+    from retrace.owned_protocol import create_account
+    from retrace.apple_transport import TransportBlocked
     provider=LocalAnisetteProvider()
     try:
         with pytest.raises(TransportBlocked):await create_account(provider)
@@ -178,14 +178,14 @@ async def _restored_reporting_account(monkeypatch,tmp_path):
     import hashlib
     from findmy.reports.anisette import DeviceIdentity
     from findmy.reports.state import LoginState
-    from findmy_home.offline_signer import OfflineSigner,provider_for
-    from findmy_home.owned_protocol import create_account
-    from findmy_home.owned_session import snapshot_account,restore_account
+    from retrace.offline_signer import OfflineSigner,provider_for
+    from retrace.owned_protocol import create_account
+    from retrace.owned_session import snapshot_account,restore_account
     library=tmp_path/"reviewed-library";library.write_bytes(b"synthetic-reviewed-library")
     digest=hashlib.sha256(library.read_bytes()).hexdigest()
     engine=SimpleNamespace(is_provisioned=True,get_data=lambda:{"X-Apple-I-MD":"synthetic-otp","X-Apple-I-MD-M":"synthetic-machine"},
         save_provisioning=lambda stream:stream.write(b"synthetic-existing-state"))
-    monkeypatch.setattr("findmy_home.offline_signer._build_engine",lambda state,libraries:engine)
+    monkeypatch.setattr("retrace.offline_signer._build_engine",lambda state,libraries:engine)
     signer=OfflineSigner(library,b"synthetic-existing-state",digest);await signer.initialize()
     identity=DeviceIdentity(model="SyntheticModel1,1",os_name="SyntheticOS",os_version="1.2",os_build="SYNTHETIC",cfnetwork="1",darwin="1")
     source=await create_account(provider_for(signer,serial="SYNTHETIC-RESTORE",identity=identity))
@@ -232,7 +232,7 @@ def _report_reply(monkeypatch,*,status,body):
 
 @pytest.mark.asyncio
 async def test_real_session_roundtrip_preserves_reporting_class_identity_and_owned_requests(monkeypatch,tmp_path):
-    from findmy_home.apple import ReportingAccount
+    from retrace.apple import ReportingAccount
     restored=await _restored_reporting_account(monkeypatch,tmp_path)
     calls=_report_reply(monkeypatch,status=200,body=b'{"acsnLocations":{"statusCode":"200","locationPayload":[]}}')
     try:
@@ -264,7 +264,7 @@ async def test_restored_report_rejection_requires_reauth_without_login_or_pet_re
 
 @pytest.mark.asyncio
 async def test_restored_reporting_empty_response_retains_app_error_classification(monkeypatch,tmp_path):
-    from findmy_home.apple import ReportSourceUnavailable
+    from retrace.apple import ReportSourceUnavailable
     restored=await _restored_reporting_account(monkeypatch,tmp_path)
     calls=_report_reply(monkeypatch,status=200,body=b"")
     # The candidate performs bounded async empty-body retries. Skip only the wait,
@@ -280,8 +280,8 @@ async def test_restored_reporting_empty_response_retains_app_error_classificatio
 @pytest.mark.asyncio
 async def test_complete_encrypted_backup_restores_after_original_directory_removed(monkeypatch,tmp_path):
     import hashlib,shutil
-    from findmy_home.private_session_store import PrivateSessionStore,restore_reporting_account
-    from findmy_home.storage import Store
+    from retrace.private_session_store import PrivateSessionStore,restore_reporting_account
+    from retrace.storage import Store
     root=tmp_path/"original";original=Store(root)
     source=await _restored_reporting_account(monkeypatch,root)
     identity=source.to_json()["ids"]
@@ -305,9 +305,9 @@ async def test_complete_encrypted_backup_restores_after_original_directory_remov
 @pytest.mark.asyncio
 async def test_mixed_encrypted_generations_and_missing_backup_key_fail_closed(monkeypatch,tmp_path):
     import hashlib,json
-    from findmy_home.private_session_store import PrivateSessionStore,restore_reporting_account
-    from findmy_home.owned_session import SessionBlocked
-    from findmy_home.storage import atomic_json
+    from retrace.private_session_store import PrivateSessionStore,restore_reporting_account
+    from retrace.owned_session import SessionBlocked
+    from retrace.storage import atomic_json
     source=await _restored_reporting_account(monkeypatch,tmp_path)
     library=tmp_path/"ani_libs.bin";library.write_bytes((tmp_path/"reviewed-library").read_bytes());library.chmod(0o600)
     private=PrivateSessionStore(tmp_path,library=library,expected_sha256=hashlib.sha256(library.read_bytes()).hexdigest())
@@ -329,9 +329,9 @@ async def test_mixed_encrypted_generations_and_missing_backup_key_fail_closed(mo
 @pytest.mark.parametrize("existing",[True,False])
 async def test_shared_startup_factory_preserves_full_identity_with_real_candidate(monkeypatch,tmp_path,existing):
     """Real SDK construction, synthetic native state; no Apple/native execution."""
-    from findmy_home import shared_runtime
-    from findmy_home.offline_signer import OfflineSigner
-    from findmy_home.storage import Store
+    from retrace import shared_runtime
+    from retrace.offline_signer import OfflineSigner
+    from retrace.storage import Store
     from findmy.reports.anisette import CLIENT_IDENTITY
     import hashlib
     import uuid
@@ -346,13 +346,13 @@ async def test_shared_startup_factory_preserves_full_identity_with_real_candidat
         async def initialize(self):self._engine=SimpleNamespace(is_provisioned=True);self._state=None
         def snapshot(self):return state
     monkeypatch.setattr(shared_runtime,"require_shared_backend",lambda:None)
-    monkeypatch.setattr("findmy_home.native_worker.verify_native_boundary",AsyncMock())
-    monkeypatch.setattr("findmy_home.artifact_policy.reviewed_artifact",lambda value,**kwargs:SimpleNamespace(expected_sha256=digest))
-    monkeypatch.setattr("findmy_home.artifact_policy.verify_artifact",AsyncMock())
-    monkeypatch.setattr("findmy_home.native_worker.ProcessOfflineSigner",SyntheticProcessSigner)
+    monkeypatch.setattr("retrace.native_worker.verify_native_boundary",AsyncMock())
+    monkeypatch.setattr("retrace.artifact_policy.reviewed_artifact",lambda value,**kwargs:SimpleNamespace(expected_sha256=digest))
+    monkeypatch.setattr("retrace.artifact_policy.verify_artifact",AsyncMock())
+    monkeypatch.setattr("retrace.native_worker.ProcessOfflineSigner",SyntheticProcessSigner)
     provision=AsyncMock(return_value=state)
-    monkeypatch.setattr("findmy_home.controlled_provisioning.provision_new_identity",provision)
-    monkeypatch.setattr("findmy_home.native_worker.IsolatedNativeWorker",lambda **kwargs:SimpleNamespace(identity=kwargs))
+    monkeypatch.setattr("retrace.controlled_provisioning.provision_new_identity",provision)
+    monkeypatch.setattr("retrace.native_worker.IsolatedNativeWorker",lambda **kwargs:SimpleNamespace(identity=kwargs))
     worker,bridge=await shared_runtime.compose_runtime(store,{"shared_artifact_id":"applemusic-arm64-v8a","create_new_identity":True})
     first=second=None
     try:

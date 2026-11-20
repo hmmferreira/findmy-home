@@ -64,9 +64,9 @@ def main():
     args=parser.parse_args()
     target=args.target
     if target is None:
-        mount=next((p for p in (Path("/local_apps"),Path("/addons")) if (p/"findmy_home").is_dir()),None)
+        mount=next((p for p in (Path("/local_apps"),Path("/addons")) if (p/"retrace").is_dir()),None)
         if mount is None:parser.exit(1,"Local app source mount not found"+chr(10))
-        target=mount/"findmy_home"
+        target=mount/"retrace"
     try:update(Path(__file__).resolve().parent,target,args.backup_root,args.apply)
     except (ValueError,OSError) as e:parser.exit(1,str(e)+chr(10))
 

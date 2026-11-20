@@ -49,7 +49,7 @@ Each installed app has its own persistent instance ID. Native unique IDs include
 that instance ID and the item ID, so separate installs do not merge. Channel
 metadata now travels in the image, snapshot and discovery announcement.
 New devices are named Item (Edge), and new entity object IDs explicitly contain
-findmy_home_edge. Legacy development installs use Edge; Stable remains a separate channel. Existing
+retrace_edge. Legacy development installs use Edge; Stable remains a separate channel. Existing
 registry IDs are preserved to avoid breaking consumers; existing entries require
 an audited rename if the user wants their old IDs changed. Do not silently
 regenerate an ID on every update.

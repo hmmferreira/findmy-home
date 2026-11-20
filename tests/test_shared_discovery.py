@@ -4,8 +4,8 @@ import json
 from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock,patch
-from findmy_home.apple_transport import OwnedHttpSession
-from findmy_home.shared_discovery import SharedDiscovery,SharedDiscoveryError,TokenLease,python_client
+from retrace.apple_transport import OwnedHttpSession
+from retrace.shared_discovery import SharedDiscovery,SharedDiscoveryError,TokenLease,python_client
 
 class SharedDiscoveryTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -108,7 +108,7 @@ class SharedDiscoveryTests(unittest.IsolatedAsyncioTestCase):
             opened.append(lease)
             return self.client
         module=SimpleNamespace(AsyncFindMyClient=SimpleNamespace(open=open_client))
-        with patch.dict("sys.modules",{"findmy.icloud":module}),patch("findmy_home.owned_protocol.open_shared_client",new=open_client):
+        with patch.dict("sys.modules",{"findmy.icloud":module}),patch("retrace.owned_protocol.open_shared_client",new=open_client):
             client=await python_client(self.account)
         self.account.request_pet.assert_awaited_once()
         self.assertFalse(hasattr(client,"join"));self.assertFalse(hasattr(client,"rename"));self.assertFalse(hasattr(client,"session"))

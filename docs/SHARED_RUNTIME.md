@@ -10,7 +10,7 @@ No existing household data or services are changed by building it.
 Build the shared image intentionally from the app directory:
 
 ```sh
-docker build -f findmy_home/Dockerfile.shared -t findmy-home:shared findmy_home
+docker build -f retrace/Dockerfile.shared -t findmy-home:shared retrace
 ```
 
 `Dockerfile.shared` fetches exactly protocol revision
@@ -141,9 +141,9 @@ explicit request. Return installation/new-identity options to false after setup.
 
 ## Side-by-side private evaluation
 
-`tools/render-evaluation.py VERSION OUTPUT` emits only `findmy_home_shared` with
-slug `findmy_home_shared` and title **Retrace Shared Edge**. It leaves an
-existing `findmy_home` app/version untouched and installs the shared AppArmor
+`tools/render-evaluation.py VERSION OUTPUT` emits only `retrace_shared` with
+slug `retrace_shared` and title **Retrace Shared Edge**. It leaves an
+existing `retrace` app/version untouched and installs the shared AppArmor
 profile as `apparmor.txt`. This is the evaluation/rollback path: separate app data,
 identity and integration instance, with the original working Edge app retained.
 All setup switches default off; deliberate deployment sets runtime mode shared,

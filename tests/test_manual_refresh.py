@@ -4,8 +4,8 @@ import tempfile
 import time
 import unittest
 from unittest.mock import AsyncMock,patch
-from findmy_home.storage import Store,atomic_json
-from findmy_home.worker import AppleWorker
+from retrace.storage import Store,atomic_json
+from retrace.worker import AppleWorker
 
 class ManualRefreshTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -84,7 +84,7 @@ class ManualRefreshTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_refresh_api_is_management_only_and_requires_csrf(self):
         from aiohttp.test_utils import TestClient,TestServer
-        from findmy_home.server import make_app
+        from retrace.server import make_app
         api=TestClient(TestServer(make_app(self.store,worker=self.worker)))
         ui=TestClient(TestServer(make_app(self.store,worker=self.worker,management=True,trusted_peer="127.0.0.1")))
         await api.start_server();await ui.start_server()

@@ -18,7 +18,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes,serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
-from findmy_home.apple_transport import OwnedHttpSession,PublicResolver,Response,TransportBlocked,trust_context,validate_destination
+from retrace.apple_transport import OwnedHttpSession,PublicResolver,Response,TransportBlocked,trust_context,validate_destination
 
 AUTH_URL="https://gsa.apple.com/grandslam/GsService2"
 class DestinationTests(unittest.TestCase):
@@ -139,7 +139,7 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
     async def test_per_host_sessions_disable_environment_proxy_and_cookies(self):
         session=SimpleNamespace(close=AsyncMock())
         resolver=SimpleNamespace(close=AsyncMock())
-        with patch("findmy_home.apple_transport.PublicResolver",return_value=resolver),patch("aiohttp.TCPConnector") as connector,patch("aiohttp.ClientSession",return_value=session) as make:
+        with patch("retrace.apple_transport.PublicResolver",return_value=resolver),patch("aiohttp.TCPConnector") as connector,patch("aiohttp.ClientSession",return_value=session) as make:
             first=await self.transport._session("gsa.apple.com")
             self.assertIs(await self.transport._session("gsa.apple.com"),first)
             self.assertFalse(make.call_args.kwargs["trust_env"])
@@ -222,7 +222,7 @@ class RealRedirectTests(unittest.IsolatedAsyncioTestCase):
 
 class VerificationFailureTests(unittest.IsolatedAsyncioTestCase):
     async def test_factor_refusal_exposes_only_stage_status_and_safe_code(self):
-        from findmy_home.apple_transport import VerificationFailure
+        from retrace.apple_transport import VerificationFailure
         for method,path,stage in (('PUT','/auth/verify/phone','request'),('POST','/auth/verify/phone/securitycode','submit'),('GET','/grandslam/GsService2/validate','submit')):
             transport=OwnedHttpSession()
             response=FakeResponse(status=401,chunks=[b'PRIVATE_VERIFICATION_BODY'])

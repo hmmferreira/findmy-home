@@ -33,7 +33,7 @@ def query(group):
             for (name,version),value in zip(group,values)]
 
 def main():
-    locks=[ROOT/"findmy_home/requirements.lock",ROOT/"findmy_home/requirements-shared.lock"]
+    locks=[ROOT/"retrace/requirements.lock",ROOT/"retrace/requirements-shared.lock"]
     pins=[]
     for lock in locks:
         if lock.exists():pins.extend(re.findall(r"^([A-Za-z0-9_.-]+)==([^\s\\]+)",lock.read_text(),re.M))

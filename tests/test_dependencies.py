@@ -6,7 +6,7 @@ import unittest
 
 class DependencyTests(unittest.TestCase):
     def test_installed_runtime_matches_lock_and_direct_intent(self):
-        root=Path(__file__).resolve().parents[1]/"findmy_home"
+        root=Path(__file__).resolve().parents[1]/"retrace"
         lock=root.joinpath("requirements.lock").read_text()
         pins=dict(re.findall(r"^([A-Za-z0-9_.-]+)==([^\s\\]+)",lock,re.M))
         self.assertGreater(len(pins),4)

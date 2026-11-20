@@ -2,7 +2,7 @@
 
 # Shared-runtime channel only. Publishing must copy this to apparmor.txt; legacy
 # channel packaging must not activate this profile accidentally.
-profile findmy_home flags=(attach_disconnected,mediate_deleted) {
+profile retrace flags=(attach_disconnected,mediate_deleted) {
   # The trusted account/UI parent retains normal container access. Native work
   # receives only the restrictive nested profile below, never these permissions.
   #include <abstractions/base>
@@ -16,16 +16,16 @@ profile findmy_home flags=(attach_disconnected,mediate_deleted) {
   deny /sys/** wklx,
   signal (receive),
   signal (send) peer=@{profile_name},
-  signal (send) peer=@{profile_name}//findmy-native,
-  change_profile -> @{profile_name}//findmy-native,
+  signal (send) peer=@{profile_name}//retrace-native,
+  change_profile -> @{profile_name}//retrace-native,
 
-  profile findmy-native flags=(attach_disconnected,mediate_deleted) {
+  profile retrace-native flags=(attach_disconnected,mediate_deleted) {
     /usr/local/lib/** mr,
     /usr/lib/** mr,
     /lib/** mr,
     /lib64/** mr,
     /probe/** r,
-    /app/findmy_home/** r,
+    /app/retrace/** r,
     /etc/ld.so.cache r,
     /etc/localtime r,
     /dev/urandom r,

@@ -18,7 +18,7 @@ class DiscoveryTests(unittest.IsolatedAsyncioTestCase):
     def setup_flow(self):
         flow=module.FindMyHomeFlow()
         flow.hass=SimpleNamespace()
-        info=SimpleNamespace(slug="fixture_findmy_home",config={"host":"fixture-findmy-home","token":"n"*64,"instance_id":"a"*32,"channel":"edge","unrelated":"DO_NOT_RETAIN"})
+        info=SimpleNamespace(slug="fixture_retrace",config={"host":"fixture-findmy-home","token":"n"*64,"instance_id":"a"*32,"channel":"edge","unrelated":"DO_NOT_RETAIN"})
         existing=SimpleNamespace(unique_id="a"*32)
         return flow,info,existing
 

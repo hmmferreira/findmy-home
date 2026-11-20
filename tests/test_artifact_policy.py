@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from findmy_home.artifact_policy import reviewed_artifact,verify_artifact,ArtifactBlocked,_MANIFEST
+from retrace.artifact_policy import reviewed_artifact,verify_artifact,ArtifactBlocked,_MANIFEST
 
 class ArtifactPolicyTests(unittest.IsolatedAsyncioTestCase):
     def manifest(self):
@@ -20,7 +20,7 @@ class ArtifactPolicyTests(unittest.IsolatedAsyncioTestCase):
         entry["license"].update(native_review="approved",redistribution="local-use-only")
         return value
     def selected(self,value=None,**kwargs):
-        with patch("findmy_home.artifact_policy._load_manifest",return_value=value or self.manifest()):
+        with patch("retrace.artifact_policy._load_manifest",return_value=value or self.manifest()):
             return reviewed_artifact("applemusic-arm64-v8a",host_architecture=kwargs.get("host_architecture","amd64"))
     def test_bundled_policy_requires_explicit_private_evaluation_context(self):
         with self.assertRaisesRegex(ArtifactBlocked,"artifact_review_required"):
@@ -32,7 +32,7 @@ class ArtifactPolicyTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(policy.source_version,"4.9.6.1447")
         with self.assertRaises(ArtifactBlocked):reviewed_artifact("applemusic-arm64-v8a",host_architecture="amd64",private_evaluation="yes")
         value=json.loads(_MANIFEST.read_text());value['artifacts'][0]['license']['redistribution']='permitted'
-        with patch("findmy_home.artifact_policy._load_manifest",return_value=value),self.assertRaises(ArtifactBlocked):
+        with patch("retrace.artifact_policy._load_manifest",return_value=value),self.assertRaises(ArtifactBlocked):
             reviewed_artifact("applemusic-arm64-v8a",host_architecture="amd64",private_evaluation=True)
     def test_approved_source_digest_version_license_and_architecture_are_preserved(self):
         policy=self.selected(host_architecture="x86_64")
@@ -64,7 +64,7 @@ class ArtifactPolicyTests(unittest.IsolatedAsyncioTestCase):
             seen=[];original=hashlib.sha256
             def hash(value):seen.append(threading.get_ident());return original(value)
             policy=self.selected()
-            with patch("findmy_home.artifact_policy.hashlib.sha256",side_effect=hash):
+            with patch("retrace.artifact_policy.hashlib.sha256",side_effect=hash):
                 self.assertEqual(await verify_artifact(path,policy),b"synthetic-library")
             self.assertNotEqual(seen,[threading.get_ident()])
     async def test_changed_missing_symlink_and_nonregular_artifacts_are_refused(self):
@@ -80,7 +80,7 @@ class ArtifactPolicyTests(unittest.IsolatedAsyncioTestCase):
         forged=replace(self.selected(),_issuer=object())
         with self.assertRaisesRegex(ArtifactBlocked,"reviewed_artifact_required"):await verify_artifact("unused",forged)
     def test_malformed_manifest_and_duplicate_json_keys_are_refused(self):
-        from findmy_home.artifact_policy import _load_manifest
+        from retrace.artifact_policy import _load_manifest
         for data in (b'{"schema_version":1,"schema_version":1}',b'not-json',b''):
             with patch("pathlib.Path.read_bytes",return_value=data),self.assertRaisesRegex(ArtifactBlocked,"artifact_policy_invalid"):_load_manifest()
 

@@ -1,2 +1,2 @@
 # Preserve upstream Leaflet bytes and hashes, including its CRLF formatting.
-findmy_home/rootfs/app/findmy_home/static/vendor/** -whitespace
+retrace/rootfs/app/retrace/static/vendor/** -whitespace

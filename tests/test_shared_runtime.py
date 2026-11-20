@@ -8,10 +8,10 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock,patch
-from findmy_home.storage import Store
-from findmy_home.shared_runtime import (RuntimeBlocked,SigningIdentityStore,read_options,
+from retrace.storage import Store
+from retrace.shared_runtime import (RuntimeBlocked,SigningIdentityStore,read_options,
     configure_runtime,owned_session_available,compose_runtime,SIGNING_MANIFEST)
-from findmy_home.owned_session import SessionBlocked
+from retrace.owned_session import SessionBlocked
 
 IDENTITY={key:'synthetic' for key in ('model','os_name','os_version','os_build','cfnetwork','darwin')}
 DIGEST='a'*64
@@ -19,7 +19,7 @@ IDS={'uid':'00000000-0000-4000-8000-000000000001','devid':'00000000-0000-4000-80
 
 class StartupTests(unittest.TestCase):
     def test_validated_options_are_handed_off_privately_before_privilege_drop(self):
-        from findmy_home.shared_runtime import publish_runtime_options
+        from retrace.shared_runtime import publish_runtime_options
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)/'private';root.mkdir(mode=0o700)
             source=Path(tmp)/'supervisor-options.json'
@@ -44,7 +44,7 @@ class StartupTests(unittest.TestCase):
             path.write_text('{"runtime_mode":"legacy","runtime_mode":"shared"}')
             with self.assertRaises(RuntimeBlocked):read_options(path)
     def test_private_evaluation_environment_only_comes_from_shared_checked_options(self):
-        with patch.dict(os.environ,{},clear=False),patch('findmy_home.shared_runtime.require_shared_backend'):
+        with patch.dict(os.environ,{},clear=False),patch('retrace.shared_runtime.require_shared_backend'):
             configure_runtime({'runtime_mode':'shared','private_evaluation':True})
             self.assertEqual(os.environ['FINDMY_PRIVATE_EVALUATION'],'1')
             configure_runtime({'runtime_mode':'shared','private_evaluation':False})
@@ -53,7 +53,7 @@ class StartupTests(unittest.TestCase):
             self.assertEqual(os.environ['FINDMY_PRIVATE_EVALUATION'],'0')
 
     def test_shared_mode_never_falls_back_if_image_marker_is_missing(self):
-        with patch('findmy_home.shared_runtime.require_shared_backend',side_effect=RuntimeBlocked('shared_image_required')):
+        with patch('retrace.shared_runtime.require_shared_backend',side_effect=RuntimeBlocked('shared_image_required')):
             with self.assertRaisesRegex(RuntimeBlocked,'shared_image_required'):
                 configure_runtime({'runtime_mode':'shared'})
     def test_shared_readiness_never_uses_legacy_session(self):
@@ -91,26 +91,26 @@ class SigningStoreTests(unittest.TestCase):
         with self.assertRaises(SessionBlocked):self.store.load()
     def test_manifest_failure_preserves_prior_generation(self):
         self.store.save(b'old-state','b'*32,IDENTITY,IDS)
-        with patch('findmy_home.shared_runtime.atomic_json',side_effect=OSError('synthetic failure')):
+        with patch('retrace.shared_runtime.atomic_json',side_effect=OSError('synthetic failure')):
             with self.assertRaises(OSError):self.store.save(b'new-state','d'*32,IDENTITY,IDS)
         self.assertEqual(self.store.load(),(b'old-state','b'*32,IDENTITY,IDS))
 
 class CompositionTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.store=Store(Path(self.tmp.name))
-        self.boundary_patch=patch('findmy_home.native_worker.verify_native_boundary',new=AsyncMock())
+        self.boundary_patch=patch('retrace.native_worker.verify_native_boundary',new=AsyncMock())
         self.boundary=self.boundary_patch.start()
     async def asyncTearDown(self):self.boundary_patch.stop();self.tmp.cleanup()
     async def test_pending_artifact_review_blocks_before_credentials_or_provisioning(self):
-        from findmy_home.artifact_policy import ArtifactBlocked
-        with patch('findmy_home.shared_runtime.require_shared_backend'),patch('findmy_home.artifact_policy.reviewed_artifact',side_effect=ArtifactBlocked('artifact_review_required')):
+        from retrace.artifact_policy import ArtifactBlocked
+        with patch('retrace.shared_runtime.require_shared_backend'),patch('retrace.artifact_policy.reviewed_artifact',side_effect=ArtifactBlocked('artifact_review_required')):
             with self.assertRaisesRegex(ArtifactBlocked,'artifact_review_required'):
                 await compose_runtime(self.store,{'shared_artifact_id':'applemusic-arm64-v8a','create_new_identity':True})
         self.assertFalse((self.store.root/SIGNING_MANIFEST).exists())
     async def test_unsupported_boundary_stops_before_component_install_or_credentials(self):
-        from findmy_home.offline_signer import SignerBlocked
+        from retrace.offline_signer import SignerBlocked
         self.boundary.side_effect=SignerBlocked('worker_boundary_unavailable')
-        with patch('findmy_home.shared_runtime.require_shared_backend'),patch('findmy_home.artifact_policy.reviewed_artifact',return_value=SimpleNamespace(expected_sha256=DIGEST)),patch('findmy_home.component_installer.ensure_component',new=AsyncMock()) as install:
+        with patch('retrace.shared_runtime.require_shared_backend'),patch('retrace.artifact_policy.reviewed_artifact',return_value=SimpleNamespace(expected_sha256=DIGEST)),patch('retrace.component_installer.ensure_component',new=AsyncMock()) as install:
             with self.assertRaisesRegex(SignerBlocked,'worker_boundary_unavailable'):
                 await compose_runtime(self.store,{'shared_artifact_id':'applemusic-arm64-v8a','create_new_identity':True,'install_reviewed_component':True})
             install.assert_not_awaited()
@@ -118,7 +118,7 @@ class CompositionTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_missing_identity_requires_explicit_consent_and_corrupt_identity_never_reprovisions(self):
         provision=AsyncMock()
-        with patch('findmy_home.shared_runtime.require_shared_backend'),patch('findmy_home.artifact_policy.reviewed_artifact',return_value=SimpleNamespace(expected_sha256=DIGEST)),patch('findmy_home.artifact_policy.verify_artifact',new=AsyncMock()),patch('findmy_home.controlled_provisioning.provision_new_identity',new=provision):
+        with patch('retrace.shared_runtime.require_shared_backend'),patch('retrace.artifact_policy.reviewed_artifact',return_value=SimpleNamespace(expected_sha256=DIGEST)),patch('retrace.artifact_policy.verify_artifact',new=AsyncMock()),patch('retrace.controlled_provisioning.provision_new_identity',new=provision):
             worker,bridge=await compose_runtime(self.store,{'shared_artifact_id':'applemusic-arm64-v8a','create_new_identity':False})
             try:
                 with self.assertRaisesRegex(RuntimeBlocked,'explicit_new_identity_required'):await worker.account_factory()

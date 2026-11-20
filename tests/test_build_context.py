@@ -10,5 +10,5 @@ class BuildContextTests(unittest.TestCase):
         for name in ('nested/account.json','nested/owned-session.json','nested/identity.json','owned-libs.bin','source.apk','session-a.key','session-a.enc','nested/export.plist','data/settings.json','.git/config','package/__pycache__/module.pyc'):
             with self.subTest(name=name):self.assertFalse(module.allowed_path(name))
     def test_reviewed_public_policy_code_and_ca_remain_available(self):
-        for name in ('Dockerfile.shared','requirements-shared.lock','rootfs/app/findmy_home/trusted_artifacts.json','rootfs/app/findmy_home/trust/apple-root-ca.pem','tests/fixtures/native_worker_fixture.py'):
+        for name in ('Dockerfile.shared','requirements-shared.lock','rootfs/app/retrace/trusted_artifacts.json','rootfs/app/retrace/trust/apple-root-ca.pem','tests/fixtures/native_worker_fixture.py'):
             with self.subTest(name=name):self.assertTrue(module.allowed_path(name))

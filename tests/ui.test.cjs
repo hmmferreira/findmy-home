@@ -3,7 +3,7 @@ const assert=require("node:assert/strict");
 const fs=require("node:fs");
 const path=require("node:path");
 const {JSDOM}=require("jsdom");
-const root=path.resolve(__dirname,"../findmy_home/rootfs/app/findmy_home/static");
+const root=path.resolve(__dirname,"../retrace/rootfs/app/retrace/static");
 const html=fs.readFileSync(path.join(root,"index.html"),"utf8");
 const script=fs.readFileSync(path.join(root,"app.js"),"utf8");
 const flush=()=>new Promise(resolve=>setImmediate(resolve));

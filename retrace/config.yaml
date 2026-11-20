@@ -17,7 +17,7 @@ panel_admin: true
 hassio_api: false
 homeassistant_api: false
 discovery:
-  - findmy_home
+  - retrace
 ports:
   8100/tcp: null
 options:

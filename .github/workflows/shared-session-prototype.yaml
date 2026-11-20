@@ -1,7 +1,7 @@
 name: Shared-session discovery prototype
 on:
   push:
-    branches: [feat/shared-session-discovery]
+    branches: [main, feat/shared-session-discovery]
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,11 +16,11 @@ jobs:
         with:
           python-version: '3.12'
       - run: |
-          pip install --require-hashes --only-binary=:all: -r findmy_home/requirements.lock
+          pip install --require-hashes --only-binary=:all: -r retrace/requirements.lock
       - run: npm ci --prefix tools/ui-tests --ignore-scripts --no-audit --no-fund
       - run: python -m unittest discover -s tests -v
         env:
-          PYTHONPATH: findmy_home/rootfs/app
+          PYTHONPATH: retrace/rootfs/app
   protocol-candidate:
     runs-on: ubuntu-latest
     steps:
@@ -39,8 +39,8 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/shared-context"
           cp experiments/shared-session/Dockerfile "$RUNNER_TEMP/shared-context/Dockerfile"
-          cp findmy_home/requirements.lock "$RUNNER_TEMP/shared-context/requirements.lock"
-          cp -a findmy_home/rootfs/app "$RUNNER_TEMP/shared-context/app"
+          cp retrace/requirements.lock "$RUNNER_TEMP/shared-context/requirements.lock"
+          cp -a retrace/rootfs/app "$RUNNER_TEMP/shared-context/app"
           cp -a reviewed-backend "$RUNNER_TEMP/shared-context/backend"
           rm -rf "$RUNNER_TEMP/shared-context/backend/.git"
           cp tests/test_shared_discovery.py "$RUNNER_TEMP/shared-context/test_shared_discovery.py"
@@ -56,11 +56,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Build explicit shared runtime
-        run: docker build -f findmy_home/Dockerfile.shared -t findmy-shared-runtime:test findmy_home
+        run: docker build -f retrace/Dockerfile.shared -t retrace-shared-runtime:test retrace
       - name: Non-root production worker and artifact gate smoke
         run: >-
           docker run --rm --user 1000:1000 --network none --read-only
           --cap-drop ALL --security-opt no-new-privileges
           --tmpfs /tmp:rw,nosuid,size=128m
           -v "$PWD/tools/shared-runtime-smoke.py:/review-smoke.py:ro"
-          --entrypoint python findmy-shared-runtime:test /review-smoke.py
+          --entrypoint python retrace-shared-runtime:test /review-smoke.py

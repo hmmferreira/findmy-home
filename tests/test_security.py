@@ -9,10 +9,10 @@ import tempfile
 import unittest
 from aiohttp.test_utils import TestClient, TestServer
 from unittest.mock import patch
-from findmy_home.storage import Store, atomic_json, read_json, token_only
-from findmy_home.importer import normalized_plist
-from findmy_home.auth import ExportFlow
-from findmy_home.server import make_app
+from retrace.storage import Store, atomic_json, read_json, token_only
+from retrace.importer import normalized_plist
+from retrace.auth import ExportFlow
+from retrace.server import make_app
 
 class StorageTests(unittest.TestCase):
     def setUp(self):
@@ -48,7 +48,7 @@ class StorageTests(unittest.TestCase):
     def test_failed_pairing_rotation_preserves_current_access(self):
         store=Store(self.root)
         before=dict(store.identity)
-        with patch("findmy_home.storage.atomic_json",side_effect=OSError("synthetic disk full")):
+        with patch("retrace.storage.atomic_json",side_effect=OSError("synthetic disk full")):
             with self.assertRaises(OSError): store.rotate_read_token()
         self.assertEqual(store.identity,before)
         self.assertEqual(read_json(self.root/"identity.json"),before)
@@ -153,7 +153,7 @@ class HttpTests(unittest.IsolatedAsyncioTestCase):
         headers["X-CSRF-Token"]=data["csrf"]
         self.assertEqual((await client.post("/ui/rotate-pairing",headers=headers,json={})).status,400)
         self.assertEqual(self.store.identity,old)
-        with patch("findmy_home.server.announce",side_effect=OSError("synthetic unavailable")):
+        with patch("retrace.server.announce",side_effect=OSError("synthetic unavailable")):
             response=await client.post("/ui/rotate-pairing",headers=headers,json={"confirm":True})
         self.assertEqual(response.status,200)
         result=await response.json()

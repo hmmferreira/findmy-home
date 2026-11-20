@@ -8,9 +8,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from findmy_home.controlled_provisioning import ProvisioningBlocked
-from findmy_home.native_worker import IsolatedNativeWorker,ProcessOfflineSigner,_NativeChannel,_decode,_encode,verify_native_boundary
-from findmy_home.offline_signer import SignerBlocked
+from retrace.controlled_provisioning import ProvisioningBlocked
+from retrace.native_worker import IsolatedNativeWorker,ProcessOfflineSigner,_NativeChannel,_decode,_encode,verify_native_boundary
+from retrace.offline_signer import SignerBlocked
 
 FIXTURE=Path(__file__).with_name("fixtures")/"native_worker_fixture.py"
 
@@ -23,7 +23,7 @@ class NativeWorkerTests(unittest.IsolatedAsyncioTestCase):
         self.artifact=json.dumps({"private_path":str(self.private),"write_path":str(self.write)}).encode()
         self.library=Path(self.tmp.name)/"synthetic-lib";self.library.write_bytes(self.artifact)
         self.digest=hashlib.sha256(self.artifact).hexdigest()
-        self.patch=patch("findmy_home.native_worker._WORKER_SCRIPT",FIXTURE)
+        self.patch=patch("retrace.native_worker._WORKER_SCRIPT",FIXTURE)
         self.patch.start();self.workers=[]
     async def asyncTearDown(self):
         for worker in self.workers:await worker.close()
@@ -62,7 +62,7 @@ class NativeWorkerTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(worker._channel._process.returncode)
     async def test_preflight_verifies_and_reaps_without_native_artifact(self):
         channel=_NativeChannel()
-        with patch("findmy_home.native_worker._NativeChannel",return_value=channel):
+        with patch("retrace.native_worker._NativeChannel",return_value=channel):
             boundary=await verify_native_boundary()
         self.assertIn(boundary,{"landlock3-seccomp-v1","apparmor-seccomp-v1"})
         self.assertIsNotNone(channel._process.returncode)
@@ -88,7 +88,7 @@ class NativeWorkerTests(unittest.IsolatedAsyncioTestCase):
             entered.set();await asyncio.sleep(.03)
             return await real(*args,**kwargs)
         worker=IsolatedNativeWorker();self.workers.append(worker)
-        with patch("findmy_home.native_worker.asyncio.create_subprocess_exec",side_effect=delayed_spawn):
+        with patch("retrace.native_worker.asyncio.create_subprocess_exec",side_effect=delayed_spawn):
             task=asyncio.create_task(worker.prepare(self.artifact))
             await entered.wait();task.cancel()
             with self.assertRaises(asyncio.CancelledError):await task
@@ -98,21 +98,21 @@ class NativeWorkerTests(unittest.IsolatedAsyncioTestCase):
         def record_pipe():
             pair=real_pipe();created.extend(pair);return pair
         worker=IsolatedNativeWorker();self.workers.append(worker)
-        with patch("findmy_home.native_worker.os.pipe",side_effect=record_pipe),patch(
-                "findmy_home.native_worker.asyncio.create_subprocess_exec",side_effect=OSError("PRIVATE_SPAWN_PATH")):
+        with patch("retrace.native_worker.os.pipe",side_effect=record_pipe),patch(
+                "retrace.native_worker.asyncio.create_subprocess_exec",side_effect=OSError("PRIVATE_SPAWN_PATH")):
             with self.assertRaises(ProvisioningBlocked) as caught:await worker.prepare(self.artifact)
         self.assertEqual(str(caught.exception),"native_worker_failed")
         for fd in created:
             with self.assertRaises(OSError):os.fstat(fd)
     async def test_repeated_close_does_not_signal_reaped_pid(self):
         worker=await self.prepare();await worker.close()
-        with patch("findmy_home.native_worker.os.killpg",side_effect=AssertionError("reaped PID signalled")):
+        with patch("retrace.native_worker.os.killpg",side_effect=AssertionError("reaped PID signalled")):
             await worker.close()
     async def test_missing_boundary_fails_before_native_input(self):
         script=Path(self.tmp.name)/"unsupported.py"
         script.write_text('import os,struct,sys,json\nf=os.fdopen(int(sys.argv[1]),"wb",buffering=0)\nb=json.dumps({"ok":False,"error":"worker_boundary_unavailable"}).encode()\nf.write(struct.pack("!I",len(b))+b)\n')
         worker=IsolatedNativeWorker();self.workers.append(worker)
-        with patch("findmy_home.native_worker._WORKER_SCRIPT",script):
+        with patch("retrace.native_worker._WORKER_SCRIPT",script):
             with self.assertRaises(ProvisioningBlocked) as caught:await worker.prepare(self.artifact)
         self.assertEqual(str(caught.exception),"worker_boundary_unavailable")
         self.assertIsNotNone(worker._channel._process.returncode)
@@ -122,7 +122,7 @@ class NativeWorkerTests(unittest.IsolatedAsyncioTestCase):
             prefix=b"\\x7f\\xff\\xff\\xff" if payload is None else b""
             script.write_text('import os,struct,sys,json\nf=os.fdopen(int(sys.argv[1]),"wb",buffering=0)\nb=json.dumps({"ok":True,"ready":True,"boundary":"landlock3-seccomp-v1"}).encode()\nf.write(struct.pack("!I",len(b))+b)\nsys.stdin.buffer.read(4)\n'+('f.write(b"\\x7f\\xff\\xff\\xff")\n' if payload is None else 'b=b"not-json"\nf.write(struct.pack("!I",len(b))+b)\n'))
             worker=IsolatedNativeWorker();self.workers.append(worker)
-            with patch("findmy_home.native_worker._WORKER_SCRIPT",script):
+            with patch("retrace.native_worker._WORKER_SCRIPT",script):
                 with self.assertRaises(ProvisioningBlocked):await worker.prepare(self.artifact)
             self.assertIsNotNone(worker._channel._process.returncode)
     async def test_invalid_order_and_busy_snapshot_are_refused(self):

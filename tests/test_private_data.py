@@ -2,8 +2,8 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
-from findmy_home.private_data import prepare_private_root
-from findmy_home.storage import Store,atomic_json
+from retrace.private_data import prepare_private_root
+from retrace.storage import Store,atomic_json
 
 class PrivateDataTests(unittest.TestCase):
     def test_restored_modes_are_repaired(self):
