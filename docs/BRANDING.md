@@ -23,12 +23,20 @@ are preserved; known default legacy entry titles adopt Retrace at integration
 setup after the companion update. Existing entity names/IDs can retain the old
 technical prefix intentionally.
 
-The repository remains https://github.com/hmmferreira/findmy-home and installed
-channel URLs stay unchanged. Changing that URL changes Supervisor's repository
-identity and can strand the existing app/update path. A future repository/package
-rename needs a separate migration plan; product branding does not require it.
-Source package directories and Python modules keep their established names for
-compatibility. Contributor instructions apply to Retrace under these paths.
+The canonical repository is https://github.com/hmmferreira/retrace after the
+owner completes the GitHub rename. Public install links use the new name.
+Existing installations can keep their original `findmy-home#edge` registration:
+GitHub redirects Git fetch/clone operations, and retaining that registration
+preserves Supervisor's installed repository/app identity and private data.
+Verify a store refresh and normal update after the rename. Do not remove/re-add
+that repository or create a new GitHub repository named `findmy-home`, which
+would remove the redirect. New installations use `retrace#edge` and therefore
+have a different Supervisor repository prefix. Never hardcode that prefix.
+
+Update local Git remotes to `git@github.com:hmmferreira/retrace.git` after
+verifying the renamed repository. Existing source package directories and Python
+modules keep their established names for compatibility. Contributor instructions
+apply to Retrace under these paths.
 
 The app update changes app/store/sidebar/web branding. Companion manifest,
 translations and default entry-title changes require updating the custom

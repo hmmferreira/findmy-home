@@ -50,12 +50,12 @@ is promised. Sparse sightings are not a continuous GPS track.
 
 ## Install and update through Home Assistant
 
-Add the [Edge app repository](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fhmmferreira%2Ffindmy-home%23edge), then install **Retrace Edge**.
+Add the [Edge app repository](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fhmmferreira%2Fretrace%23edge), then install **Retrace Edge**.
 Updates appear in Settings → Apps. No terminal archive copying is needed.
 The initial source build can take a while; subsequent builds reuse cached layers.
 
 Edge is delivered after tests on main. Stable is reserved for manually promoted,
-validated releases at `https://github.com/hmmferreira/findmy-home#stable`.
+validated releases at `https://github.com/hmmferreira/retrace#stable`.
 Do not add stable until its first release has passed live validation.
 Both channels remain experimental until the security/release checks are complete.
 
