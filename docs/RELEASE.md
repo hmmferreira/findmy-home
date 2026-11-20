@@ -5,7 +5,7 @@ deployment hook. Nothing is pushed to the homelab main branch.
 
 ## Legacy local Supervisor trial
 Copy retrace to the local-app mount (/local_apps/retrace or /addons/retrace) on the HA host; reload the app store,
-build and install it. Copy custom_components/findmy_home to the matching directory
+build and install it. Copy custom_components/retrace to the matching directory
 under /config/custom_components, then restart Core. Use supported file/SSH access;
 do not edit .storage. Open the app in ingress, complete setup, choose a small test
 set, and confirm the discovered integration. Both installations have separate

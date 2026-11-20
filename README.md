@@ -9,8 +9,8 @@ Retrace is an independent community project, not affiliated with or endorsed by
 Apple. It runs independently of an existing MQTT tracker. Development remains
 experimental; sparse sightings are not continuous GPS tracking.
 
-Formerly named Find My Home. See [rename compatibility](docs/BRANDING.md) for
-existing installations and technical identifiers.
+This version uses a new Retrace integration and app identity. See the
+[clean-install procedure](docs/BRANDING.md) before replacing an older installation.
 
 ## User journey
 1. Open the app through Home Assistant ingress.
@@ -42,7 +42,7 @@ is promised. Sparse sightings are not a continuous GPS track.
 ## Packaging
 - retrace/: Supervisor app, ingress UI, local helper, patched exporter,
   selected-item polling, owner-only runtime state.
-- custom_components/findmy_home/: native integration, config/reauth flows,
+- custom_components/retrace/: native integration, config/reauth flows,
   coordinator, trackers, timestamps, Repairs and sanitized diagnostics.
 - tests/: isolated transport, security, recovery and polling tests.
 - docs/SECURITY.md: trust boundaries, storage and remaining review.

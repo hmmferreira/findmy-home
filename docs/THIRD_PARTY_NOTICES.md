@@ -9,7 +9,7 @@ Copyright (c) 2023 FindMy.py Contributors. License: MIT.
 The complete upstream license below is retained verbatim. A matching copy is
 packaged at `/app/licenses/FindMy.py-MIT.txt`, with attribution in
 `/app/licenses/NOTICE.md`. The shared image also retains the original upstream
-`LICENSE.md` beside `/opt/findmy-shared/findmy`. Source channel packages retain
+`LICENSE.md` beside `/opt/retrace-protocol/findmy`. Source channel packages retain
 these app files. Original project copyright remains in the root LICENSE; it does
 not replace upstream copyright. Preserve both on redistribution and retain any
 additional notices when adopting other code.
