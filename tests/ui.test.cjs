@@ -382,3 +382,17 @@ test("unavailable app is shown as an issue and is not masked by switching tabs",
     assert.equal(env.document.getElementById('checks-badge').dataset.kind,'info');
   }finally{env.close();}
 });
+
+test("local setup failure explains Configuration instead of asking for another Apple sign-in",async()=>{
+  const env=await setup({shared:true,connected:false,auth:{phase:"failed",error:"setup_required"}});try{
+    assert.match(env.document.getElementById("login-status").textContent,/Configuration tab/);
+    assert.match(env.document.getElementById("login-status").textContent,/not a rejected Apple password/);
+    assert.equal(env.document.getElementById("account-badge").textContent,"Account: setup required");
+    assert.equal(env.document.getElementById("checks-badge").textContent,"Checks: setup needs attention");
+    assert.equal(env.document.getElementById("account-badge").dataset.kind,"error");
+    env.data.setup.locations_connected=true;await env.refresh();
+    assert.equal(env.document.getElementById("account-badge").dataset.kind,"error");
+    assert.equal(env.document.getElementById("account-badge").textContent,"Account: setup required");
+    assert.equal(env.document.getElementById("message").hidden,true);
+  }finally{env.close();}
+});

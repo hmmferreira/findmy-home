@@ -55,5 +55,8 @@ Do not remove that gate or enable private evaluation by default to ship a releas
 Native rights/provenance and credential-boundary reviews remain release gates.
 Verify installed version, protection and readiness through HA after deployment;
 an uncertain lifecycle result must be read back before retry. Preserve sessions and selected items within the current Retrace installation;
-never import pre-rename sessions or identities implicitly. Record verified results without private data.
+never import pre-rename sessions or identities implicitly. HTTP readiness does not
+mean the lazily created signing identity exists. Keep explicit first-identity
+creation enabled until the first successful sign-in/discovery has saved it; never
+clear that setup flag merely because app startup or /health succeeded. Record verified results without private data.
 Do not contact upstream maintainers without explicit user instructions.

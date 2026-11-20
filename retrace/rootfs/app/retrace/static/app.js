@@ -28,10 +28,11 @@ function statusBadge(id,label,kind="info"){
 function renderStatus(data){
   const auth=data.auth?.phase,flow=data.recovery?.phase,health=data.health||{};
   const selected=data.items.filter(item=>item.enabled);
+  const setupBlocked=auth==="failed"&&data.auth?.error==="setup_required";
   const pending=["working","choose_method","verification_code"].includes(auth);
   statusBadge("account-badge",pending?(auth==="working"?"Account: connecting":"Account: verification needed"):
-    data.setup?.locations_connected?"Account: connected":auth==="failed"?"Account: sign-in needs attention":"Account: not connected",
-    pending?"info":data.setup?.locations_connected?"success":auth==="failed"?"error":"info");
+    setupBlocked?"Account: setup required":data.setup?.locations_connected?"Account: connected":auth==="failed"?"Account: sign-in needs attention":"Account: not connected",
+    setupBlocked?"error":pending?"info":data.setup?.locations_connected?"success":auth==="failed"?"error":"info");
   const recoveryIssue=["failed","expired","timed_out"].includes(flow);
   statusBadge("keys-badge",flow==="working"?"Item keys: recovering":flow==="input"?"Item keys: unlock needed":recoveryIssue?"Item keys: recovery needs attention":
     data.items.length?"Item keys: ready":"Item keys: not recovered",recoveryIssue?"error":flow==="input"?"warning":data.items.length&&flow!=="working"?"success":"info");
@@ -39,7 +40,7 @@ function renderStatus(data){
   let label="Checks: waiting",kind="info";
   if(health.error_code==="rate_limited"){label="Checks: paused by Apple";kind="warning";}
   else if(health.status==="reauth_required"){label="Checks: reconnect needed";kind="error";}
-  else if(health.status==="setup_required"){label="Checks: setup needs attention";kind="error";}
+  else if(health.status==="setup_required"||setupBlocked){label="Checks: setup needs attention";kind="error";}
   else if(auth==="failed"){label="Status: sign-in needs attention";kind="error";}
   else if(recoveryIssue){label="Status: recovery needs attention";kind="error";}
   else if(["error","partial_results"].includes(health.status)||health.items_failed>0){label="Checks: needs attention";kind="error";}
@@ -259,7 +260,7 @@ function showFactor(result){
     "sign_in_expired":"The verification step expired. Sign in again using the Apple account form above.",
     "session_expired":"The saved session expired. Reconnect using the Apple account form above.",
     "session_save_failed":"Your account session could not be saved securely. Check app storage before signing in again.",
-    "setup_required":"Secure account setup needs attention. Check the app's setup requirements before signing in.",
+    "setup_required":"Secure account setup is incomplete. Open the app’s Configuration tab and check first-time setup before retrying. This is a local setup problem, not a rejected Apple password.",
     "verification_not_accepted":"Apple did not accept that verification attempt. Check that you are using the code from the selected method, then try again. Your sign-in may also have expired.",
     "invalid_verification_code":"Apple did not accept that verification attempt. Check the code from the selected method and try again.",
     "verification_rate_limited":"Apple asked you to wait before trying verification again. Do not repeatedly request or submit codes.",

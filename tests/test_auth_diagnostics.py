@@ -144,3 +144,13 @@ class AuthDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
     def test_event_whitelist_drops_injected_values(self):
         self.worker._auth_event("2fa_submit","failed",method="PRIVATE_PHONE",error="PRIVATE_CODE",kind="PRIVATE_TOKEN",status=123456,reason={"PRIVATE":"VALUE"})
         self.assertEqual(self.events(),[{"stage":"2fa_submit","event":"failed"}])
+
+    async def test_first_identity_gate_survives_background_error_mapping_without_apple_login(self):
+        from retrace.shared_runtime import RuntimeBlocked
+        self.worker.account_factory=AsyncMock(side_effect=RuntimeBlocked("explicit_new_identity_required"))
+        self.bridge=SharedDiscoveryUI(AsyncMock());self.bridge.bind(self.worker)
+        await self.bridge.authenticate("owner",self.login)
+        await self.bridge.auth_task
+        self.assertEqual(self.bridge.auth_visible("owner"),{"phase":"failed","error":"setup_required"})
+        self.account.login.assert_not_awaited();self.writer.assert_not_awaited()
+        self.assertEqual(self.events()[-1]["reason"],"explicit_new_identity_required")

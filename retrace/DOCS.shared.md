@@ -1,8 +1,7 @@
-# Retrace Shared Edge
+# Retrace Edge
 
-This private evaluation runs beside the existing Edge app with its own app data,
-account session and integration instance. Keep the existing app while comparing.
-It does not reuse or overwrite the existing app's authentication or item keys.
+This shared-auth private evaluation uses the current Retrace app identity and
+private data. A clean installation does not import pre-rename sessions or keys.
 
 ## First use
 
@@ -29,8 +28,15 @@ Setup is explicit: `runtime_mode: shared`, `private_evaluation: true`,
 private first-time evaluation. The component is fetched only from the fixed vendor
 URL, with source/member/bundle hashes checked before use. No vendor binary is in
 this repository or app image. Existing components and signing identities are
-reused; corrupted or missing saved material is not silently replaced. After first
-setup, return the two setup-only flags to false. Keep private evaluation enabled
+reused; corrupted or missing saved material is not silently replaced.
+
+**The signing identity is created lazily when you first press Connect Apple account,
+not when the app starts.** Keep `create_new_identity: true` until the first
+successful sign-in and discovery have completed. A healthy web UI does not prove
+that this identity exists. After that first completed setup, return the two
+setup-only flags to false. Existing saved identities are reused even while the
+creation flag is true; it never authorizes replacing corrupt saved identity data.
+Keep private evaluation enabled
 for this evaluation scope.
 
 Sessions and signing identity are encrypted in private generation files. A backup
