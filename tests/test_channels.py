@@ -61,3 +61,24 @@ class ChannelTests(unittest.TestCase):
             target=Path(tmp)/'rendered'
             module.render(source,target,'edge','0.1.12-dev.1.1',runtime='shared')
             self.assertEqual(list((target/'findmy_home/rootfs/app/private-fixture').iterdir()),[])
+
+    def test_shared_packages_preserve_exact_upstream_license_and_attribution(self):
+        import hashlib
+        spec=importlib.util.spec_from_file_location("render_evaluation",ROOT/"tools/render-evaluation.py")
+        evaluation=importlib.util.module_from_spec(spec);spec.loader.exec_module(evaluation)
+        expected=ROOT/"findmy_home/rootfs/app/licenses/FindMy.py-MIT.txt"
+        self.assertEqual(hashlib.sha256(expected.read_bytes()).hexdigest(),
+                         "51396fd82204e1d844bbff2019054d8c3712e53c3ed8485c9f19dd73990eb46e")
+        with tempfile.TemporaryDirectory() as tmp:
+            normal=Path(tmp)/"edge"
+            module.render(ROOT,normal,"edge","0.1.13-dev.1.6",runtime="shared")
+            separate=Path(tmp)/"evaluation"
+            evaluation.render(ROOT,separate,"0.1.13-dev.1.6")
+            for app in (normal/"findmy_home",separate/"findmy_home_shared"):
+                self.assertEqual((app/"rootfs/app/licenses/FindMy.py-MIT.txt").read_bytes(),expected.read_bytes())
+                self.assertIn("Copyright (c) 2023 FindMy.py Contributors",
+                              (app/"rootfs/app/licenses/NOTICE.md").read_text())
+                docker=(app/"Dockerfile").read_text()
+                self.assertIn("COPY rootfs/app /app",docker)
+                self.assertIn("findmy LICENSE.md",docker)
+            self.assertIn(expected.read_text(),(normal/"docs/THIRD_PARTY_NOTICES.md").read_text())

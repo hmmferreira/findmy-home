@@ -13,7 +13,9 @@ runtime before making claims about dependencies or authentication.
 - Keep protocol source pinned by revision and archive hash, Python wheels pinned
   by version/hash, and upstream notices intact. Review source, transitive changes,
   advisories and licenses before updating. A matching hash is integrity evidence,
-  not evidence of safety or redistribution permission.
+  not evidence of safety or redistribution permission. Preserve the complete
+  FindMy.py notice in docs/THIRD_PARTY_NOTICES.md and rootfs/app/licenses; ensure
+  rendered packages retain it and the shared image keeps upstream LICENSE.md.
 - Route account operations through the owned transport. No remote signer,
   arbitrary endpoint, environment proxy, redirect, legacy-session fallback or
   unreviewed executable download. Preserve explicit native policy and isolation.

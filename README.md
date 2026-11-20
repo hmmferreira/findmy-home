@@ -87,3 +87,9 @@ The local Portainer helper runs python tools/docker-check.py test or build.
 Set PORTAINER_DOCKER_API and PORTAINER_KEY_FILE for another environment.
 It is developer tooling, not part of the app. Tests have no network or live
 runtime mounts. Do not copy production sessions into test fixtures.
+
+## Attribution
+
+FindMy.py retains **Copyright (c) 2023 FindMy.py Contributors** under MIT.
+See [third-party notices](docs/THIRD_PARTY_NOTICES.md) for the complete license
+and packaged notice locations; this does not clear other component release gates.
