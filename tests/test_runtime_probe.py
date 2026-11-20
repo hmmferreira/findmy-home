@@ -21,7 +21,7 @@ class RuntimeProbeTests(unittest.TestCase):
         # no YAML parser/dependency is needed to verify its security contract.
         config=dict(re.findall(r"^([a-z_]+):[ \t]*(.*)$",text,re.MULTILINE))
         self.assertEqual(config["slug"],"findmy_runtime_probe")
-        self.assertEqual(config["version"],"0.1.4")
+        self.assertEqual(config["version"],"0.1.5")
         self.assertEqual(config["boot"],"manual")
         self.assertRegex(text,r"(?m)^arch:\n  - amd64\n")
         for key in ("ingress","hassio_api","homeassistant_api","docker_api","host_network","full_access"):
