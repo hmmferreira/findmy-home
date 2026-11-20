@@ -10,6 +10,54 @@ from .storage import atomic_json, read_json, token_only
 from .progress import safe_progress
 
 
+AUTH_ERRORS={"authentication_failed","authentication_network_error","verification_rejected",
+    "verification_not_accepted","verification_rate_limited","code_request_failed",
+    "invalid_verification_code","session_save_failed","discovery_handoff_failed",
+    "setup_required","sign_in_expired"}
+
+class AuthenticationError(RuntimeError):
+    """Stable public code only; never keep the underlying SDK exception/message."""
+    def __init__(self,code,stage,*,retry_factor=False):
+        self.code=code if code in AUTH_ERRORS else "authentication_failed"
+        self.stage=stage
+        self.retry_factor=retry_factor
+        super().__init__(self.code)
+
+def _auth_classification(error,stage):
+    from .apple_transport import TransportBlocked,VerificationFailure
+    if stage=="session_save":return "session_save_failed",False,"storage"
+    if stage=="discovery_handoff":return "discovery_handoff_failed",False,"handoff"
+    if isinstance(error,VerificationFailure):
+        code=("verification_rate_limited" if error.status==429 else
+              "verification_not_accepted" if error.stage=="submit" else "code_request_failed")
+        return code,True,"verification_refused"
+    # Some SDKs expose an explicit invalid-code type. The currently pinned one
+    # does not; never infer a wrong code by matching an exception's prose/name.
+    from findmy import errors as sdk_errors
+    invalid_types=tuple(value for name in ("InvalidCodeError","InvalidVerificationCodeError")
+        if isinstance((value:=getattr(sdk_errors,name,None)),type) and issubclass(value,Exception))
+    if invalid_types and isinstance(error,invalid_types):
+        return "invalid_verification_code",True,"verification_code_rejected"
+    if isinstance(error,TransportBlocked):
+        if error.code=="request_failed":return "authentication_network_error",False,"network"
+        setup={"artifact_unavailable","artifact_digest_mismatch","artifact_review_required","reviewed_artifact_required",
+            "isolated_provisioning_worker_required","worker_boundary_unavailable","explicit_new_identity_required",
+            "signing_identity_missing","signing_identity_invalid"}
+        if error.code in setup:return "setup_required",False,"setup"
+        return ("code_request_failed" if stage=="2fa_request" else "verification_rejected" if stage=="2fa_submit" else "authentication_failed"),False,"transport_blocked"
+    import aiohttp
+    if isinstance(error,(TimeoutError,OSError,aiohttp.ClientError)):
+        return "authentication_network_error",False,"network"
+    unavailable=getattr(sdk_errors,"AppleServiceUnavailableError",None)
+    if isinstance(unavailable,type) and isinstance(error,unavailable):
+        return "verification_rate_limited" if getattr(error,"status_code",None)==429 else "authentication_network_error",False,"service_unavailable"
+    code=getattr(error,"code",None)
+    if isinstance(code,str) and code in {"artifact_unavailable","artifact_digest_mismatch","artifact_review_required","reviewed_artifact_required",
+                "isolated_provisioning_worker_required","worker_boundary_unavailable","explicit_new_identity_required",
+                "signing_identity_missing","signing_identity_invalid"}:
+        return "setup_required",False,"setup"
+    return ("verification_rejected" if stage=="2fa_submit" else "code_request_failed" if stage=="2fa_request" else "authentication_failed"),False,"unclassified"
+
 class AppleWorker:
     def __init__(self, store, *, account_factory=None, session_writer=None, authenticated=None, session_available=None):
         self.store = store
@@ -38,12 +86,55 @@ class AppleWorker:
     def _session(self, account):
         atomic_json(self.store.root / "account.json", token_only(account))
 
-    async def _complete_signin(self):
+    @staticmethod
+    def _method_kind(method):
+        from findmy.reports.twofactor import SmsSecondFactorMethod,TrustedDeviceSecondFactorMethod
+        if isinstance(method,SmsSecondFactorMethod):return "sms"
+        if isinstance(method,TrustedDeviceSecondFactorMethod):return "trusted_device"
+        return "unknown"
+
+    def _method_choices(self):
+        return [{"value":n,"label":"SMS" if self._method_kind(method)=="sms" else
+                 "Trusted device" if self._method_kind(method)=="trusted_device" else "Verification method"}
+                for n,method in enumerate(self.methods)]
+
+    @staticmethod
+    def _auth_event(stage,event,*,method=None,error=None,kind=None,status=None,reason=None):
+        if stage not in {"login","2fa_request","2fa_submit","session_save","discovery_handoff"}:return
+        if event not in {"started","completed","failed","cancelled"}:return
+        value={"stage":stage,"event":event}
+        if isinstance(method,str) and method in {"sms","trusted_device","unknown"}:value["method"]=method
+        if isinstance(error,str) and error in AUTH_ERRORS:value["error"]=error
+        if isinstance(kind,str) and kind in {"storage","handoff","verification_refused","verification_code_rejected","network","setup","transport_blocked","service_unavailable","unclassified"}:value["kind"]=kind
+        if type(status) is int and status in {400,401,403,429,500,502,503,504}:value["status"]=status
+        if isinstance(reason,str) and reason in {"destination_blocked","request_failed","transport_closed","transport_options_blocked",
+                       "dns_destination_blocked","redirect_blocked","response_invalid","response_too_large"}:value["reason"]=reason
+        # Bounded structured print deliberately survives global SDK logging disable.
+        # No caller can supply owner/email/phone/code/token, body or exception text.
+        print("Find My Home auth: "+json.dumps(value,separators=(",",":")),flush=True)
+
+    async def _auth_step(self,stage,operation,*,method=None):
+        self._auth_event(stage,"started",method=method)
+        try:result=await operation()
+        except asyncio.CancelledError:
+            self._auth_event(stage,"cancelled",method=method)
+            raise
+        except Exception as error:
+            code,retry,kind=_auth_classification(error,stage)
+            self._auth_event(stage,"failed",method=method,error=code,kind=kind,
+                status=getattr(error,"status",getattr(error,"status_code",None)),reason=getattr(error,"code",None))
+            raise AuthenticationError(code,stage,retry_factor=retry) from None
+        self._auth_event(stage,"completed",method=method)
+        return result
+
+    async def _complete_signin(self,*,method=None):
         account=self.pending
-        if self.session_writer is None:self._session(account)
-        else:await self.session_writer(account)
+        async def save():
+            if self.session_writer is None:await asyncio.to_thread(self._session,account)
+            else:await self.session_writer(account)
+        await self._auth_step("session_save",save,method=method)
         if self.authenticated is not None:
-            await self.authenticated(self.owner,account)
+            await self._auth_step("discovery_handoff",lambda:self.authenticated(self.owner,account),method=method)
             # The callback explicitly takes ownership until discovery completes.
             self.pending=None
         await self._clear_pending()
@@ -73,43 +164,58 @@ class AppleWorker:
         async with self.lock:
             if self.pending:
                 raise ValueError("Finish or cancel the current sign-in")
-            async with asyncio.timeout(90):
-                account = (await self.account_factory() if self.account_factory is not None else
-                           AsyncAppleAccount(LocalAnisetteProvider(libs_path=str(self.store.root / "ani_libs.bin"))))
-            self.pending, self.owner = account, owner
-            self.auth_task = asyncio.create_task(self._expire())
-            try:
+            async def start():
                 async with asyncio.timeout(90):
-                    state = await account.login(email, password)
-                    if state == LoginState.REQUIRE_2FA:
-                        self.methods = list(await account.get_2fa_methods())
-                        return {"phase": "choose_method", "methods": [
-                            {"value": n, "label": "SMS" if "Sms" in type(m).__name__ else "Trusted device"}
-                            for n, m in enumerate(self.methods)]}
-                    if state != LoginState.LOGGED_IN:
-                        raise ValueError("Authentication incomplete")
-                    return await self._complete_signin()
+                    account = (await self.account_factory() if self.account_factory is not None else
+                               AsyncAppleAccount(LocalAnisetteProvider(libs_path=str(self.store.root / "ani_libs.bin"))))
+                self.pending, self.owner = account, owner
+                self.auth_task = asyncio.create_task(self._expire())
+                async with asyncio.timeout(90):
+                    state=await account.login(email,password)
+                    if state==LoginState.REQUIRE_2FA:
+                        self.methods=list(await account.get_2fa_methods())
+                        return {"phase":"choose_method","methods":self._method_choices()}
+                    if state!=LoginState.LOGGED_IN:raise ValueError("Authentication incomplete")
+                    return None
+            try:
+                result=await self._auth_step("login",start)
+                return result if result is not None else await self._complete_signin()
             except BaseException:
                 await self._clear_pending()
                 raise
 
     async def factor(self, owner, index, code=None):
         from findmy import LoginState
+        stage="2fa_request" if code is None else "2fa_submit"
         async with self.lock:
-            if not self.pending or self.owner != owner:
-                raise ValueError("No active sign-in for this user")
-            if not isinstance(index, int) or index < 0 or index >= len(self.methods):
+            if not self.pending or self.owner!=owner:
+                raise AuthenticationError("sign_in_expired",stage)
+            if type(index) is not int or index<0 or index>=len(self.methods):
                 raise ValueError("Invalid verification method")
+            method=self.methods[index];kind=self._method_kind(method)
             try:
-                async with asyncio.timeout(90):
-                    method = self.methods[index]
-                    if code is None:
-                        await method.request()
-                        return {"phase": "verification_code", "method": index}
-                    await method.submit(code)
-                    if self.pending.login_state != LoginState.LOGGED_IN:
-                        raise ValueError("Verification incomplete")
-                    return await self._complete_signin()
+                async def verify():
+                    async with asyncio.timeout(90):
+                        if code is None:await method.request()
+                        else:
+                            await method.submit(code)
+                            if self.pending.login_state!=LoginState.LOGGED_IN:
+                                raise ValueError("Verification incomplete")
+                await self._auth_step(stage,verify,method=kind)
+                if code is None:return {"phase":"verification_code","method":index}
+                return await self._complete_signin(method=kind)
+            except AuthenticationError as error:
+                # A known HTTP refusal has not advanced the SDK challenge. Keep
+                # it for an explicit human retry, never automatically resend a
+                # factor/code. Ambiguous submit/network outcomes are torn down.
+                active=self.pending is not None and self.pending.login_state==LoginState.REQUIRE_2FA
+                if active and (error.retry_factor or (code is None and error.code in {
+                        "code_request_failed","authentication_network_error","verification_rate_limited"})):
+                    if code is not None:
+                        return {"phase":"verification_code","method":index,"error":error.code}
+                    return {"phase":"choose_method","methods":self._method_choices(),"error":error.code}
+                await self._clear_pending()
+                raise
             except BaseException:
                 await self._clear_pending()
                 raise
@@ -202,11 +308,9 @@ class AppleWorker:
                 self.active_items.discard(item_id)
 
     async def _query_process(self, item_id):
-        command=getattr(self,"_item_command",[sys.executable,"-m","findmy_home.poll_item"])
-        env={key:os.environ[key] for key in
-            ("PATH","LANG","LC_ALL","SSL_CERT_FILE","SSL_CERT_DIR","XDG_CONFIG_HOME")
-            if key in os.environ}
-        env["FINDMY_HOME_DATA"]=str(self.store.root)
+        from .reporting_runtime import report_launch
+        default_command,env=report_launch(self.store.root)
+        command=getattr(self,"_item_command",default_command)
         progress_path=self.store.root/"progress"/(item_id+".json")
         progress_path.unlink(missing_ok=True)
         process=await asyncio.create_subprocess_exec(*command,
@@ -230,6 +334,11 @@ class AppleWorker:
                 return {"ok":False,"error":"poll_failed"}
             if result.get("error") not in self.ALLOWED_ERRORS and not result["ok"]:
                 return {"ok":False,"error":"poll_failed"}
+            from .progress import safe_query_diagnostic
+            diagnostic=safe_query_diagnostic(result.get("diagnostic"))
+            if diagnostic:
+                result["diagnostic"]=diagnostic
+                print("Find My Home query diagnostic: "+json.dumps(diagnostic),flush=True)
             progress=safe_progress(read_json(progress_path,{}))
             if progress:
                 result["progress"]=progress

@@ -11,7 +11,7 @@ from .apple import ReportingAccount, ReportSourceUnavailable, PacedHttp, RateLim
 from .storage import read_json, atomic_json
 from .private_session_store import restore_reporting_account
 from .owned_session import SessionBlocked
-from .progress import QueryProgress
+from .progress import QueryProgress,safe_query_diagnostic
 from .search import fetch_bounded
 
 async def query():
@@ -35,8 +35,10 @@ async def query():
     except SessionBlocked as error:
         setup_codes={"worker_boundary_unavailable","artifact_review_required","artifact_license_review_required",
             "artifact_not_approved","artifact_architecture_unsupported","artifact_digest_mismatch",
-            "session_artifact_mismatch","artifact_unavailable","artifact_policy_invalid","artifact_source_unverified"}
-        return {"ok":False,"error":"setup_required" if error.code in setup_codes else "authentication_required"}
+            "session_artifact_mismatch","artifact_unavailable","artifact_policy_invalid","artifact_source_unverified",
+            "reporting_backend_unavailable","signer_initialization_failed","signing_failed"}
+        return {"ok":False,"error":"setup_required" if error.code in setup_codes else "authentication_required",
+            "diagnostic":safe_query_diagnostic({"stage":"session_restore","code":error.code})}
     account._http=PacedHttp(account._http,root/"request-gate")
     try:
         accessory=FindMyAccessory.from_json(key_file)
@@ -54,7 +56,7 @@ async def query():
     except ReportSourceUnavailable:
         return {"ok":False,"error":"apple_empty_response"}
     except (InvalidCredentialsError,UnauthorizedError):
-        return {"ok":False,"error":"authentication_required"}
+        return {"ok":False,"error":"authentication_required","diagnostic":{"stage":"report_fetch","code":"authentication_required"}}
     except ValueError as error:
         return {"ok":False,"error":"authentication_required" if str(error)=="No username or password specified" else "poll_failed"}
     except Exception:

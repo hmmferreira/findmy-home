@@ -153,5 +153,6 @@ async def restore_account(data,*,encryption_key,library,expected_sha256,now=None
         if account is not None:await account.close()
         elif signer is not None:await signer.close()
         if isinstance(exc,(SessionBlocked,asyncio.CancelledError)):raise
-        if isinstance(exc,SignerBlocked) and exc.code in {"worker_boundary_unavailable","artifact_digest_mismatch","artifact_unavailable"}:raise SessionBlocked(exc.code) from None
+        if isinstance(exc,ImportError):raise SessionBlocked("reporting_backend_unavailable") from None
+        if isinstance(exc,SignerBlocked) and exc.code in {"worker_boundary_unavailable","artifact_digest_mismatch","artifact_unavailable","signer_initialization_failed","signing_failed"}:raise SessionBlocked(exc.code) from None
         raise SessionBlocked("session_restore_failed") from None

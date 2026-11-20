@@ -23,6 +23,23 @@ class TransportBlocked(RuntimeError):
         super().__init__(code)
         self.code=code
 
+class VerificationFailure(TransportBlocked):
+    """Known factor HTTP refusal, without response text or verification inputs."""
+    def __init__(self,stage,status):
+        if stage not in ("request","submit") or status not in (400,401,403,429):
+            raise TransportBlocked("request_failed")
+        self.status=status
+        self.stage=stage
+        super().__init__("verification_rate_limited" if status==429 else
+            "verification_not_accepted" if stage=="submit" else "verification_request_rejected")
+
+VERIFICATION_ROUTES={
+    ("PUT","/auth/verify/phone"):"request",
+    ("GET","/auth/verify/trusteddevice"):"request",
+    ("POST","/auth/verify/phone/securitycode"):"submit",
+    ("GET","/grandslam/GsService2/validate"):"submit",
+}
+
 ACCOUNT_PATHS={
     "gsa.apple.com":frozenset({"/grandslam/GsService2","/grandslam/GsService2/validate","/auth","/auth/verify/phone","/auth/verify/phone/securitycode","/auth/verify/trusteddevice"}),
     "gsas.apple.com":frozenset({"/grandslam/GsService2/postdata"}),
@@ -41,7 +58,7 @@ ARTIFACT_URL="https://apps.mzstatic.com/content/android-apple-music-apk/applemus
 ESCROW_PATHS=frozenset("/escrowproxy/api/"+path for path in ("get_records","get_club_cert","srp_init","recover"))
 
 def validate_destination(profile,method,url):
-    if profile not in ("account","cloudkit","escrow","provisioning","artifact") or method not in ("GET","POST"):
+    if profile not in ("account","cloudkit","escrow","provisioning","artifact") or method not in ("GET","POST","PUT"):
         raise TransportBlocked()
     if not isinstance(url,str) or any(ord(c)<=32 or ord(c)>=127 for c in url) or any(c in url for c in "\\#"):
         raise TransportBlocked()
@@ -59,7 +76,7 @@ def validate_destination(profile,method,url):
         if profile=="artifact":
             allowed=method=="GET" and url==ARTIFACT_URL
         elif profile=="account":
-            allowed=parsed.path in ACCOUNT_PATHS.get(host,())
+            allowed=parsed.path in ACCOUNT_PATHS.get(host,()) and (method!="PUT" or (host=="gsa.apple.com" and parsed.path=="/auth/verify/phone"))
         elif profile=="cloudkit":
             allowed=host=="gateway.icloud.com" and parsed.path in CLOUDKIT_PATHS and method=="POST"
         elif profile=="provisioning":
@@ -162,6 +179,9 @@ class OwnedHttpSession:
             session=await self._session(host)
             async with session.request(method,url,allow_redirects=False,ssl=self._ssl,**kwargs) as response:
                 if 300<=response.status<400: raise TransportBlocked("redirect_blocked")
+                stage=VERIFICATION_ROUTES.get((method,urlsplit(url).path)) if self.profile=="account" and host=="gsa.apple.com" else None
+                if stage is not None and response.status in (400,401,403,429):
+                    raise VerificationFailure(stage,response.status)
                 body=bytearray()
                 async for chunk in response.content.iter_chunked(65536):
                     if len(body)+len(chunk)>self.MAX_BODY: raise TransportBlocked("response_too_large")

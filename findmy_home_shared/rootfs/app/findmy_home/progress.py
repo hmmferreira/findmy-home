@@ -51,3 +51,18 @@ class QueryProgress:
     def complete(self):
         self.value["phase"]="complete"
         self.save(force=True)
+
+QUERY_DIAGNOSTIC_STAGES={'session_restore','report_fetch'}
+QUERY_DIAGNOSTIC_CODES={
+    'session_expired','reauthentication_required','session_invalid','session_restore_failed',
+    'session_storage_invalid','session_storage_unavailable','session_artifact_mismatch',
+    'artifact_review_required','artifact_license_review_required','artifact_not_approved',
+    'artifact_architecture_unsupported','artifact_digest_mismatch','artifact_unavailable',
+    'artifact_policy_invalid','artifact_source_unverified','worker_boundary_unavailable',
+    'reporting_backend_unavailable','signer_initialization_failed','signing_failed',
+    'authentication_required','rate_limited','poll_failed',
+}
+
+def safe_query_diagnostic(value):
+    if not isinstance(value,dict) or value.get('stage') not in QUERY_DIAGNOSTIC_STAGES or value.get('code') not in QUERY_DIAGNOSTIC_CODES:return {}
+    return {'stage':value['stage'],'code':value['code']}
