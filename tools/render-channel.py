@@ -31,6 +31,7 @@ def render(source, target, channel, version, *, runtime="legacy"):
     if runtime=="shared":
         shutil.copyfile(target/"findmy_home/Dockerfile.shared",target/"findmy_home/Dockerfile")
         shutil.copyfile(target/"findmy_home/apparmor.shared.txt",target/"findmy_home/apparmor.txt")
+        shutil.copyfile(target/"findmy_home/DOCS.shared.md",target/"findmy_home/DOCS.md")
         text=text.replace("  runtime_mode: legacy","  runtime_mode: shared",1)
     config.write_text(text)
     # Channel name alone never removes experimental status: live validation is required.

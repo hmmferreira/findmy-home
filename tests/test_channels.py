@@ -45,6 +45,7 @@ class ChannelTests(unittest.TestCase):
             self.assertIn("  runtime_mode: shared",(target/"findmy_home/config.yaml").read_text())
             self.assertEqual((target/"findmy_home/Dockerfile").read_bytes(),(ROOT/"findmy_home/Dockerfile.shared").read_bytes())
             self.assertEqual(json.loads((target/"CHANNEL.json").read_text())["runtime"],"shared")
+            self.assertIn("same authenticated account",(target/"findmy_home/DOCS.md").read_text())
             self.assertEqual((target/"findmy_home/apparmor.txt").read_bytes(),(ROOT/"findmy_home/apparmor.shared.txt").read_bytes())
             with self.assertRaises(ValueError):module.render(ROOT,Path(tmp)/"stable","stable","0.1.12",runtime="shared")
 
