@@ -1,3 +1,10 @@
+# 0.1.14-dev.1.5 — Check saved device identity without another login
+
+- Compare saved native device metadata against account identity in the restricted
+  worker at startup. Report only match booleans or fixed error codes.
+- Never provision, sign in, generate OTP headers, or replace saved state during
+  this check. Apple account refusals remain explicit rather than password errors.
+
 # 0.1.14-dev.1.4 — Distinguish Apple refusals from local sign-in errors
 
 - Recognize typed Apple account/password and protocol refusals instead of an

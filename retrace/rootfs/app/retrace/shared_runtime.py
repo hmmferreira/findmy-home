@@ -135,6 +135,30 @@ async def _persist(operation):
         await asyncio.gather(task,return_exceptions=True)
         raise
 
+async def check_saved_identity(signing,library,digest):
+    """Offline comparison only: no provisioning, account login, or disk writes."""
+    from .native_worker import ProcessOfflineSigner
+    signer=None
+    try:
+        if not signing.exists():return {"status":"not_saved"}
+        async with asyncio.timeout(50):
+            state,serial,identity,ids=await asyncio.to_thread(signing.load)
+            from findmy.reports.anisette import DeviceIdentity
+            client=DeviceIdentity(**identity).client_info("com.apple.AOSKit/282 (com.apple.dt.Xcode/3594.4.19)")
+            signer=ProcessOfflineSigner(library,state,digest)
+            await signer.initialize()
+            checks=await signer.identity_checks({"uid":ids["uid"],"devid":ids["devid"],"client_info":client})
+            return {"status":"consistent" if all(checks.values()) else "mismatch",**checks}
+    except asyncio.CancelledError:raise
+    except Exception as error:
+        code=getattr(error,"code",None)
+        allowed={"signing_identity_invalid","worker_boundary_unavailable","artifact_unavailable","artifact_digest_mismatch",
+                 "native_worker_failed","signer_initialization_failed","identity_check_failed"}
+        return {"status":"unavailable","error":code if isinstance(code,str) and code in allowed else "check_failed"}
+    finally:
+        if signer is not None:await signer.close()
+
+
 async def compose_runtime(store,options):
     """Used by server.main only in the explicitly selected shared runtime image."""
     require_shared_backend()
@@ -154,6 +178,8 @@ async def compose_runtime(store,options):
         await ensure_component(store.root,policy,install=True)
     await verify_artifact(library,policy)
     signing=SigningIdentityStore(store.root,policy.expected_sha256)
+    check=await check_saved_identity(signing,library,policy.expected_sha256)
+    print("Retrace identity check: "+json.dumps(check,separators=(",",":")),flush=True)
     sessions=PrivateSessionStore(store.root,library=library,expected_sha256=policy.expected_sha256)
     lifecycle=asyncio.Lock()
     async def account_factory():
