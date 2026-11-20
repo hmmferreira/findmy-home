@@ -3,12 +3,13 @@
 ## Channels
 
 Development source lives on main. CI runs synthetic tests without Apple secrets,
-then renders only allowlisted app, integration and documentation files into the
-edge branch. Versions are unique (`0.1.2-dev.RUN.ATTEMPT`), never a mutable `latest`.
-App store URL: https://github.com/hmmferreira/findmy-home#edge
+and explicit delivery renders only allowlisted app, integration and documentation
+files into the edge branch. Source pushes never overwrite the side-by-side Shared
+Edge package; use the reviewed evaluation renderer for that app. Versions are unique (`0.1.2-dev.RUN.ATTEMPT`), never a mutable `latest`.
+App store URL: https://github.com/hmmferreira/retrace#edge
 
 Stable URL (after the first validated promotion):
-https://github.com/hmmferreira/findmy-home#stable
+https://github.com/hmmferreira/retrace#stable
 Run the channel workflow on main, choose stable, and acknowledge completion of
 RELEASE.md checks. Stable versions cannot be overwritten: increase config.yaml's
 version first. Stable is not automatically promoted from Edge. Matching tagged integration

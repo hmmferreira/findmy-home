@@ -1,0 +1,35 @@
+name: Retrace Shared Edge
+version: 0.1.13-dev.1.9
+slug: findmy_home_shared
+description: Location history in Home Assistant with Apple Find My support
+url: https://github.com/hmmferreira/retrace
+homeassistant: 2026.9.3
+arch:
+  - amd64
+startup: application
+boot: manual
+init: false
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:radar
+panel_title: Retrace Shared Edge
+panel_admin: true
+hassio_api: false
+homeassistant_api: false
+discovery:
+  - retrace
+ports:
+  8100/tcp: null
+options:
+  runtime_mode: shared
+  shared_artifact_id: applemusic-arm64-v8a
+  create_new_identity: false
+  install_reviewed_component: false
+  private_evaluation: false
+schema:
+  runtime_mode: list(legacy|shared)
+  shared_artifact_id: str
+  create_new_identity: bool
+  install_reviewed_component: bool
+  private_evaluation: bool
+stage: experimental

@@ -216,7 +216,7 @@ no main password/session extraction from the existing setup is performed.
 
 ## Side-by-side deployment verified — 2026-11-20
 
-Deployed `9c579022_findmy_home_shared` as **Retrace Shared Edge**
+Deployed `9c579022_retrace_shared` as **Retrace Shared Edge**
 `0.1.13-dev.1.3`, source `3a88835429bf86656b3ca9857853ffc1f28962c2`,
 Edge delivery commit `b83140c`. Supervisor reports started, protection enabled and
 custom AppArmor profile loaded. Its credential-free `/health` returns HTTP200
@@ -225,7 +225,7 @@ component verification. Setup uses explicit private evaluation and fixed-compone
 installation, with first-identity creation authorized; Apple account sign-in and
 trusted-device unlock remain protected-UI actions.
 
-The original `9c579022_findmy_home` remains started at `0.1.12-dev.16.1`, unchanged.
+The original `9c579022_retrace` remains started at `0.1.12-dev.16.1`, unchanged.
 Separate app data/identity provide the comparison/rollback path; no existing app
 was stopped, migrated, backed up destructively or restored. Diagnostic0.1.4 is
 installed, stopped and manual-boot after all ten target restrictions passed.

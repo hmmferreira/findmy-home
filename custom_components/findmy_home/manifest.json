@@ -8,10 +8,10 @@
   "dependencies": [
     "hassio"
   ],
-  "documentation": "https://github.com/hmmferreira/findmy-home",
+  "documentation": "https://github.com/hmmferreira/retrace",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/hmmferreira/findmy-home/issues",
+  "issue_tracker": "https://github.com/hmmferreira/retrace/issues",
   "requirements": [],
-  "version": "0.1.13-dev.1.6"
+  "version": "0.1.13-dev.1.9"
 }

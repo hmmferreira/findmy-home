@@ -42,7 +42,7 @@ Final 0.1.2 image built and passed non-root/private-state/ingress/helper startup
 smoke. Previous repository run also published v0.1.2-dev.3.1 successfully.
 No stable release is approved. Supervisor still has no durable installed
 version for Edge after its install tool timed out; user UI status is pending.
-Core is back after the HACS activation restart; no findmy_home startup errors
+Core is back after the HACS activation restart; no retrace startup errors
 were returned by the system-log query. Existing MQTT status remains ok, reports 9.
 
 ## Usability 0.1.3

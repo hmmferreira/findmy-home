@@ -40,7 +40,7 @@ History follows the user's Recorder configuration; no retention period or backfi
 is promised. Sparse sightings are not a continuous GPS track.
 
 ## Packaging
-- findmy_home/: Supervisor app, ingress UI, local helper, patched exporter,
+- retrace/: Supervisor app, ingress UI, local helper, patched exporter,
   selected-item polling, owner-only runtime state.
 - custom_components/findmy_home/: native integration, config/reauth flows,
   coordinator, trackers, timestamps, Repairs and sanitized diagnostics.
@@ -50,12 +50,13 @@ is promised. Sparse sightings are not a continuous GPS track.
 
 ## Install and update through Home Assistant
 
-Add the [Edge app repository](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fhmmferreira%2Ffindmy-home%23edge), then install **Retrace Edge**.
+Add the [Edge app repository](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fhmmferreira%2Fretrace%23edge), then install **Retrace Edge**.
 Updates appear in Settings → Apps. No terminal archive copying is needed.
 The initial source build can take a while; subsequent builds reuse cached layers.
 
-Edge is delivered after tests on main. Stable is reserved for manually promoted,
-validated releases at `https://github.com/hmmferreira/findmy-home#stable`.
+Edge delivery is explicit after tests on main; source pushes do not overwrite
+the installed Shared Edge evaluation package. Stable is reserved for manually promoted,
+validated releases at `https://github.com/hmmferreira/retrace#stable`.
 Do not add stable until its first release has passed live validation.
 Both channels remain experimental until the security/release checks are complete.
 
@@ -87,7 +88,7 @@ installations use Edge consistently. Existing registry IDs are retained.
 See [known limitations and release readiness](docs/KNOWN_LIMITATIONS.md).
 
 ## Development
-Build from the findmy_home directory using its Dockerfile. It compiles the pinned
+Build from the retrace directory using its Dockerfile. It compiles the pinned
 exporter with the known protocol/session fixes and bundles the anisette helper
 locally; no public anisette service is used. Leaflet 1.9.4 is vendored with license
 and hashes; scripts do not load from a CDN. Maps fetch OpenStreetMap tiles.
