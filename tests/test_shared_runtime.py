@@ -24,11 +24,20 @@ class StartupTests(unittest.TestCase):
             self.assertEqual(read_options(path)['runtime_mode'],'legacy')
             path.write_text(json.dumps({'runtime_mode':'shared','create_new_identity':True}))
             self.assertEqual(read_options(path)['runtime_mode'],'shared')
-            for value in ({'runtime_mode':'guess'},{'create_new_identity':'true'},{'digest':'a'*64},{'shared_artifact_id':'../../file'}):
+            for value in ({'runtime_mode':'guess'},{'create_new_identity':'true'},{'install_reviewed_component':'true'},{'private_evaluation':'true'},{'digest':'a'*64},{'shared_artifact_id':'../../file'}):
                 path.write_text(json.dumps(value))
                 with self.assertRaises(RuntimeBlocked):read_options(path)
             path.write_text('{"runtime_mode":"legacy","runtime_mode":"shared"}')
             with self.assertRaises(RuntimeBlocked):read_options(path)
+    def test_private_evaluation_environment_only_comes_from_shared_checked_options(self):
+        with patch.dict(os.environ,{},clear=False),patch('findmy_home.shared_runtime.require_shared_backend'):
+            configure_runtime({'runtime_mode':'shared','private_evaluation':True})
+            self.assertEqual(os.environ['FINDMY_PRIVATE_EVALUATION'],'1')
+            configure_runtime({'runtime_mode':'shared','private_evaluation':False})
+            self.assertEqual(os.environ['FINDMY_PRIVATE_EVALUATION'],'0')
+            configure_runtime({'runtime_mode':'legacy','private_evaluation':True})
+            self.assertEqual(os.environ['FINDMY_PRIVATE_EVALUATION'],'0')
+
     def test_shared_mode_never_falls_back_if_image_marker_is_missing(self):
         with patch('findmy_home.shared_runtime.require_shared_backend',side_effect=RuntimeBlocked('shared_image_required')):
             with self.assertRaisesRegex(RuntimeBlocked,'shared_image_required'):
@@ -75,13 +84,24 @@ class SigningStoreTests(unittest.TestCase):
 class CompositionTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.store=Store(Path(self.tmp.name))
-    async def asyncTearDown(self):self.tmp.cleanup()
+        self.boundary_patch=patch('findmy_home.native_worker.verify_native_boundary',new=AsyncMock())
+        self.boundary=self.boundary_patch.start()
+    async def asyncTearDown(self):self.boundary_patch.stop();self.tmp.cleanup()
     async def test_pending_artifact_review_blocks_before_credentials_or_provisioning(self):
         from findmy_home.artifact_policy import ArtifactBlocked
         with patch('findmy_home.shared_runtime.require_shared_backend'),patch('findmy_home.artifact_policy.reviewed_artifact',side_effect=ArtifactBlocked('artifact_review_required')):
             with self.assertRaisesRegex(ArtifactBlocked,'artifact_review_required'):
                 await compose_runtime(self.store,{'shared_artifact_id':'applemusic-arm64-v8a','create_new_identity':True})
         self.assertFalse((self.store.root/SIGNING_MANIFEST).exists())
+    async def test_unsupported_boundary_stops_before_component_install_or_credentials(self):
+        from findmy_home.offline_signer import SignerBlocked
+        self.boundary.side_effect=SignerBlocked('worker_boundary_unavailable')
+        with patch('findmy_home.shared_runtime.require_shared_backend'),patch('findmy_home.artifact_policy.reviewed_artifact',return_value=SimpleNamespace(expected_sha256=DIGEST)),patch('findmy_home.component_installer.ensure_component',new=AsyncMock()) as install:
+            with self.assertRaisesRegex(SignerBlocked,'worker_boundary_unavailable'):
+                await compose_runtime(self.store,{'shared_artifact_id':'applemusic-arm64-v8a','create_new_identity':True,'install_reviewed_component':True})
+            install.assert_not_awaited()
+        self.assertFalse((self.store.root/SIGNING_MANIFEST).exists())
+
     async def test_missing_identity_requires_explicit_consent_and_corrupt_identity_never_reprovisions(self):
         provision=AsyncMock()
         with patch('findmy_home.shared_runtime.require_shared_backend'),patch('findmy_home.artifact_policy.reviewed_artifact',return_value=SimpleNamespace(expected_sha256=DIGEST)),patch('findmy_home.artifact_policy.verify_artifact',new=AsyncMock()),patch('findmy_home.controlled_provisioning.provision_new_identity',new=provision):

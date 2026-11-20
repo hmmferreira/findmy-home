@@ -95,8 +95,10 @@ Primary references:
 
 The wrapper's MIT notice does not establish permission to redistribute Apple's
 native binaries or authorize this particular use. No such permission was located
-or inferred in this review. Native-use/license review remains pending; bundling
-or downloading executable libraries at app runtime is therefore not enabled.
+or inferred in this review. Native-use/license permission remains undetermined. Community images contain no
+Apple libraries. An explicit private-evaluation setup can acquire only the fixed
+verified vendor APK, validate its bytes and privately construct the pinned bundle;
+this technical evaluation does not claim a license grant.
 A future local-use-only policy, if reviewed/approved, must still keep binaries out
 of community images; it is a separate decision from permission to redistribute.
 
@@ -108,11 +110,11 @@ URL or download fallback. An approved entry must bind the source APK version/has
 wrapper wheel/version, guest and tested host architectures, exact bundle/member
 hashes, review ID/date/evidence and native-use/redistribution review result.
 
-The committed entry records the technical pins above but remains `pending`, with
-no release host architecture approved and native rights unresolved. Current
-Dragon worker initialization is recorded above; HA-host compatibility and a
-release approval decision have not been established. Selection fails with
-`artifact_review_required`. An owned-session private manifest cannot turn a raw
+The committed entry records those technical pins with `private-evaluation` scope
+for amd64, retaining native rights as undetermined. Dragon initialization and HA
+AppArmor boundary checks are separate evidence; successful live Apple operations
+remain unverified. Default selection fails with `artifact_review_required`; an
+explicit private evaluation is required to select this fixed artifact. An owned-session private manifest cannot turn a raw
 digest into execution approval. Tests inject clearly synthetic approved manifests;
 no real release approval is asserted by those fixtures.
 
@@ -151,3 +153,21 @@ complete dependency notices, malicious-code analysis or the separate native
 binary rights question. The candidate remains test-only and pinned. Retain its
 notice if a reviewed release adopts it; do not describe a full provenance audit
 or clean-room cryptographic rewrite as completed.
+
+## Private Edge evaluation scope — 2026-11-20
+
+The fixed artifact entry now has a separate `private-evaluation` technical scope.
+Default selection continues to refuse it; the shared runtime must explicitly opt
+into private evaluation. This scope binds the already verified vendor source,
+signature evidence, exact bytes and tested amd64 architecture. It does not mark
+native licensing as approved: `terms-reviewed-no-clearance` records that distinction.
+The app image and Git repository contain no Apple binary. Public/Stable promotion
+and redistribution permission are not established by this setting.
+
+Reviewed primary terms: https://www.apple.com/legal/sla/docs/AppleMusic.pdf .
+Sections 2A/2B describe Android-device use and system requirements; 2A restricts
+redistribution; 2D restricts copying/reverse engineering with exceptions referring
+to applicable law and open-source terms. No broader native-use permission was
+located. This is an observation of the published terms, not a conclusion about
+legal rights or applicability of an exception to this household. Source/sandbox
+verification and this limited technical evaluation are not legal clearance.

@@ -3,8 +3,10 @@
   "artifacts": [
     {
       "id": "applemusic-arm64-v8a",
-      "review_status": "pending",
-      "host_architectures": [],
+      "review_status": "private-evaluation",
+      "host_architectures": [
+        "amd64"
+      ],
       "guest_architecture": "arm64-v8a",
       "wrapper": {
         "name": "anisette",
@@ -25,14 +27,14 @@
         }
       },
       "review": {
-        "id": "native-integrity-2026-11-19",
-        "date": "2026-11-19",
+        "id": "private-edge-technical-review-2026-11-20",
+        "date": "2026-11-20",
         "evidence": "docs/ARTIFACT_PROVENANCE.md"
       },
       "license": {
         "wrapper": "MIT",
-        "native_review": "pending",
-        "redistribution": "not-approved"
+        "native_review": "terms-reviewed-no-clearance",
+        "redistribution": "local-use-only"
       }
     }
   ]

@@ -1,0 +1,10 @@
+"""Allow source files into build contexts; exclude private runtime artifacts."""
+from pathlib import PurePath
+
+PRIVATE_NAMES={"account.json","owned-session.json","owned-signing.json","identity.json",".env"}
+PRIVATE_SUFFIXES={".apk",".bin",".enc",".key",".plist",".sqlite",".sqlite3"}
+EXCLUDED_PARTS={".git","__pycache__",".venv",".pytest_cache","node_modules","data"}
+
+def allowed_path(relative):
+    path=PurePath(relative)
+    return not (set(path.parts)&EXCLUDED_PARTS or path.name in PRIVATE_NAMES or path.suffix in PRIVATE_SUFFIXES or path.suffix==".pyc")

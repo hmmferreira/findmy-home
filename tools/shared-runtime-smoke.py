@@ -20,4 +20,4 @@ async def probe():
     assert channel._process.returncode is not None
 
 asyncio.run(probe())
-print('Shared smoke passed: pinned candidate, non-root, real native-worker boundary, pending-artifact refusal; no native artifact loaded.')
+print('Shared smoke passed: pinned candidate, non-root, real native-worker boundary, default artifact refusal; no native artifact loaded.')

@@ -24,16 +24,18 @@ class RuntimeBlocked(RuntimeError):
 def read_options(path=Path('/data/options.json')):
     path=Path(path)
     try:
-        if not path.exists():return {"runtime_mode":"legacy","shared_artifact_id":"applemusic-arm64-v8a","create_new_identity":False}
+        if not path.exists():return {"runtime_mode":"legacy","shared_artifact_id":"applemusic-arm64-v8a","create_new_identity":False,"install_reviewed_component":False,"private_evaluation":False}
         if path.is_symlink() or path.stat().st_size>4096:raise ValueError()
         value=json.loads(path.read_text(),object_pairs_hook=_pairs)
-        if not isinstance(value,dict) or set(value)-{"runtime_mode","shared_artifact_id","create_new_identity"}:raise ValueError()
+        if not isinstance(value,dict) or set(value)-{"runtime_mode","shared_artifact_id","create_new_identity","install_reviewed_component","private_evaluation"}:raise ValueError()
         mode=value.get("runtime_mode","legacy")
         artifact=value.get("shared_artifact_id","applemusic-arm64-v8a")
         create=value.get("create_new_identity",False)
-        if mode not in ("legacy","shared") or type(create) is not bool:raise ValueError()
+        install=value.get("install_reviewed_component",False)
+        private_evaluation=value.get("private_evaluation",False)
+        if mode not in ("legacy","shared") or type(create) is not bool or type(install) is not bool or type(private_evaluation) is not bool:raise ValueError()
         if not isinstance(artifact,str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,79}",artifact):raise ValueError()
-        return {"runtime_mode":mode,"shared_artifact_id":artifact,"create_new_identity":create}
+        return {"runtime_mode":mode,"shared_artifact_id":artifact,"create_new_identity":create,"install_reviewed_component":install,"private_evaluation":private_evaluation}
     except Exception:raise RuntimeBlocked("runtime_options_invalid") from None
 
 def require_shared_backend():
@@ -51,6 +53,7 @@ def configure_runtime(options):
     if mode=='shared':require_shared_backend()
     elif Path(__file__).with_name('shared_backend.json').exists():raise RuntimeBlocked('legacy_image_required')
     os.environ['FINDMY_RUNTIME_MODE']=mode
+    os.environ['FINDMY_PRIVATE_EVALUATION']='1' if mode=='shared' and options.get('private_evaluation',False) is True else '0'
     return mode
 
 def owned_session_available(root):
@@ -127,13 +130,19 @@ async def compose_runtime(store,options):
     """Used by server.main only in the explicitly selected shared runtime image."""
     require_shared_backend()
     from .artifact_policy import reviewed_artifact,verify_artifact
-    from .native_worker import IsolatedNativeWorker,ProcessOfflineSigner
+    from .native_worker import IsolatedNativeWorker,ProcessOfflineSigner,verify_native_boundary
     from .controlled_provisioning import provision_new_identity
     from .offline_signer import provider_for
     from .owned_protocol import create_account
     from .shared_ui import compose_shared_ui
-    policy=reviewed_artifact(options['shared_artifact_id'])
+    policy=reviewed_artifact(options['shared_artifact_id'],private_evaluation=options.get('private_evaluation',False))
+    # Validate the actual target's native boundary before vendor download,
+    # entering credentials, or opening UI/integration listeners.
+    await verify_native_boundary()
     library=store.root/'owned-libs.bin'
+    if options.get('install_reviewed_component',False):
+        from .component_installer import ensure_component
+        await ensure_component(store.root,policy,install=True)
     await verify_artifact(library,policy)
     signing=SigningIdentityStore(store.root,policy.expected_sha256)
     sessions=PrivateSessionStore(store.root,library=library,expected_sha256=policy.expected_sha256)

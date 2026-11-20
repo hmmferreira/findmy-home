@@ -22,9 +22,18 @@ class ArtifactPolicyTests(unittest.IsolatedAsyncioTestCase):
     def selected(self,value=None,**kwargs):
         with patch("findmy_home.artifact_policy._load_manifest",return_value=value or self.manifest()):
             return reviewed_artifact("applemusic-arm64-v8a",host_architecture=kwargs.get("host_architecture","amd64"))
-    def test_bundled_release_policy_remains_pending_no_native_artifact_approved(self):
+    def test_bundled_policy_requires_explicit_private_evaluation_context(self):
         with self.assertRaisesRegex(ArtifactBlocked,"artifact_review_required"):
             reviewed_artifact("applemusic-arm64-v8a",host_architecture="amd64")
+    def test_private_evaluation_is_source_bound_and_does_not_claim_redistribution(self):
+        policy=reviewed_artifact("applemusic-arm64-v8a",host_architecture="amd64",private_evaluation=True)
+        self.assertEqual(policy.redistribution,"local-use-only")
+        self.assertEqual(policy.expected_sha256,"1cc48641b9803e951eaf96439463e05790e5b14452155261dcc271cec53ad563")
+        self.assertEqual(policy.source_version,"4.9.6.1447")
+        with self.assertRaises(ArtifactBlocked):reviewed_artifact("applemusic-arm64-v8a",host_architecture="amd64",private_evaluation="yes")
+        value=json.loads(_MANIFEST.read_text());value['artifacts'][0]['license']['redistribution']='permitted'
+        with patch("findmy_home.artifact_policy._load_manifest",return_value=value),self.assertRaises(ArtifactBlocked):
+            reviewed_artifact("applemusic-arm64-v8a",host_architecture="amd64",private_evaluation=True)
     def test_approved_source_digest_version_license_and_architecture_are_preserved(self):
         policy=self.selected(host_architecture="x86_64")
         self.assertEqual(policy.host_architecture,"amd64")

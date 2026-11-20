@@ -346,7 +346,8 @@ async def test_shared_startup_factory_preserves_full_identity_with_real_candidat
         async def initialize(self):self._engine=SimpleNamespace(is_provisioned=True);self._state=None
         def snapshot(self):return state
     monkeypatch.setattr(shared_runtime,"require_shared_backend",lambda:None)
-    monkeypatch.setattr("findmy_home.artifact_policy.reviewed_artifact",lambda value:SimpleNamespace(expected_sha256=digest))
+    monkeypatch.setattr("findmy_home.native_worker.verify_native_boundary",AsyncMock())
+    monkeypatch.setattr("findmy_home.artifact_policy.reviewed_artifact",lambda value,**kwargs:SimpleNamespace(expected_sha256=digest))
     monkeypatch.setattr("findmy_home.artifact_policy.verify_artifact",AsyncMock())
     monkeypatch.setattr("findmy_home.native_worker.ProcessOfflineSigner",SyntheticProcessSigner)
     provision=AsyncMock(return_value=state)

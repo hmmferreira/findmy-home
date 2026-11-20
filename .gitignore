@@ -9,3 +9,11 @@ __pycache__/
 .env
 .DS_Store
 node_modules/
+
+*.apk
+*.bin
+*.enc
+*.key
+account.json
+owned-session.json
+owned-signing.json

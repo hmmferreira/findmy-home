@@ -36,10 +36,12 @@ PROVISIONING_ROUTES=frozenset({
     ("POST","/grandslam/MidService/startMachineProvisioning"),
     ("POST","/grandslam/MidService/finishMachineProvisioning"),
 })
+ARTIFACT_URL="https://apps.mzstatic.com/content/android-apple-music-apk/applemusic.apk"
+
 ESCROW_PATHS=frozenset("/escrowproxy/api/"+path for path in ("get_records","get_club_cert","srp_init","recover"))
 
 def validate_destination(profile,method,url):
-    if profile not in ("account","cloudkit","escrow","provisioning") or method not in ("GET","POST"):
+    if profile not in ("account","cloudkit","escrow","provisioning","artifact") or method not in ("GET","POST"):
         raise TransportBlocked()
     if not isinstance(url,str) or any(ord(c)<=32 or ord(c)>=127 for c in url) or any(c in url for c in "\\#"):
         raise TransportBlocked()
@@ -54,7 +56,9 @@ def validate_destination(profile,method,url):
         if parsed.query and not (profile=="cloudkit" and parsed.path=="/setup/setup/ck/v1/ckAppInit"
             and parsed.query in ("container=com.apple.icloud.searchparty","container=com.apple.security.keychain")):
             raise TransportBlocked()
-        if profile=="account":
+        if profile=="artifact":
+            allowed=method=="GET" and url==ARTIFACT_URL
+        elif profile=="account":
             allowed=parsed.path in ACCOUNT_PATHS.get(host,())
         elif profile=="cloudkit":
             allowed=host=="gateway.icloud.com" and parsed.path in CLOUDKIT_PATHS and method=="POST"
@@ -116,7 +120,7 @@ class Response:
 class OwnedHttpSession:
     MAX_BODY=8*1024*1024
     def __init__(self,*,profile="account",timeout=30,verify_tls=True):
-        if profile not in ("account","cloudkit","escrow","provisioning") or verify_tls is not True:
+        if profile not in ("account","cloudkit","escrow","provisioning","artifact") or verify_tls is not True:
             raise TransportBlocked("transport_options_blocked")
         if not isinstance(timeout,(int,float)) or isinstance(timeout,bool) or not math.isfinite(timeout) or not 0<timeout<=90:
             raise TransportBlocked("transport_options_blocked")
@@ -135,6 +139,7 @@ class OwnedHttpSession:
                 cookie_jar=aiohttp.DummyCookieJar())
         return self._sessions[host]
     async def request(self,method,url,**kwargs):
+        if self.profile=="artifact":raise TransportBlocked("artifact_stream_required")
         if self._closed: raise TransportBlocked("transport_closed")
         host=validate_destination(self.profile,method,url)
         if set(kwargs)-{"auth","headers","data","json","auto_retry"}:
@@ -164,6 +169,32 @@ class OwnedHttpSession:
                 return Response(response.status,bytes(body),dict(response.headers))
         except (aiohttp.ClientError,TimeoutError,OSError,ValueError,TypeError):
             raise TransportBlocked("request_failed") from None
+    async def artifact_chunks(self,url,*,max_bytes):
+        """Unauthenticated bounded vendor stream; account response limits unchanged."""
+        if self._closed:raise TransportBlocked("transport_closed")
+        if self.profile!="artifact" or type(max_bytes) is not int or not 0<max_bytes<=200*1024*1024:
+            raise TransportBlocked("transport_options_blocked")
+        host=validate_destination("artifact","GET",url)
+        try:
+            session=await self._session(host)
+            async with session.request("GET",url,allow_redirects=False,ssl=self._ssl,auto_decompress=False,
+                headers={"Accept":"application/vnd.android.package-archive","Accept-Encoding":"identity"}) as response:
+                if 300<=response.status<400:raise TransportBlocked("redirect_blocked")
+                if response.status!=200:raise TransportBlocked("artifact_download_failed")
+                if response.headers.get("Content-Encoding","identity").lower()!="identity":
+                    raise TransportBlocked("artifact_encoding_blocked")
+                length=response.headers.get("Content-Length")
+                if length is not None and (not length.isdecimal() or not 0<int(length)<=max_bytes):
+                    raise TransportBlocked("response_too_large")
+                received=0
+                async for chunk in response.content.iter_chunked(65536):
+                    received+=len(chunk)
+                    if received>max_bytes:raise TransportBlocked("response_too_large")
+                    yield chunk
+                if received==0:raise TransportBlocked("artifact_download_failed")
+        except (aiohttp.ClientError,TimeoutError,OSError,ValueError,TypeError):
+            raise TransportBlocked("artifact_download_failed") from None
+
     async def get(self,url,**kwargs): return await self.request("GET",url,**kwargs)
     async def post(self,url,**kwargs): return await self.request("POST",url,**kwargs)
     async def close(self):

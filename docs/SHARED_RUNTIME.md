@@ -40,15 +40,18 @@ silently use an old plaintext account session after shared mode was selected.
 Shared startup requires a release-approved bundled artifact policy and a matching
 private `/data/findmy_home/owned-libs.bin`. It verifies the artifact before opening
 listeners. Users cannot approve a binary by supplying its hash in the options or
-a private session manifest. **The bundled policy currently records a pending
-review, so this build intentionally stops with `artifact_review_required`.**
+a private session manifest. **Default selection refuses the private-evaluation entry with
+`artifact_review_required`. Explicit private Edge evaluation selects the fixed
+technically reviewed bytes without claiming native-use or redistribution rights.**
 Documenting this executable path does not waive the review or invent an approved
 Apple artifact/version/redistribution claim. It performs no runtime download.
 
 After that release review, a fresh installation must explicitly set
 `create_new_identity: true` for its first provisioning. Provisioning runs through
 the owned Apple transport and `IsolatedNativeWorker`; the native worker requires
-Landlock ABI 3 or newer and libseccomp and cannot use the network. It receives no
+Landlock ABI 3 or a verified enforced AppArmor child profile, together with
+libseccomp, and cannot use the network. The actual HA host passed all ten
+synthetic restrictions using AppArmor; its kernel does not provide Landlock. It receives no
 Apple account password. An unsupported host fails closed. A saved identity is
 always reused even if that option remains true. Missing/corrupt saved identity
 material or an existing owned-account marker prevents implicit regeneration.
@@ -100,4 +103,52 @@ in CHANNEL.json. Subsequent updates can follow the normal GitHub app repository
 workflow. Existing installed options are retained by Supervisor, so an existing
 installation still needs its mode changed deliberately after the matching image
 is installed. Shared Stable rendering is refused; omitting the flag retains the
-legacy image/defaults. Rendering does not bypass pending artifact approval.
+legacy image/defaults. Rendering does not enable private evaluation or component installation automatically.
+
+## Optional private component placement
+
+`install_reviewed_component` is false by default. When explicitly true, shared
+startup can acquire the fixed Apple vendor APK directly inside the app rather
+than requiring a manual file upload. `private_evaluation` is separately false by
+default; it selects only the fixed technically reviewed personal-evaluation policy
+when that policy is present. It does not assert redistribution clearance or make
+a pending component a generally approved release. The checked option sets the
+report-child evaluation flag; an inherited environment variable cannot enable it.
+
+Startup first selects the immutable policy and probes the actual native process
+boundary. An unsupported target fails before any component download or account
+sign-in. The acquisition transport permits one exact HTTPS GET, uses the same
+strict TLS/public-DNS checks, has no account credentials/cookies/environment proxy,
+and refuses redirects and compression. Streaming is bounded at 200 MiB separately
+from the unchanged 8 MiB account-response limit; no automatic retry occurs.
+
+A temporary owner-only APK is hash-verified in full before ZIP parsing. Only the
+two exact pinned arm64 ELF members are read; duplicates, oversized members, wrong
+architecture or member digests fail. The deterministic bundle must match its own
+release pin before it is published owner-only without overwriting an existing
+file or symlink. The APK and temporary files are removed on success, error or
+normal cancellation. Cancellation waits for an outstanding disk operation to
+finish safely; if atomic publication has begun, the verified component can remain
+installed. A power loss can leave an unreferenced temporary vendor file; neither
+credentials nor account state enter these files.
+
+Existing valid components are reused. An invalid existing component is never
+silently replaced, and a changed vendor APK fails its old source pin rather than
+executing or approving new bytes. The vendor component is excluded from Git,
+images and public app archives; this option downloads locally at the user's
+explicit request. Return installation/new-identity options to false after setup.
+
+
+## Side-by-side private evaluation
+
+`tools/render-evaluation.py VERSION OUTPUT` emits only `findmy_home_shared` with
+slug `findmy_home_shared` and title **Find My Home Shared Edge**. It leaves an
+existing `findmy_home` app/version untouched and installs the shared AppArmor
+profile as `apparmor.txt`. This is the evaluation/rollback path: separate app data,
+identity and integration instance, with the original working Edge app retained.
+All setup switches default off; deliberate deployment sets runtime mode shared,
+private evaluation true, reviewed component installation true, and first-identity
+creation true. The installation option only reuses an existing matching component
+on later starts. First-identity creation never silently replaces stored identity.
+Return setup-only switches to false after initial setup. Apple account credentials
+and trusted-device passcodes belong only in the protected management UI.

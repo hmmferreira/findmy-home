@@ -53,8 +53,8 @@ def main():
                 if value not in sys.path:sys.path.append(value)
         sys.path.insert(0,str(code))
         from native_sandbox import restrict_worker
-        restrict_worker(public)
-        send({"ok":True,"ready":True,"boundary":"landlock3-seccomp-v1"})
+        boundary=restrict_worker(public)
+        send({"ok":True,"ready":True,"boundary":boundary})
     except BaseException:
         send({"ok":False,"error":"worker_boundary_unavailable"})
         return

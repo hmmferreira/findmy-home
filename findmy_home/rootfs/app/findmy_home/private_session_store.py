@@ -113,7 +113,7 @@ async def restore_reporting_account(root):
         from .native_worker import ProcessOfflineSigner
         from .artifact_policy import ArtifactBlocked,reviewed_artifact,verify_artifact
         try:
-            approved=reviewed_artifact("applemusic-arm64-v8a")
+            approved=reviewed_artifact("applemusic-arm64-v8a",private_evaluation=os.environ.get("FINDMY_PRIVATE_EVALUATION")=="1")
             if approved.expected_sha256!=policy.digest:raise SessionBlocked("session_artifact_mismatch")
             await verify_artifact(root/policy.library,approved)
         except ArtifactBlocked as exc:raise SessionBlocked(exc.code) from None

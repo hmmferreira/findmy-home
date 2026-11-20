@@ -11,7 +11,7 @@ RUN git init . && git remote add origin https://github.com/parawanderer/FindMy.p
     && echo '676e871098ec60a9c5e6718ea8cc18215631b036b99117a814ac1eb87d4e99e7  /tmp/protocol.tar' | sha256sum -c - \
     && mkdir /export && tar -xf /tmp/protocol.tar -C /export
 FROM python:3.12-slim-bookworm
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libssl3 libstdc++6 libseccomp2 \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libssl3 libstdc++6 libseccomp2 libapparmor1 \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --uid 1000 --home-dir /data/findmy_home/home --no-create-home findmy
 COPY requirements.lock requirements-shared.lock /app/

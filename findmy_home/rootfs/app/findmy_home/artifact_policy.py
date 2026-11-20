@@ -61,10 +61,11 @@ class ReviewedArtifact:
     _issuer:object=field(repr=False,compare=False)
 
 
-def reviewed_artifact(artifact_id,*,host_architecture=None):
+def reviewed_artifact(artifact_id,*,host_architecture=None,private_evaluation=False):
     """Select only an approved source-bound entry from the fixed release manifest."""
     if not isinstance(artifact_id,str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,79}",artifact_id):
         raise ArtifactBlocked("artifact_policy_invalid")
+    if type(private_evaluation) is not bool:raise ArtifactBlocked("artifact_policy_invalid")
     manifest=_load_manifest()
     if not _keys(manifest,("schema_version","artifacts")) or type(manifest["schema_version"]) is not int or manifest["schema_version"]!=1 or not isinstance(manifest["artifacts"],list):
         raise ArtifactBlocked("artifact_policy_invalid")
@@ -75,7 +76,8 @@ def reviewed_artifact(artifact_id,*,host_architecture=None):
         entries[entry["id"]]=entry
     entry=entries.get(artifact_id)
     if entry is None:raise ArtifactBlocked("artifact_not_approved")
-    if entry["review_status"]!="approved":raise ArtifactBlocked("artifact_review_required")
+    evaluation=entry["review_status"]=="private-evaluation"
+    if entry["review_status"]!="approved" and not (evaluation and private_evaluation):raise ArtifactBlocked("artifact_review_required")
     arch=_ARCHES.get(host_architecture or platform.machine())
     if arch is None or not isinstance(entry["host_architectures"],list) or not entry["host_architectures"] or any(a not in ("amd64","aarch64") for a in entry["host_architectures"]) or arch not in entry["host_architectures"]:
         raise ArtifactBlocked("artifact_architecture_unsupported")
@@ -91,7 +93,11 @@ def reviewed_artifact(artifact_id,*,host_architecture=None):
         raise ArtifactBlocked("artifact_review_required")
     try:date.fromisoformat(review["date"])
     except (ValueError,TypeError):raise ArtifactBlocked("artifact_policy_invalid") from None
-    if not _keys(license,("wrapper","native_review","redistribution")) or license["wrapper"]!="MIT" or license["native_review"]!="approved" or license["redistribution"] not in ("permitted","local-use-only"):
+    if not _keys(license,("wrapper","native_review","redistribution")) or license["wrapper"]!="MIT":
+        raise ArtifactBlocked("artifact_license_review_required")
+    if evaluation:
+        if license["native_review"]!="terms-reviewed-no-clearance" or license["redistribution"]!="local-use-only":raise ArtifactBlocked("artifact_license_review_required")
+    elif license["native_review"]!="approved" or license["redistribution"] not in ("permitted","local-use-only"):
         raise ArtifactBlocked("artifact_license_review_required")
     return ReviewedArtifact(entry["id"],bundle["sha256"],entry["guest_architecture"],arch,source["url"],source["version"],source["sha256"],tuple(sorted(bundle["member_sha256"].items())),review["id"],license["redistribution"],_ISSUER)
 

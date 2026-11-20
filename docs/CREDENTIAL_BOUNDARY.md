@@ -137,8 +137,9 @@ see CONTROLLED_PROVISIONING.md for the concrete boundary and remaining gates.
 The native execution boundary is now implemented by native_sandbox.py,
 native_worker_child.py and native_worker.py. Production shared-runtime callers
 can use IsolatedNativeWorker and ProcessOfflineSigner rather than native threads.
-Linux LandlockABI>=3 limits reads to public code/runtime files and denies private
-filesystem access/writes; libseccomp denies sockets, child execution, tracing,
+Linux LandlockABI>=3, or an explicitly loaded and verified enforced AppArmor
+child profile on HAOS, limits reads to public code/runtime files and denies private
+filesystem contents/writes; libseccomp denies sockets, child execution, tracing,
 parent memory/signalling and boundary changes. No privileges are added. Startup
 fails closed when required controls are unavailable, before third-party/native
 execution. Native logs are discarded and bounded private IPC is separate.
@@ -149,3 +150,20 @@ Artifact provenance/release approval,
 real native compatibility and HA target/live verification remain open gates;
 synthetic boundary success does not approve an artifact. Full implemented policy,
 test scope and operational limits are in CONTROLLED_PROVISIONING.md.
+
+
+For the HAOS AppArmor backend, an app-owned nested profile is loaded by Supervisor,
+not by the worker. The worker verifies a permanent enforced transition before
+no-new-privileges, syscall restrictions or native loading. It has no permission to
+transition back. Startup preflight validates and reaps a fresh restricted child
+before artifact installation/UI listening. Parent file permissions do not inherit
+into the child profile. Diagnostic stderr classification applies only to the
+credential-free synthetic probe; production native stdout/stderr remain discarded.
+
+Actual HAOS target verification on 2026-11-20 passed: diagnostic app0.1.4 ran
+protected as UID1000, with all ten synthetic checks denied by the enforced
+AppArmor/seccomp child. Landlock was unavailable (ENOSYS38), so the validated
+boundary was `apparmor-seccomp-v1`. Only the trusted diagnostic parent required
+ordinary container file permissions; native child permissions stayed restricted
+and match the shared-runtime template. No Apple account or native artifact was
+used by the target probe. See CONTROLLED_PROVISIONING.md for the exact scope.

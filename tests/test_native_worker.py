@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from findmy_home.controlled_provisioning import ProvisioningBlocked
-from findmy_home.native_worker import IsolatedNativeWorker,ProcessOfflineSigner,_NativeChannel,_decode,_encode
+from findmy_home.native_worker import IsolatedNativeWorker,ProcessOfflineSigner,_NativeChannel,_decode,_encode,verify_native_boundary
 from findmy_home.offline_signer import SignerBlocked
 
 FIXTURE=Path(__file__).with_name("fixtures")/"native_worker_fixture.py"
@@ -60,6 +60,13 @@ class NativeWorkerTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ProvisioningBlocked) as caught:await worker.begin(b"fail")
         self.assertEqual(str(caught.exception),"native_worker_failed")
         self.assertIsNotNone(worker._channel._process.returncode)
+    async def test_preflight_verifies_and_reaps_without_native_artifact(self):
+        channel=_NativeChannel()
+        with patch("findmy_home.native_worker._NativeChannel",return_value=channel):
+            boundary=await verify_native_boundary()
+        self.assertIn(boundary,{"landlock3-seccomp-v1","apparmor-seccomp-v1"})
+        self.assertIsNotNone(channel._process.returncode)
+        self.assertIsNone(channel._reader)
     async def test_process_signer_updates_snapshot_and_closes(self):
         signer=ProcessOfflineSigner(self.library,b"SYNTHETIC_SAVED_STATE",self.digest);self.workers.append(signer)
         await signer.initialize()

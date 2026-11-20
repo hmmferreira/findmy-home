@@ -32,7 +32,7 @@ def _decode(value,limit):
 class _NativeChannel:
     def __init__(self):
         self._process=None;self._reader=None;self._pipe_transport=None
-        self._lock=asyncio.Lock();self._closed=False
+        self._lock=asyncio.Lock();self._closed=False;self._boundary=None
     def __repr__(self):return "<NativeChannel redacted>"
     async def _read(self):
         header=await self._reader.readexactly(4)
@@ -69,8 +69,9 @@ class _NativeChannel:
             raise
         self._reader=reader
         ready=await self._read()
-        if ready!={"ok":True,"ready":True,"boundary":"landlock3-seccomp-v1"}:
+        if set(ready)!={"ok","ready","boundary"} or ready.get("ready") is not True or ready.get("boundary") not in {"landlock3-seccomp-v1","apparmor-seccomp-v1"}:
             raise ProvisioningBlocked("worker_boundary_unavailable")
+        self._boundary=ready["boundary"]
     async def exchange(self,command,**fields):
         try:
             async with self._lock:
@@ -100,6 +101,18 @@ class _NativeChannel:
                 if process.stdin is not None:process.stdin.close()
                 if self._pipe_transport is not None:self._pipe_transport.close()
         self._reader=None
+
+async def verify_native_boundary():
+    """Prove startup boundary without reading/loading any artifact or account."""
+    channel=_NativeChannel()
+    try:
+        async with asyncio.timeout(10):
+            await channel._start()
+            return channel._boundary
+    except asyncio.CancelledError:raise
+    except ProvisioningBlocked:raise
+    except Exception:raise ProvisioningBlocked("worker_boundary_unavailable") from None
+    finally:await channel.close()
 
 class IsolatedNativeWorker:
     """Native provisioning in Landlock/seccomp worker; no network/data access."""

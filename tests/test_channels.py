@@ -45,4 +45,18 @@ class ChannelTests(unittest.TestCase):
             self.assertIn("  runtime_mode: shared",(target/"findmy_home/config.yaml").read_text())
             self.assertEqual((target/"findmy_home/Dockerfile").read_bytes(),(ROOT/"findmy_home/Dockerfile.shared").read_bytes())
             self.assertEqual(json.loads((target/"CHANNEL.json").read_text())["runtime"],"shared")
+            self.assertEqual((target/"findmy_home/apparmor.txt").read_bytes(),(ROOT/"findmy_home/apparmor.shared.txt").read_bytes())
             with self.assertRaises(ValueError):module.render(ROOT,Path(tmp)/"stable","stable","0.1.12",runtime="shared")
+
+    def test_channel_render_excludes_private_component_and_session_files(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as tmp:
+            source=Path(tmp)/"source";source.mkdir()
+            for folder in ('findmy_home','custom_components','docs'):
+                shutil.copytree(ROOT/folder,source/folder,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
+            for name in ('README.md','repository.yaml','hacs.json','LICENSE'):shutil.copyfile(ROOT/name,source/name)
+            private=source/'findmy_home/rootfs/app/private-fixture';private.mkdir()
+            for name in ('owned-libs.bin','source.apk','session.key','session.enc','account.json','owned-signing.json'):(private/name).write_text('SYNTHETIC_PRIVATE')
+            target=Path(tmp)/'rendered'
+            module.render(source,target,'edge','0.1.12-dev.1.1',runtime='shared')
+            self.assertEqual(list((target/'findmy_home/rootfs/app/private-fixture').iterdir()),[])

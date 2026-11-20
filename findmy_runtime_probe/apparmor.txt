@@ -1,0 +1,51 @@
+#include <tunables/global>
+
+profile findmy_runtime_probe flags=(attach_disconnected,mediate_deleted) {
+  # The diagnostic parent has no network client or API access. UNIX sockets are
+  # needed only for asyncio's local wakeup socketpair.
+  network unix,
+  # The trusted synthetic parent keeps Docker-default-equivalent file access.
+  # The native child below is a separate profile and inherits none of this.
+  file,
+  /usr/local/bin/python* ixr,
+  /usr/local/lib/** mr,
+  /usr/lib/** mr,
+  /lib/** mr,
+  /lib64/** mr,
+  /probe/** r,
+  /etc/ld.so.cache r,
+  /etc/localtime r,
+  /dev/null rw,
+  /dev/urandom r,
+  /tmp/ r,
+  owner /tmp/findmy-capability-*/ rw,
+  owner /tmp/findmy-capability-*/** rw,
+  owner /proc/[0-9]*/attr/{current,apparmor/current} rw,
+  owner /proc/[0-9]*/task/[0-9]*/attr/{current,apparmor/current} rw,
+  signal (receive),
+  signal (send) peer=@{profile_name},
+  signal (send) peer=@{profile_name}//findmy-native,
+  change_profile -> @{profile_name}//findmy-native,
+
+  profile findmy-native flags=(attach_disconnected,mediate_deleted) {
+    /usr/local/lib/** mr,
+    /usr/lib/** mr,
+    /lib/** mr,
+    /lib64/** mr,
+    /probe/** r,
+    /app/findmy_home/** r,
+    /etc/ld.so.cache r,
+    /etc/localtime r,
+    /dev/urandom r,
+    /dev/null rw,
+    owner /proc/[0-9]*/attr/{current,apparmor/current} r,
+    owner /proc/[0-9]*/task/[0-9]*/attr/{current,apparmor/current} r,
+    signal (receive),
+    deny network,
+    deny capability,
+    deny /data/** rw,
+    deny /home/** rw,
+    deny /root/** rw,
+    # No execute, write, change_profile or transition-back permission.
+  }
+}

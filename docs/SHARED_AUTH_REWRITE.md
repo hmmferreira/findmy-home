@@ -1,6 +1,6 @@
 # Shared authentication and Python discovery prototype
 
-Status: experimental feature branch; not deployed and not a completed extractor
+Status: private evaluation implementation; target sandbox verified, live sign-in comparison pending; not a completed extractor
 rewrite. Edge remains on its working Rust-backed implementation. No production
 Python dependency, Apple session, Keychain membership or item inventory changed.
 
@@ -192,3 +192,23 @@ boundary, create a private recovery point, and perform a deliberate protected-UI
 live sign-in/poll/restart comparison. No Edge publication, update, migration or
 Home Assistant restart performed. See ARTIFACT_PROVENANCE.md, SHARED_RUNTIME.md
 and CONTROLLED_PROVISIONING.md for evidence, runnable paths and exact limits.
+
+
+## Home Assistant host compatibility and private evaluation — 2026-11-20
+
+The actual HAOS host reports Landlock unavailable (ENOSYS38). The worker now
+supports an independently enforced AppArmor child profile plus the same seccomp
+restrictions; no protection disabling, OS change or additional app capabilities.
+Diagnostic app 0.1.4 passed all ten restrictions as UID1000, with Supervisor
+protection enabled. A production-equivalent trusted parent profile was necessary
+for Python child startup; the restricted native child permissions stayed fixed.
+
+The source-bound artifact policy has an explicit private-evaluation scope, not
+native-use/legal clearance or redistribution permission. No vendor binary enters
+Git or an app image. Explicit setup can privately acquire the exact vendor APK,
+verify source/member/bundle hashes, and publish the component atomically. Missing
+or unsupported boundaries stop startup before download or sign-in.
+
+A separate Shared Edge app render keeps the existing Edge app/data untouched.
+Account authentication and trusted-device unlock still require the protected UI;
+no main password/session extraction from the existing setup is performed.
