@@ -382,3 +382,34 @@ async def test_shared_startup_factory_preserves_full_identity_with_real_candidat
         if first is not None:await first.close()
         if second is not None:await second.close()
         await bridge.close()
+
+@pytest.mark.asyncio
+async def test_real_sdk_sms_challenge_uses_owned_put_and_submission_uses_post(monkeypatch,tmp_path):
+    from findmy.reports.state import LoginState
+    account=await _restored_reporting_account(monkeypatch,tmp_path)
+    account._set_login_state(LoginState.REQUIRE_2FA,{'adsid':'synthetic-adsid','idms_token':'synthetic-factor-token'})
+    calls=[]
+    class Reply:
+        status=200;headers={}
+        async def __aenter__(self):return self
+        async def __aexit__(self,*args):pass
+        @property
+        def content(self):return self
+        async def iter_chunked(self,size):yield b'{}'
+    class Session:
+        def request(self,method,url,**kwargs):calls.append((method,url,kwargs));return Reply()
+    async def connection(transport,host):
+        assert host=='gsa.apple.com' and transport.profile=='account'
+        return Session()
+    monkeypatch.setattr(OwnedHttpSession,'_session',connection)
+    monkeypatch.setattr(account,'_gsa_authenticate',AsyncMock(return_value=LoginState.AUTHENTICATED))
+    monkeypatch.setattr(account,'_login_mobileme',AsyncMock(return_value=LoginState.LOGGED_IN))
+    try:
+        await account.sms_2fa_request(1)
+        assert await account.sms_2fa_submit(1,'000123')==LoginState.LOGGED_IN
+        assert [(method,url) for method,url,_ in calls]==[
+            ('PUT','https://gsa.apple.com/auth/verify/phone'),
+            ('POST','https://gsa.apple.com/auth/verify/phone/securitycode')]
+        assert calls[1][2]['json']['securityCode']['code']=='000123'
+        assert all(options['allow_redirects'] is False for _,_,options in calls)
+    finally:await account.close()

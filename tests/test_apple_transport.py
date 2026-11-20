@@ -28,6 +28,10 @@ class DestinationTests(unittest.TestCase):
             ("cloudkit","https://gateway.icloud.com/setup/setup/ck/v1/ckAppInit?container=com.apple.icloud.searchparty"),
             ("escrow","https://p24-escrowproxy.icloud.com:443/escrowproxy/api/recover")):
             self.assertTrue(validate_destination(profile,"POST",url))
+    def test_sms_request_put_is_allowed_only_for_the_exact_apple_factor_route(self):
+        self.assertEqual(validate_destination('account','PUT','https://gsa.apple.com/auth/verify/phone'),'gsa.apple.com')
+        for profile,url in (('account',AUTH_URL),('account','https://gsa.apple.com/auth/verify/phone/securitycode'),('account','https://setup.icloud.com/setup/iosbuddy/loginDelegates'),('cloudkit','https://gateway.icloud.com/ckdatabase/api/client/record/sync'),('artifact','https://apps.mzstatic.com/content/android-apple-music-apk/applemusic.apk')):
+            with self.subTest(profile=profile,url=url),self.assertRaises(TransportBlocked):validate_destination(profile,'PUT',url)
     def test_deceptive_or_noncanonical_urls_are_rejected(self):
         for url in (
             "http://gsa.apple.com/grandslam/GsService2", "https://gsa.apple.com.evil.invalid/grandslam/GsService2",
@@ -214,3 +218,20 @@ class RealRedirectTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(str(caught.exception),"request_failed")
                 self.assertEqual(received,[])
             finally:await transport.close();await server.close()
+
+
+class VerificationFailureTests(unittest.IsolatedAsyncioTestCase):
+    async def test_factor_refusal_exposes_only_stage_status_and_safe_code(self):
+        from findmy_home.apple_transport import VerificationFailure
+        for method,path,stage in (('PUT','/auth/verify/phone','request'),('POST','/auth/verify/phone/securitycode','submit'),('GET','/grandslam/GsService2/validate','submit')):
+            transport=OwnedHttpSession()
+            response=FakeResponse(status=401,chunks=[b'PRIVATE_VERIFICATION_BODY'])
+            session=SimpleNamespace(request=Mock(return_value=response))
+            try:
+                with patch.object(transport,'_session',new=AsyncMock(return_value=session)),self.assertRaises(VerificationFailure) as caught:
+                    await transport.request(method,'https://gsa.apple.com'+path,json={'code':'SYNTHETIC_CODE'})
+                self.assertEqual(caught.exception.stage,stage)
+                self.assertEqual(caught.exception.status,401)
+                self.assertNotIn('PRIVATE',str(caught.exception))
+                self.assertNotIn('SYNTHETIC',str(caught.exception))
+            finally:await transport.close()

@@ -33,7 +33,7 @@ class ChildQueryTests(unittest.IsolatedAsyncioTestCase):
             root=Path(tmp);item="a"*32
             atomic_json(root/"items.json",{item:{"enabled":True,"key_file":item+".json"}})
             with patch.dict(os.environ,{"FINDMY_HOME_DATA":tmp}), patch("sys.stdin",SimpleNamespace(buffer=io.BytesIO(json.dumps({"id":item}).encode()))), patch("findmy_home.poll_item.restore_reporting_account",new=AsyncMock(side_effect=SessionBlocked("session_expired"))), patch("findmy.FindMyAccessory.from_json") as accessory:
-                self.assertEqual(await query(),{"ok":False,"error":"authentication_required"})
+                self.assertEqual(await query(),{"ok":False,"error":"authentication_required","diagnostic":{"stage":"session_restore","code":"session_expired"}})
                 accessory.assert_not_called()
 
     async def test_missing_worker_boundary_requests_setup_instead_of_apple_login(self):
@@ -42,4 +42,4 @@ class ChildQueryTests(unittest.IsolatedAsyncioTestCase):
             root=Path(tmp);item="a"*32
             atomic_json(root/"items.json",{item:{"enabled":True,"key_file":item+".json"}})
             with patch.dict(os.environ,{"FINDMY_HOME_DATA":tmp}),patch("sys.stdin",SimpleNamespace(buffer=io.BytesIO(json.dumps({"id":item}).encode()))),patch("findmy_home.poll_item.restore_reporting_account",new=AsyncMock(side_effect=SessionBlocked("worker_boundary_unavailable"))):
-                self.assertEqual(await query(),{"ok":False,"error":"setup_required"})
+                self.assertEqual(await query(),{"ok":False,"error":"setup_required","diagnostic":{"stage":"session_restore","code":"worker_boundary_unavailable"}})

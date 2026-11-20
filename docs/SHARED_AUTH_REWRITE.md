@@ -238,3 +238,43 @@ an owner-only app snapshot for the unprivileged web process. The final app passe
 source3a88835, including real pinned SDK composition and shared-image boundary
 smoke. Live discovery and location refresh still require the user's UI sign-in;
 readiness is not a claim of successful Apple authentication or sightings.
+
+## SMS and mobile setup repair — 2026-11-20
+
+The live app's old logs could not explain an earlier SMS attempt: they recorded
+poll counts, with no authentication stages. Inspection found a concrete local
+SMS defect: the pinned SDK requests a challenge with PUT on the exact Apple
+`/auth/verify/phone` route, while owned transport allowed only GET/POST. That
+specific method/route is now permitted; other PUT destinations remain denied.
+A real candidate integration case covers challenge PUT and submission POST,
+including preservation of a code's leading zero. Known factor HTTP refusal now
+carries only a fixed stage/status/code, without body or verification inputs.
+The UI does not claim every refusal means an incorrect code. Explicit human retry
+can reuse an SDK challenge still requiring 2FA; there is no automatic resend or
+code replay. Ambiguous submission outcomes clear pending credentials.
+
+Shared mobile setup combines account and discovery into one article, places
+consent before Connect, explains encrypted-item recovery, and reports progress,
+errors and success beside each CTA. Factor controls survive background snapshots;
+reload reconstructs the method from server state rather than submitting null.
+Legacy layout remains intact. Browser coverage checks CTA-local feedback,
+consent validation without clearing a password, method/code retention and mobile
+save feedback.
+
+A second live issue appeared before report requests: report children lost both
+the shared SDK path and checked runtime flags during environment sanitization.
+They now use an isolated Python entrypoint with fixed SDK/app paths and reconstruct
+mode/evaluation from the validated private options snapshot. No account token,
+Supervisor token or arbitrary PYTHONPATH is passed through environment/argv.
+The production-image smoke exercises the exact child startup without accounts.
+Redacted query diagnostics distinguish local session restoration from report
+fetch; redacted authentication events distinguish login, factor request/submit,
+session saving and discovery handoff. No emails, phone numbers, codes, passcodes,
+item IDs, coordinates, bodies or SDK exception prose are included.
+
+Validation before delivery: 268 app cases, 877 backend cases, 15 real candidate
+integration cases and 21 browser DOM cases (inside the app UI test) pass; shared
+image and its exact isolated report-child smoke pass. No household credentials
+were replayed or inspected during debugging. Old logs do not prove which failure
+a particular past SMS attempt reached; a fresh user-driven retry remains live
+verification of the repaired SMS path.
