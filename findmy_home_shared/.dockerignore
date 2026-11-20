@@ -1,0 +1,13 @@
+**/__pycache__
+**/*.pyc
+**/*.apk
+**/*.bin
+**/*.enc
+**/*.key
+**/*.plist
+**/*.sqlite*
+**/account.json
+**/owned-session.json
+**/owned-signing.json
+**/identity.json
+**/.env
