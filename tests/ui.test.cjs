@@ -51,8 +51,8 @@ test("save gives exact count and leaves no unsaved changes",async()=>{
     const check=env.document.querySelector("#choices input");check.checked=true;check.dispatchEvent(new env.window.Event("change"));
     assert.match(env.document.getElementById("selection-state").textContent,/Unsaved/);
     submit(env,"selection");await flush();
-    assert.match(env.document.getElementById("message").textContent,/Saved: 1 item tracked/);
-    assert.equal(env.document.getElementById("message").dataset.kind,"success");
+    assert.match(env.document.getElementById("selection-feedback").textContent,/Saved: 1 item tracked/);
+    assert.equal(env.document.getElementById("selection-feedback").dataset.kind,"success");
     assert.equal(env.document.getElementById("save-selection").disabled,true);
     assert.equal(env.requests.filter(request=>request.url==="ui/select").length,1);
   }finally{env.close();}
@@ -61,8 +61,8 @@ test("failed save retains edits and gives an error instead of Saved",async()=>{
   const env=await setup({failSave:true});try{
     const check=env.document.querySelector("#choices input");check.checked=true;check.dispatchEvent(new env.window.Event("change"));
     submit(env,"selection");await flush();
-    assert.equal(env.document.getElementById("message").textContent,"Fixture save failure");
-    assert.equal(env.document.getElementById("message").dataset.kind,"error");
+    assert.equal(env.document.getElementById("selection-feedback").textContent,"Fixture save failure");
+    assert.equal(env.document.getElementById("selection-feedback").dataset.kind,"error");
     assert.equal(env.document.getElementById("save-selection").disabled,false);
     assert.equal(env.document.querySelector("#choices input").checked,true);
   }finally{env.close();}
@@ -109,7 +109,7 @@ test("per-item refresh queues only the clicked item and shows progress",async()=
     env.document.querySelector("[data-refresh]").click();await flush();
     const calls=env.requests.filter(request=>request.url==="ui/refresh");
     assert.equal(calls.length,1);assert.equal(calls[0].body.id,"a");
-    assert.match(env.document.getElementById("message").textContent,/Refresh queued/);
+    assert.match(env.document.getElementById("refresh-status-a").textContent,/Queued for the next available worker/);
     assert.equal(env.document.querySelector("[data-refresh]").disabled,true);
     assert.match(env.document.querySelector(".item-status").textContent,/Queued/);
     assert.equal(env.document.getElementById("app-title").textContent,"Find My Home Edge");
@@ -153,7 +153,7 @@ test("pairing renewal requires explicit confirmation and never displays tokens",
     form.dispatchEvent(new env.window.Event("submit",{cancelable:true}));await flush();await flush();
     const calls=env.requests.filter(call=>call.url==="ui/rotate-pairing");
     assert.equal(calls.length,1);assert.deepEqual(calls[0].body,{confirm:true});
-    assert.match(env.document.getElementById("message").textContent,/revoked/);
+    assert.match(env.document.getElementById("pairing-status").textContent,/revoked/);
     assert.equal(env.document.getElementById("pairing-consent").checked,false);
   }finally{env.close();}
 });
@@ -185,7 +185,7 @@ test("expired shared verification reopens the main sign-in with an explicit reas
     await env.refresh();
     assert.equal(env.document.getElementById("login").hidden,false);
     assert.equal(env.document.getElementById("factor").hidden,true);
-    assert.match(env.document.getElementById("message").textContent,/verification step expired/);
+    assert.match(env.document.getElementById("login-status").textContent,/verification step expired/);
     assert.match(env.document.getElementById("recovery-status").textContent,/saved tracked items are kept/);
     assert.equal(env.document.getElementById("discovery-credentials").hidden,true);
   }finally{env.close();}
@@ -330,4 +330,55 @@ test("selection pending and success feedback stay in the mobile save bar",async(
     assert.equal(feedback.dataset.kind,"success");assert.match(feedback.textContent,/Saved: 1 item tracked/);
     assert.equal(feedback.closest(".save-bar"),env.document.getElementById("save-selection").parentElement);
   }finally{release();env.close();}
+});
+
+
+test("setup completion stays local across tabs and polling; overview badges show current stages",async()=>{
+  const env=await setup({shared:true,enabled:true,auth:{phase:"complete"}});try{
+    env.document.querySelector('[data-tab="setup"]').click();
+    assert.equal(env.document.getElementById('message').hidden,true);
+    assert.match(env.document.getElementById('login-status').textContent,/Apple account connected/);
+    env.document.querySelector('[data-tab="overview"]').click();
+    assert.equal(env.document.getElementById('setup').hidden,true);
+    assert.equal(env.document.getElementById('message').hidden,true);
+    await env.refresh();
+    assert.equal(env.document.getElementById('message').hidden,true);
+    assert.equal(env.document.getElementById('account-badge').textContent,'Account: connected');
+    assert.equal(env.document.getElementById('keys-badge').textContent,'Item keys: ready');
+    assert.equal(env.document.getElementById('tracking-badge').textContent,'Tracking: 1 item');
+    assert.equal(env.document.getElementById('checks-badge').textContent,'Checks: completed');
+    assert.doesNotMatch(env.document.getElementById('overview').textContent,/Continue with encrypted item-key recovery/);
+  }finally{env.close();}
+});
+
+test("badges distinguish verification, key unlock, pending sightings, rate limits and real errors",async()=>{
+  const env=await setup({shared:true,connected:false});try{
+    env.data.auth={phase:'verification_code',method:0};env.data.recovery={phase:'input',kind:'device_unlock',choices:[]};await env.refresh();
+    assert.match(env.document.getElementById('account-badge').textContent,/verification needed/);
+    assert.match(env.document.getElementById('keys-badge').textContent,/unlock needed/);
+    env.data.auth={phase:'idle'};env.data.setup.locations_connected=true;env.data.items[0].enabled=true;env.data.recovery={phase:'complete'};env.data.health={status:'searching'};await env.refresh();
+    assert.equal(env.document.getElementById('checks-badge').textContent,'Checks: searching for sightings');
+    assert.equal(env.document.getElementById('checks-badge').dataset.kind,'info');
+    env.data.health={status:'error',error_code:'rate_limited'};await env.refresh();
+    assert.equal(env.document.getElementById('checks-badge').textContent,'Checks: paused by Apple');
+    assert.equal(env.document.getElementById('checks-badge').dataset.kind,'warning');
+    env.data.health={status:'reauth_required'};await env.refresh();
+    assert.equal(env.document.getElementById('checks-badge').textContent,'Checks: reconnect needed');
+    assert.equal(env.document.getElementById('checks-badge').dataset.kind,'error');
+    env.data.recovery={phase:'failed',error:'discovery_failed'};env.data.health={status:'ok'};await env.refresh();
+    assert.match(env.document.getElementById('keys-badge').textContent,/needs attention/);
+  }finally{env.close();}
+});
+
+test("unavailable app is shown as an issue and is not masked by switching tabs",async()=>{
+  let unavailable=false;
+  const env=await setup({onRequest:({url})=>unavailable&&url==='v1/snapshot'?{ok:false,result:{message:'Synthetic app unavailable'}}:undefined});try{
+    unavailable=true;await env.refresh();
+    assert.equal(env.document.getElementById('checks-badge').textContent,'Checks: app unavailable');
+    env.document.querySelector('[data-tab="setup"]').click();
+    assert.equal(env.document.getElementById('checks-badge').dataset.kind,'error');
+    assert.equal(env.document.getElementById('message').hidden,true);
+    unavailable=false;await env.refresh();
+    assert.equal(env.document.getElementById('checks-badge').dataset.kind,'info');
+  }finally{env.close();}
 });

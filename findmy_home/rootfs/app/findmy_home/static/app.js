@@ -11,7 +11,8 @@ function setFeedback(id,message,kind="info"){
   box.textContent=message;box.dataset.kind=kind;box.hidden=!message;
 }
 function notice(message,kind="info",target=activeFeedback){
-  setFeedback("message",message,kind);$("message").setAttribute("aria-live",target?"off":"polite");
+  // Action feedback belongs to its control, never a duplicate banner on other tabs.
+  setFeedback("message",target?"":message,kind);
   if(target){
     setFeedback(target,message,kind);
     if(target.startsWith("refresh-status-")){
@@ -20,6 +21,36 @@ function notice(message,kind="info",target=activeFeedback){
     }
   }
 }
+function statusBadge(id,label,kind="info"){
+  const node=$(id);if(node.textContent!==label)node.textContent=label;
+  node.dataset.kind=kind;
+}
+function renderStatus(data){
+  const auth=data.auth?.phase,flow=data.recovery?.phase,health=data.health||{};
+  const selected=data.items.filter(item=>item.enabled);
+  const pending=["working","choose_method","verification_code"].includes(auth);
+  statusBadge("account-badge",pending?(auth==="working"?"Account: connecting":"Account: verification needed"):
+    data.setup?.locations_connected?"Account: connected":auth==="failed"?"Account: sign-in needs attention":"Account: not connected",
+    pending?"info":data.setup?.locations_connected?"success":auth==="failed"?"error":"info");
+  const recoveryIssue=["failed","expired","timed_out"].includes(flow);
+  statusBadge("keys-badge",flow==="working"?"Item keys: recovering":flow==="input"?"Item keys: unlock needed":recoveryIssue?"Item keys: recovery needs attention":
+    data.items.length?"Item keys: ready":"Item keys: not recovered",recoveryIssue?"error":flow==="input"?"warning":data.items.length&&flow!=="working"?"success":"info");
+  statusBadge("tracking-badge","Tracking: "+itemCount(selected.length),selected.length?"success":"info");
+  let label="Checks: waiting",kind="info";
+  if(health.error_code==="rate_limited"){label="Checks: paused by Apple";kind="warning";}
+  else if(health.status==="reauth_required"){label="Checks: reconnect needed";kind="error";}
+  else if(health.status==="setup_required"){label="Checks: setup needs attention";kind="error";}
+  else if(auth==="failed"){label="Status: sign-in needs attention";kind="error";}
+  else if(recoveryIssue){label="Status: recovery needs attention";kind="error";}
+  else if(["error","partial_results"].includes(health.status)||health.items_failed>0){label="Checks: needs attention";kind="error";}
+  else if(!selected.length)label="Checks: choose tracked items";
+  else if(health.status==="polling")label="Checks: refreshing";
+  else if(health.status==="searching")label="Checks: searching for sightings";
+  else if(health.status==="no_reports")label="Checks: no sightings yet";
+  else if(health.status==="ok"){label="Checks: completed";kind="success";}
+  statusBadge("checks-badge",label,kind);
+}
+
 async function api(path,data){
   const response=await fetch(path,{method:data?"POST":"GET",headers:data?{"Content-Type":"application/json","X-CSRF-Token":csrf}:{},body:data?JSON.stringify(data):undefined,cache:"no-store",credentials:"same-origin"});
   const result=await response.json();
@@ -91,7 +122,8 @@ function configureLayout(shared){
 function render(data){
   snapshot=data;csrf=data.csrf;
   $("app-title").textContent="Find My Home"+(data.channel==="edge"?" Edge":data.channel==="stable"?"":" Edge");
-  $("health").textContent=({"ok":"Tracking","searching":"Tracking; searching remaining items","partial_results":"Some items need attention","no_reports":"No reports returned","reauth_required":"Connect location access","setup_required":"Secure runtime setup required","select_items":"Choose tracked items","polling":"Refreshing","error":"Refresh needs attention","starting":"Starting","ready":"Location access connected"})[data.health.status]||"Checking";
+  $("health").textContent=({"ok":"Tracking","searching":"Tracking; searching remaining items","partial_results":"Some items need attention","no_reports":"No reports returned","reauth_required":"Connect location access","setup_required":"Secure runtime setup required","select_items":"Choose tracked items","polling":"Refreshing","error":"Refresh needs attention","starting":"Starting","ready":"Ready"})[data.health.status]||"Checking";
+  renderStatus(data);
   const selected=data.items.filter(item=>item.enabled), known=selected.filter(item=>item.report).length, health=data.health;
   $("poll-summary").textContent=selected.length+" tracked · "+known+" with a saved location · Scheduled check: "+(health.last_poll?ago(health.last_poll):"not completed")+" · Checked "+(health.items_completed??0)+"/"+selected.length+(health.error_code?" · "+(errors[health.error_code]||"Refresh needs attention."):"");
   const cards=$("cards");cards.replaceChildren();
@@ -203,8 +235,8 @@ function renderMap(){
   }
   map.invalidateSize();if(points.length&&!map._fitted){map.fitBounds(points,{padding:[30,30],maxZoom:15});map._fitted=true;}
 }
-async function refresh(){if(refreshing)return;refreshing=true;try{render(await api("v1/snapshot"));}catch(error){$("health").textContent="App unavailable";notice(error.message,"error");}finally{refreshing=false;}}
-document.querySelectorAll("[data-tab]").forEach(button=>button.onclick=()=>{for(const id of ["overview","setup"])$(id).hidden=id!==button.dataset.tab;document.querySelectorAll("[data-tab]").forEach(other=>other.setAttribute("aria-selected",String(other===button)));renderMap();});
+async function refresh(){if(refreshing)return;refreshing=true;try{render(await api("v1/snapshot"));}catch(error){$("health").textContent="App unavailable";statusBadge("checks-badge","Checks: app unavailable","error");notice(error.message,"error");}finally{refreshing=false;}}
+document.querySelectorAll("[data-tab]").forEach(button=>button.onclick=()=>{setFeedback("message","");for(const id of ["overview","setup"])$(id).hidden=id!==button.dataset.tab;document.querySelectorAll("[data-tab]").forEach(other=>other.setAttribute("aria-selected",String(other===button)));renderMap();});
 $("map-preview").ontoggle=renderMap;
 $("login").onsubmit=event=>{
   event.preventDefault();if(busy)return;
@@ -286,7 +318,7 @@ function showFactor(result){
   factorPhase=result.phase;factorKey="";loginMethod=null;form.replaceChildren();form.hidden=true;setFeedback("factor-status","");
   if(result.phase==="complete"){
     reconnecting=false;
-    notice(shared?"Apple account connected. Continue with encrypted item-key recovery below.":"Location access connected. Next, discover or choose your items.","success","login-status");
+    notice(shared?"Apple account connected.":"Location access connected. Next, discover or choose your items.","success","login-status");
   }else if(result.phase==="failed"){
     notice(reasons[result.error]||"Apple sign-in could not finish. Reconnect using the account form above.","error","login-status");
   }else if(result.phase==="cancelled")notice("Apple sign-in cancelled.","info","login-status");
