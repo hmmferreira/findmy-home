@@ -11,3 +11,4 @@
 **/owned-signing.json
 **/identity.json
 **/.env
+**/runtime-options.json
