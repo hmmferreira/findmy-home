@@ -1,6 +1,6 @@
 # Shared authentication and Python discovery prototype
 
-Status: Shared Edge private evaluation deployed side by side; target sandbox and readiness verified; live sign-in/location comparison pending
+Status: Shared Edge private evaluation active; sign-in/discovery user-confirmed and saved-session polling verified; fresh SMS retry pending
 rewrite. Edge remains on its working Rust-backed implementation. No production
 Python dependency, Apple session, Keychain membership or item inventory changed.
 
@@ -278,3 +278,19 @@ image and its exact isolated report-child smoke pass. No household credentials
 were replayed or inspected during debugging. Old logs do not prove which failure
 a particular past SMS attempt reached; a fresh user-driven retry remains live
 verification of the repaired SMS path.
+
+
+Deployment verified for SMS/mobile repair: Shared Edge0.1.13-dev.1.4, source
+374bcb1c8914fc8dbd1b7a5b36acb0f3986a6fc5, Edge delivery01576bb. Supervisor
+reports started/protected/custom AppArmor and readinessHTTP200. CI44716845173
+passed all three jobs. Setup-only component installation/identity-creation flags
+were disabled after successful initial setup; existing signing state/component
+remain reused. The original Edge0.1.12-dev.16.1 stays started unchanged.
+
+Live post-update poll completed all three selected items with zero errors:
+two have saved sightings; the third returned no reports and continues bounded
+resumable searching. Saved-session restoration worked after app update/restart
+without another sign-in, and the prior local loading/auth failure is resolved.
+No names, positions, account identifiers or private configuration were inspected
+or recorded. A fresh user-driven SMS attempt remains needed to confirm the live
+factor flow; the tested fix is not a claim that an old submitted code was wrong.
