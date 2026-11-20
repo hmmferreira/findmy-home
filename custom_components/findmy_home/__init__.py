@@ -6,7 +6,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import issue_registry as ir
 from .api import Api, Unauthorized
-from .const import DOMAIN, PLATFORMS, normalize_channel, entry_title
+from .const import DOMAIN, PLATFORMS, normalize_channel, migrated_entry_title
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class Coordinator(DataUpdateCoordinator):
         except Unauthorized as error:
             raise ConfigEntryAuthFailed("Reconnect the app's read-only pairing credential") from error
         except Exception as error:
-            raise UpdateFailed("Find My Home app is unavailable") from error
+            raise UpdateFailed("Retrace app is unavailable") from error
         status = data["health"].get("status")
         for key, active in {"apple_reauth":status=="reauth_required", "poll_failed":status in ("error","partial_results")}.items():
             issue_id = self.entry.entry_id + "_" + key
@@ -40,8 +40,9 @@ async def async_setup_entry(hass, entry):
     updates={}
     if entry.data.get("channel")!=channel:
         updates["data"]={**entry.data,"channel":channel}
-    if entry.title in ("Find My Home (Beta)","Find My Home (Edge)","Find My Home (Stable)"):
-        updates["title"]=entry_title(channel)
+    title=migrated_entry_title(entry.title,channel)
+    if title!=entry.title:
+        updates["title"]=title
     if updates:
         hass.config_entries.async_update_entry(entry,**updates)
     entry.runtime_data = coordinator

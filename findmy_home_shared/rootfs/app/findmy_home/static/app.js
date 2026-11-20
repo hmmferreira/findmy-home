@@ -121,7 +121,8 @@ function configureLayout(shared){
 }
 function render(data){
   snapshot=data;csrf=data.csrf;
-  $("app-title").textContent="Find My Home"+(data.channel==="edge"?" Edge":data.channel==="stable"?"":" Edge");
+  $("app-title").textContent="Retrace"+(data.channel==="stable"?"":" Edge");
+  document.title=$("app-title").textContent;
   $("health").textContent=({"ok":"Tracking","searching":"Tracking; searching remaining items","partial_results":"Some items need attention","no_reports":"No reports returned","reauth_required":"Connect location access","setup_required":"Secure runtime setup required","select_items":"Choose tracked items","polling":"Refreshing","error":"Refresh needs attention","starting":"Starting","ready":"Ready"})[data.health.status]||"Checking";
   renderStatus(data);
   const selected=data.items.filter(item=>item.enabled), known=selected.filter(item=>item.report).length, health=data.health;

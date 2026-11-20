@@ -1,5 +1,12 @@
 # Security design and review boundary
 
+## Runtime scope
+This document includes legacy design notes. For the current Shared Edge dependency,
+credential and release boundary, read [DEPENDENCY_BOUNDARY.md](DEPENDENCY_BOUNDARY.md)
+and [SHARED_RUNTIME.md](SHARED_RUNTIME.md). Shared Edge has no Rust exporter or
+separate Anisette server; its Python protocol dependencies remain trusted
+same-process code. Shared stable promotion remains blocked.
+
 ## Isolation
 The app runs web/polling processes as uid/gid 1000 after preparing its own private
 /data/findmy_home directory. No Docker socket, host network, device access,

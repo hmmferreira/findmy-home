@@ -6,4 +6,12 @@ def normalize_channel(channel):
     return "stable" if channel=="stable" else "edge"
 
 def entry_title(channel):
-    return "Find My Home" if normalize_channel(channel)=="stable" else "Find My Home Edge"
+    return "Retrace" if normalize_channel(channel)=="stable" else "Retrace Edge"
+
+
+def migrated_entry_title(title, channel):
+    """Rename only known product defaults, preserving user-selected titles."""
+    defaults = {"Find My Home", "Find My Home Edge", "Find My Home (Beta)",
+                "Find My Home (Edge)", "Find My Home (Stable)",
+                "Retrace (Beta)", "Retrace (Edge)", "Retrace (Stable)"}
+    return entry_title(channel) if title in defaults else title

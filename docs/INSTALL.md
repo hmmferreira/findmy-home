@@ -32,18 +32,18 @@ a new unauthenticated service to work around it.
     python3 install.py --apply
 
 5. Go to Settings → Apps → App store. Open its menu and Check for updates
-   (reload the store). Find the Local apps section and Find My Home (experimental).
+   (reload the store). Find the Local apps section and Retrace (experimental).
    Install it. Its first source build includes Rust and can take several minutes.
 6. Restart Home Assistant Core once to load the custom integration. This briefly
    pauses automations. No YAML edits or .storage edits are needed.
-7. Start the Find My Home app, open Web UI, and optionally enable Show in sidebar.
+7. Start the Retrace app, open Web UI, and optionally enable Show in sidebar.
 8. In Account & items, connect the polling Apple account. Choose the exact
    verification method and use the code sent by that method.
 9. Discover items. Read the Keychain trust explanation, accept it, and follow the
    separate recovery prompts. Use the chosen trusted device's unlock passcode.
    Enter all credentials only in the app UI, over your normal HTTPS HA connection.
 10. Select a small test set and save. Newly discovered items are unselected.
-11. In Settings → Devices & services, confirm the discovered Find My Home entry.
+11. In Settings → Devices & services, confirm the discovered Retrace entry.
     If it has not appeared, wait up to five minutes with both app and Core running.
 
 The app has its own Overview map. The integration creates Edge-suffixed devices

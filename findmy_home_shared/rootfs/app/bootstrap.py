@@ -46,5 +46,5 @@ if __name__=='__main__':
     except Exception as error:
         code=getattr(error,'code','startup_failed')
         if not isinstance(code,str) or len(code)>80 or not all(c.islower() or c=='_' for c in code):code='startup_failed'
-        print('Find My Home startup blocked: '+code,flush=True)
+        print('Retrace startup blocked: '+code,flush=True)
         raise SystemExit(1)

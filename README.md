@@ -1,7 +1,16 @@
-# Find My Home — experimental app + integration
+# Retrace
 
-A separate prototype for friendly Apple Find My item setup in Home Assistant.
-Runs independently of an existing MQTT tracker.
+Location history for your belongings in Home Assistant. **Currently supports
+Apple Find My items and devices**, with guided account setup, latest reported
+locations and timestamped sightings recorded through Home Assistant. Other
+tracking sources are a future direction, not currently implemented.
+
+Retrace is an independent community project, not affiliated with or endorsed by
+Apple. It runs independently of an existing MQTT tracker. Development remains
+experimental; sparse sightings are not continuous GPS tracking.
+
+Formerly named Find My Home. See [rename compatibility](docs/BRANDING.md) for
+existing installations and technical identifiers.
 
 ## User journey
 1. Open the app through Home Assistant ingress.
@@ -13,8 +22,10 @@ Runs independently of an existing MQTT tracker.
    GPS trackers and last-sighting sensors. HA zones and Recorder handle history.
 6. Open Items for the overview and optional map preview. Add items later in Setup.
 
-Apple polling and key recovery use separate sessions. The wizard exposes
-both; it does not promise one universal login. No Mac needs to stay running.
+The legacy runtime uses separate polling and recovery sessions. Shared Edge
+reuses the main account with a separate trusted-device unlock for key recovery.
+No Mac needs to stay running. Shared Edge still relies on third-party protocol
+code and native components: see [ownership and trust boundaries](docs/DEPENDENCY_BOUNDARY.md).
 
 ## Status and limits
 This is development source, not a published or security-audited release.
@@ -39,7 +50,7 @@ is promised. Sparse sightings are not a continuous GPS track.
 
 ## Install and update through Home Assistant
 
-Add the [Edge app repository](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fhmmferreira%2Ffindmy-home%23edge), then install **Find My Home Edge**.
+Add the [Edge app repository](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fhmmferreira%2Ffindmy-home%23edge), then install **Retrace Edge**.
 Updates appear in Settings → Apps. No terminal archive copying is needed.
 The initial source build can take a while; subsequent builds reuse cached layers.
 
@@ -85,3 +96,9 @@ The local Portainer helper runs python tools/docker-check.py test or build.
 Set PORTAINER_DOCKER_API and PORTAINER_KEY_FILE for another environment.
 It is developer tooling, not part of the app. Tests have no network or live
 runtime mounts. Do not copy production sessions into test fixtures.
+
+## Attribution
+
+FindMy.py retains **Copyright (c) 2023 FindMy.py Contributors** under MIT.
+See [third-party notices](docs/THIRD_PARTY_NOTICES.md) for the complete license
+and packaged notice locations; this does not clear other component release gates.
