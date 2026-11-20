@@ -40,3 +40,27 @@ explains build/boot requirements. The
 [HAOS 17.1 kernel fragment](https://github.com/home-assistant/operating-system/blob/17.1/buildroot-external/kernel/v6.12.y/hassos.config)
 selects AppArmor in CONFIG_LSM; an app-specific AppArmor allow rule cannot enable a
 kernel security module that is absent or disabled at boot.
+
+## AppArmor alternative and staged failures
+
+Version 0.1.2 adds a custom, enforced nested AppArmor profile for HAOS hosts whose
+kernel does not provide Landlock. The child permanently changes from its app's
+profile to `findmy-native`, verifies the exact enforced destination, then applies
+the same no-new-privileges, resource limits and syscall filter. The child profile
+allows public interpreter/library/code reads and private control-pipe traffic;
+it grants no private data access, networking, executable launches or transition
+back. No host policy is loaded by the app itself; Supervisor loads the app-owned
+profile as part of its normal installation. Protection mode remains enabled and
+no extra capabilities or host changes are requested.
+
+Version 0.1.3 distinguishes failure stages in the trusted diagnostic parent using
+fixed labels, whitelisted exception classes and numeric errno/exit values only.
+This helps identify a missing parent runtime permission without printing paths,
+exception messages, command arguments, environment values or process contents.
+A supported result names the active boundary in `diagnostics.boundary`.
+
+Primary implementation references:
+
+- [Supervisor profile renaming](https://github.com/home-assistant/supervisor/blob/2026.11.0/supervisor/utils/apparmor.py)
+- [OS Agent permits app-owned child profiles](https://github.com/home-assistant/os-agent/blob/main/apparmor/apparmor.go)
+- [AppArmor permanent profile transition API](https://manpages.ubuntu.com/manpages/jammy/man2/aa_change_profile.2.html)

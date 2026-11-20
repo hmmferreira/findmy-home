@@ -4,6 +4,9 @@ profile findmy_runtime_probe flags=(attach_disconnected,mediate_deleted) {
   # The diagnostic parent has no network client or API access. UNIX sockets are
   # needed only for asyncio's local wakeup socketpair.
   network unix,
+  # The trusted synthetic parent keeps Docker-default-equivalent file access.
+  # The native child below is a separate profile and inherits none of this.
+  file,
   /usr/local/bin/python* ixr,
   /usr/local/lib/** mr,
   /usr/lib/** mr,

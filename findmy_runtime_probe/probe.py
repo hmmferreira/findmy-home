@@ -2,6 +2,7 @@
 import asyncio
 import json
 import os
+import re
 from pathlib import Path
 import signal
 import struct
@@ -52,9 +53,26 @@ def safe_failure(error,stage,child_exit=None):
         "errno":number if type(number) is int and 0<=number<=4095 else 0,
         "child_exit":child_exit if type(child_exit) is int and -255<=child_exit<=255 else None}
 
+async def bounded_stderr(stream):
+    saved=bytearray()
+    while True:
+        block=await stream.read(65536)
+        if not block:return bytes(saved)
+        if len(saved)<MAX_MESSAGE:saved.extend(block[:MAX_MESSAGE-len(saved)])
+
+def stderr_summary(raw):
+    # Never return text, filenames, traceback lines or command arguments.
+    known={"PermissionError","OSError","ValueError","RuntimeError","ImportError","ModuleNotFoundError","FileNotFoundError","SyntaxError"}
+    names=re.findall(rb"(?m)^([A-Za-z]+Error):",raw)
+    name=next((value.decode("ascii") for value in reversed(names) if value.decode("ascii") in known),"UnknownError")
+    match=re.search(rb"\[Errno ([0-9]{1,4})\]",raw)
+    number=int(match.group(1)) if match else 0
+    phase="python_startup" if b"Fatal Python error:" in raw else "framed_output" if b"sys.stdout.buffer." in raw else "child_bootstrap" if b"Traceback (most recent call last):" in raw else "unclassified"
+    return {"child_error":name,"child_errno":number if 0<=number<=4095 else 0,"child_phase":phase}
+
 async def run_probe():
     if os.geteuid()!=1000:return {"result":"unexpected_uid"}
-    process=None;stage="temporary_directory"
+    process=None;stderr_task=None;stage="temporary_directory"
     try:
         with tempfile.TemporaryDirectory(prefix="findmy-capability-",dir="/tmp") as directory:
             stage="temporary_file"
@@ -66,9 +84,10 @@ async def run_probe():
             if len(request)>MAX_MESSAGE:raise ValueError()
             stage="spawn_child"
             process=await asyncio.create_subprocess_exec(sys.executable,"-I","-S","-B",str(Path(__file__).with_name("child.py")),
-                stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL,
+                stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,
                 close_fds=True,start_new_session=True,cwd="/",
                 env={"PATH":"/usr/bin:/bin","LANG":"C.UTF-8","PYTHONDONTWRITEBYTECODE":"1"})
+            stderr_task=asyncio.create_task(bounded_stderr(process.stderr))
             async with asyncio.timeout(15):
                 stage="send_request"
                 process.stdin.write(struct.pack("!I",len(request))+request)
@@ -84,7 +103,12 @@ async def run_probe():
                 stage="validate_response"
                 return validate_result(value)
     except BaseException as error:
-        return safe_failure(error,stage,process.returncode if process is not None else None)
+        result=safe_failure(error,stage,process.returncode if process is not None else None)
+        raw=b""
+        if stderr_task is not None:
+            try:raw=await asyncio.wait_for(asyncio.shield(stderr_task),.25)
+            except BaseException:pass
+        return {**result,**stderr_summary(raw)}
     finally:
         if process is not None:
             if process.returncode is None:
@@ -93,8 +117,11 @@ async def run_probe():
             try:await asyncio.wait_for(process.wait(),2)
             except BaseException:pass
             if process.stdin is not None:process.stdin.close()
+        if stderr_task is not None:
+            if not stderr_task.done():stderr_task.cancel()
+            await asyncio.gather(stderr_task,return_exceptions=True)
 
 if __name__=="__main__":
     result=asyncio.run(run_probe())
-    print(json.dumps({"probe":"findmy_runtime_probe","version":"0.1.3",**result},separators=(",",":")),flush=True)
+    print(json.dumps({"probe":"findmy_runtime_probe","version":"0.1.4",**result},separators=(",",":")),flush=True)
     raise SystemExit(0 if result["result"]=="supported" else 1)
