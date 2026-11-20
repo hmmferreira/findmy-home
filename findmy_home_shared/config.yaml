@@ -1,5 +1,5 @@
 name: Retrace Shared Edge
-version: 0.1.13-dev.1.6
+version: 0.1.13-dev.1.7
 slug: findmy_home_shared
 description: Location history in Home Assistant with Apple Find My support
 url: https://github.com/hmmferreira/findmy-home

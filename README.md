@@ -102,3 +102,10 @@ runtime mounts. Do not copy production sessions into test fixtures.
 FindMy.py retains **Copyright (c) 2023 FindMy.py Contributors** under MIT.
 See [third-party notices](docs/THIRD_PARTY_NOTICES.md) for the complete license
 and packaged notice locations; this does not clear other component release gates.
+
+## Support development
+
+Enjoying Retrace? [Buy me a coffee](https://buymeacoffee.com/hmmferreira) to
+optionally support its development and maintenance. Retrace remains free, with
+all features available to everyone. Support goes to this project's maintainer;
+upstream contributors retain their credits and licenses.
