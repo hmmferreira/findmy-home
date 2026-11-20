@@ -4,7 +4,8 @@ Install and start this diagnostic app once, then inspect its log. It exits after
 printing one generic JSON result. `supported` means this app's effective container
 profile allowed the production Landlock/seccomp restrictions and the synthetic
 checks passed. `boundary_unavailable` means the required kernel/container controls
-were unavailable. Other results are failures; do not weaken the runtime controls.
+were unavailable. `unexpected_uid` means the process did not run as UID1000.
+Other results are failures; do not weaken the runtime controls.
 
 The app requests no Supervisor/Home Assistant/Docker API, ingress, network ports,
 capabilities, privileged mode or host/config/data mounts. It runs as UID1000 and

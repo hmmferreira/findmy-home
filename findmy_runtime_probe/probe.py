@@ -14,6 +14,7 @@ EXPECTED_CHECKS={"private_file_open_denied","private_write_denied","parent_proc_
     "exec_denied","parent_signal_denied","dumpability_change_denied"}
 
 async def run_probe():
+    if os.geteuid()!=1000:return {"result":"unexpected_uid"}
     process=None
     try:
         with tempfile.TemporaryDirectory(prefix="findmy-capability-",dir="/tmp") as directory:
