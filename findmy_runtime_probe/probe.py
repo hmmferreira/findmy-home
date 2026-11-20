@@ -13,6 +13,32 @@ EXPECTED_CHECKS={"private_file_open_denied","private_write_denied","parent_proc_
     "metadata_change_denied","ipv4_socket_denied","ipv6_socket_denied","unix_socket_denied",
     "exec_denied","parent_signal_denied","dumpability_change_denied"}
 
+REASONS={"worker_platform_unsupported","worker_seccomp_unavailable","worker_landlock_unavailable",
+    "worker_privilege_restriction_failed","worker_landlock_rule_failed","worker_landlock_restriction_failed",
+    "worker_seccomp_rule_failed","worker_seccomp_restriction_failed","worker_seccomp_syscall_unavailable",
+    "unclassified_boundary_failure"}
+
+def validate_result(value):
+    if not isinstance(value,dict):raise ValueError()
+    result=value.get("result")
+    if result not in {"supported","restriction_failed","boundary_unavailable","probe_failed"}:raise ValueError()
+    if result=="probe_failed":
+        if set(value)!={"result"}:raise ValueError()
+        return value
+    details=value.get("diagnostics")
+    if not isinstance(details,dict) or set(details)!={"platform","uid","landlock_abi","landlock_errno","boundary_errno"}:raise ValueError()
+    if details["platform"] not in {"linux-amd64","linux-arm64","unsupported"}:raise ValueError()
+    if type(details["uid"]) is not int or not 0<=details["uid"]<=2**32-1:raise ValueError()
+    if type(details["landlock_abi"]) is not int or not -1<=details["landlock_abi"]<=1024:raise ValueError()
+    for key in ("landlock_errno","boundary_errno"):
+        if type(details[key]) is not int or not 0<=details[key]<=4095:raise ValueError()
+    if result in {"supported","restriction_failed"}:
+        checks=value.get("checks")
+        if set(value)!={"result","checks","diagnostics"} or not isinstance(checks,dict) or set(checks)!=EXPECTED_CHECKS or any(type(flag) is not bool for flag in checks.values()):raise ValueError()
+        if (result=="supported")!=all(checks.values()):raise ValueError()
+    elif set(value)!={"result","reason","diagnostics"} or value.get("reason") not in REASONS:raise ValueError()
+    return value
+
 async def run_probe():
     if os.geteuid()!=1000:return {"result":"unexpected_uid"}
     process=None
@@ -35,15 +61,8 @@ async def run_probe():
                 if not 0<size<=MAX_MESSAGE:raise ValueError()
                 value=json.loads(await process.stdout.readexactly(size))
                 await process.wait()
-                if process.returncode!=0 or not isinstance(value,dict):raise ValueError()
-                result=value.get("result")
-                if result not in {"supported","restriction_failed","boundary_unavailable","probe_failed"}:raise ValueError()
-                if result in {"supported","restriction_failed"}:
-                    checks=value.get("checks")
-                    if set(value)!={"result","checks"} or not isinstance(checks,dict) or set(checks)!=EXPECTED_CHECKS or any(type(flag) is not bool for flag in checks.values()):raise ValueError()
-                    if (result=="supported")!=all(checks.values()):raise ValueError()
-                elif set(value)!={"result"}:raise ValueError()
-                return value
+                if process.returncode!=0:raise ValueError()
+                return validate_result(value)
     except BaseException:
         return {"result":"probe_failed"}
     finally:
@@ -57,5 +76,5 @@ async def run_probe():
 
 if __name__=="__main__":
     result=asyncio.run(run_probe())
-    print(json.dumps({"probe":"findmy_runtime_probe","version":"0.1.0",**result},separators=(",",":")),flush=True)
+    print(json.dumps({"probe":"findmy_runtime_probe","version":"0.1.1",**result},separators=(",",":")),flush=True)
     raise SystemExit(0 if result["result"]=="supported" else 1)

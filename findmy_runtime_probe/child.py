@@ -3,6 +3,7 @@ import ctypes
 import errno
 import json
 import os
+import platform
 from pathlib import Path
 import socket
 import struct
@@ -13,6 +14,22 @@ MAX_MESSAGE=4096
 CODE=Path(__file__).resolve().parent
 sys.path.insert(0,str(CODE))
 from native_sandbox import restrict_worker,SandboxUnavailable
+
+REASONS={"worker_platform_unsupported","worker_seccomp_unavailable","worker_landlock_unavailable",
+    "worker_privilege_restriction_failed","worker_landlock_rule_failed","worker_landlock_restriction_failed",
+    "worker_seccomp_rule_failed","worker_seccomp_restriction_failed","worker_seccomp_syscall_unavailable"}
+
+def preflight():
+    system=platform.system();machine=platform.machine()
+    label="linux-amd64" if system=="Linux" and machine=="x86_64" else "linux-arm64" if system=="Linux" and machine=="aarch64" else "unsupported"
+    details={"platform":label,"uid":os.geteuid(),"landlock_abi":-1,"landlock_errno":0,"boundary_errno":0}
+    if label!="unsupported":
+        libc=ctypes.CDLL(None,use_errno=True);libc.syscall.restype=ctypes.c_long
+        ctypes.set_errno(0)
+        abi=int(libc.syscall(444,0,0,1))
+        details["landlock_abi"]=abi if -1<=abi<=1024 else -1
+        details["landlock_errno"]=ctypes.get_errno() if abi<0 else 0
+    return details
 
 CHECKS=("private_file_open_denied","private_write_denied","parent_proc_open_denied",
         "metadata_change_denied","ipv4_socket_denied","ipv6_socket_denied",
@@ -37,6 +54,7 @@ def read_input():
     return value
 
 def main():
+    details=preflight()
     try:
         values=read_input()
         restrict_worker([CODE,"/usr/lib","/usr/local/lib","/lib","/lib64","/etc/ld.so.cache","/dev/urandom"])
@@ -63,9 +81,11 @@ def main():
             "parent_signal_denied":denied(lambda:os.kill(os.getppid(),0)),
             "dumpability_change_denied":denied(change_dumpability),
         }
-        return {"result":"supported" if all(checks.values()) else "restriction_failed","checks":checks}
-    except SandboxUnavailable:
-        return {"result":"boundary_unavailable"}
+        return {"result":"supported" if all(checks.values()) else "restriction_failed","checks":checks,"diagnostics":details}
+    except SandboxUnavailable as exc:
+        reason=str(exc)
+        details["boundary_errno"]=ctypes.get_errno()
+        return {"result":"boundary_unavailable","reason":reason if reason in REASONS else "unclassified_boundary_failure","diagnostics":details}
     except BaseException:
         return {"result":"probe_failed"}
 
