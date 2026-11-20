@@ -109,6 +109,16 @@ def main():
                 provider.adi.end_provisioning(session.session,_binary(request.get("ptm"),MAX_FIELD),_binary(request.get("tk"),MAX_FIELD))
                 if not engine.is_provisioned:raise ValueError()
                 send({"ok":True,"state":snapshot(provider)});return
+            elif command=="identity_check" and phase=="signing":
+                expected=request.get("expected")
+                if not isinstance(expected,dict) or set(expected)!={"uid","devid","client_info"} or any(
+                    not isinstance(v,str) or not v or len(v)>1024 or any(ord(c)<32 or ord(c)>126 for c in v)
+                    for v in expected.values()):raise ValueError()
+                device=provider.device
+                send({"ok":True,"checks":{
+                    "device_id_matches":device.unique_device_identifier==expected["devid"].upper(),
+                    "local_user_matches":device.local_user_uuid==expected["uid"],
+                    "client_info_matches":device.server_friendly_description==expected["client_info"]}})
             elif command=="headers" and phase=="signing":
                 if not engine.is_provisioned:raise ValueError()
                 headers=engine.get_data()

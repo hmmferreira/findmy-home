@@ -127,3 +127,43 @@ class CompositionTests(unittest.IsolatedAsyncioTestCase):
                 with self.assertRaises(SessionBlocked):await worker.account_factory()
                 provision.assert_not_awaited()
             finally:await bridge.close()
+
+
+class IdentityCheckTests(unittest.IsolatedAsyncioTestCase):
+    async def test_missing_state_never_starts_worker_or_provisions(self):
+        from retrace.shared_runtime import check_saved_identity
+        with patch('retrace.native_worker.ProcessOfflineSigner') as signer,patch('retrace.controlled_provisioning.provision_new_identity',new=AsyncMock()) as provision:
+            result=await check_saved_identity(SimpleNamespace(exists=lambda:False),Path('/synthetic'),DIGEST)
+        self.assertEqual(result,{"status":"not_saved"});signer.assert_not_called();provision.assert_not_awaited()
+
+    async def test_comparison_emits_only_booleans_and_keeps_account_credentials_out(self):
+        from retrace.shared_runtime import check_saved_identity
+        signer=SimpleNamespace(initialize=AsyncMock(),identity_checks=AsyncMock(return_value={"device_id_matches":True,"local_user_matches":True,"client_info_matches":True}),close=AsyncMock())
+        signing=SimpleNamespace(exists=lambda:True,load=lambda:(b'PRIVATE_STATE','PRIVATE_SERIAL',IDENTITY,IDS))
+        from findmy.reports import anisette as sdk_anisette
+        identity_type=lambda **kwargs:SimpleNamespace(client_info=lambda bundle:'Synthetic client')
+        with patch.object(sdk_anisette,'DeviceIdentity',identity_type,create=True),patch('retrace.native_worker.ProcessOfflineSigner',return_value=signer),patch('retrace.controlled_provisioning.provision_new_identity',new=AsyncMock()) as provision:
+            result=await check_saved_identity(signing,Path('/synthetic'),DIGEST)
+        self.assertEqual(result,{"status":"consistent","device_id_matches":True,"local_user_matches":True,"client_info_matches":True})
+        self.assertNotIn('PRIVATE',json.dumps(result));provision.assert_not_awaited();signer.close.assert_awaited_once()
+
+    async def test_corrupt_state_is_not_replaced_and_diagnostics_do_not_include_error_prose(self):
+        from retrace.shared_runtime import check_saved_identity
+        def load():raise ValueError('PRIVATE_ACCOUNT_DATA')
+        with patch('retrace.native_worker.ProcessOfflineSigner') as signer:
+            result=await check_saved_identity(SimpleNamespace(exists=lambda:True,load=load),Path('/synthetic'),DIGEST)
+        self.assertEqual(result,{"status":"unavailable","error":"check_failed"});signer.assert_not_called()
+
+    async def test_cancelled_offline_check_closes_worker_and_does_not_start_provisioning(self):
+        from retrace.shared_runtime import check_saved_identity
+        from findmy.reports import anisette as sdk_anisette
+        entered=asyncio.Event()
+        async def initialize():entered.set();await asyncio.Event().wait()
+        signer=SimpleNamespace(initialize=initialize,close=AsyncMock())
+        signing=SimpleNamespace(exists=lambda:True,load=lambda:(b'PRIVATE_STATE','PRIVATE_SERIAL',IDENTITY,IDS))
+        identity_type=lambda **kwargs:SimpleNamespace(client_info=lambda bundle:'Synthetic client')
+        with patch.object(sdk_anisette,'DeviceIdentity',identity_type,create=True),patch('retrace.native_worker.ProcessOfflineSigner',return_value=signer),patch('retrace.controlled_provisioning.provision_new_identity',new=AsyncMock()) as provision:
+            task=asyncio.create_task(check_saved_identity(signing,Path('/synthetic'),DIGEST))
+            await asyncio.wait_for(entered.wait(),1);task.cancel()
+            with self.assertRaises(asyncio.CancelledError):await task
+        signer.close.assert_awaited_once();provision.assert_not_awaited()

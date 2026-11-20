@@ -77,6 +77,17 @@ class NativeWorkerTests(unittest.IsolatedAsyncioTestCase):
         await signer.close();self.assertFalse(signer.ready)
         with self.assertRaises(SignerBlocked):signer.snapshot()
         self.assertIsNotNone(signer._channel._process.returncode)
+    async def test_identity_check_is_boolean_only_and_does_not_generate_headers_or_change_state(self):
+        signer=ProcessOfflineSigner(self.library,b"SYNTHETIC_SAVED_STATE",self.digest);self.workers.append(signer)
+        await signer.initialize();before=signer.snapshot()
+        expected={"uid":"SYNTHETIC-LOCAL","devid":"synthetic-uuid","client_info":"Synthetic client"}
+        self.assertEqual(await signer.identity_checks(expected),{"device_id_matches":True,"local_user_matches":True,"client_info_matches":True})
+        self.assertEqual(signer.snapshot(),before)
+        mismatch=await signer.identity_checks({**expected,"devid":"different-device"})
+        self.assertEqual(mismatch,{"device_id_matches":False,"local_user_matches":True,"client_info_matches":True})
+        self.assertEqual(signer.snapshot(),before)
+        self.assertEqual((await signer.headers())["X-Apple-I-MD"],"SYNTHETIC_OTP_1")
+
     async def test_process_signer_tampered_artifact_never_starts_worker(self):
         self.library.write_bytes(b"tampered")
         signer=ProcessOfflineSigner(self.library,b"SYNTHETIC_SAVED_STATE",self.digest);self.workers.append(signer)

@@ -203,6 +203,26 @@ class ProcessOfflineSigner(OfflineSigner):
                 if isinstance(exc,ProvisioningBlocked):raise SignerBlocked(exc.code) from None
                 raise SignerBlocked("signing_failed") from None
             finally:self._busy=False
+    async def identity_checks(self,expected):
+        """Compare saved native metadata in the sandbox; return booleans only."""
+        async with self._operation:
+            if not self.ready:raise SignerBlocked("signer_not_ready")
+            if not isinstance(expected,dict) or set(expected)!={"uid","devid","client_info"} or any(
+                not isinstance(v,str) or not v or len(v)>1024 or any(ord(c)<32 or ord(c)>126 for c in v)
+                for v in expected.values()):raise SignerBlocked("identity_check_failed")
+            self._busy=True
+            try:
+                reply=await self._channel.exchange("identity_check",expected=expected)
+                checks=reply.get("checks")
+                if not isinstance(checks,dict) or set(checks)!={"device_id_matches","local_user_matches","client_info_matches"} or any(type(v) is not bool for v in checks.values()):
+                    raise SignerBlocked("identity_check_failed")
+                return dict(checks)
+            except BaseException as error:
+                await self.close()
+                if isinstance(error,asyncio.CancelledError):raise
+                raise SignerBlocked("identity_check_failed") from None
+            finally:self._busy=False
+
     def snapshot(self):
         if not self.ready or self._snapshot is None:raise SignerBlocked("signer_not_ready")
         if self._busy:raise SignerBlocked("signer_busy")
