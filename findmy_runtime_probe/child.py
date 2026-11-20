@@ -87,8 +87,12 @@ def main():
         reason=str(exc)
         details["boundary_errno"]=ctypes.get_errno()
         return {"result":"boundary_unavailable","reason":reason if reason in REASONS else "unclassified_boundary_failure","diagnostics":details}
-    except BaseException:
-        return {"result":"probe_failed"}
+    except BaseException as exc:
+        number=getattr(exc,"errno",0)
+        name=type(exc).__name__
+        return {"result":"probe_failed","stage":"child_restrictions_or_checks",
+            "error":name if name in {"PermissionError","OSError","ValueError","RuntimeError"} else "UnknownError",
+            "errno":number if type(number) is int and 0<=number<=4095 else 0}
 
 if __name__=="__main__":
     data=json.dumps(main(),separators=(",",":")).encode()

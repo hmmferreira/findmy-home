@@ -24,7 +24,9 @@ def validate_result(value):
     result=value.get("result")
     if result not in {"supported","restriction_failed","boundary_unavailable","probe_failed"}:raise ValueError()
     if result=="probe_failed":
-        if set(value)!={"result"}:raise ValueError()
+        if set(value)=={"result"}:return value
+        if set(value)!={"result","stage","error","errno"} or value.get("stage")!="child_restrictions_or_checks" or value.get("error") not in {"PermissionError","OSError","ValueError","RuntimeError","UnknownError"}:raise ValueError()
+        if type(value["errno"]) is not int or not 0<=value["errno"]<=4095:raise ValueError()
         return value
     details=value.get("diagnostics")
     if not isinstance(details,dict) or set(details)!={"platform","uid","landlock_abi","landlock_errno","boundary_errno","boundary"}:raise ValueError()
@@ -41,32 +43,48 @@ def validate_result(value):
     elif set(value)!={"result","reason","diagnostics"} or value.get("reason") not in REASONS:raise ValueError()
     return value
 
+SAFE_ERRORS={"PermissionError","OSError","TimeoutError","IncompleteReadError","JSONDecodeError","ValueError","CancelledError"}
+
+def safe_failure(error,stage,child_exit=None):
+    name=type(error).__name__
+    number=getattr(error,"errno",0)
+    return {"result":"probe_failed","stage":stage,"error":name if name in SAFE_ERRORS else "UnknownError",
+        "errno":number if type(number) is int and 0<=number<=4095 else 0,
+        "child_exit":child_exit if type(child_exit) is int and -255<=child_exit<=255 else None}
+
 async def run_probe():
     if os.geteuid()!=1000:return {"result":"unexpected_uid"}
-    process=None
+    process=None;stage="temporary_directory"
     try:
         with tempfile.TemporaryDirectory(prefix="findmy-capability-",dir="/tmp") as directory:
+            stage="temporary_file"
             private=Path(directory)/"synthetic-private"
             private.write_bytes(b"synthetic probe data; not a credential")
             private.chmod(0o600)
             write=Path(directory)/"synthetic-write"
             request=json.dumps({"private_path":str(private),"write_path":str(write)},separators=(",",":")).encode()
             if len(request)>MAX_MESSAGE:raise ValueError()
+            stage="spawn_child"
             process=await asyncio.create_subprocess_exec(sys.executable,"-I","-S","-B",str(Path(__file__).with_name("child.py")),
                 stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL,
                 close_fds=True,start_new_session=True,cwd="/",
                 env={"PATH":"/usr/bin:/bin","LANG":"C.UTF-8","PYTHONDONTWRITEBYTECODE":"1"})
             async with asyncio.timeout(15):
+                stage="send_request"
                 process.stdin.write(struct.pack("!I",len(request))+request)
                 await process.stdin.drain();process.stdin.close()
+                stage="read_header"
                 size=struct.unpack("!I",await process.stdout.readexactly(4))[0]
                 if not 0<size<=MAX_MESSAGE:raise ValueError()
+                stage="read_body"
                 value=json.loads(await process.stdout.readexactly(size))
+                stage="wait_child"
                 await process.wait()
                 if process.returncode!=0:raise ValueError()
+                stage="validate_response"
                 return validate_result(value)
-    except BaseException:
-        return {"result":"probe_failed"}
+    except BaseException as error:
+        return safe_failure(error,stage,process.returncode if process is not None else None)
     finally:
         if process is not None:
             if process.returncode is None:
@@ -78,5 +96,5 @@ async def run_probe():
 
 if __name__=="__main__":
     result=asyncio.run(run_probe())
-    print(json.dumps({"probe":"findmy_runtime_probe","version":"0.1.2",**result},separators=(",",":")),flush=True)
+    print(json.dumps({"probe":"findmy_runtime_probe","version":"0.1.3",**result},separators=(",",":")),flush=True)
     raise SystemExit(0 if result["result"]=="supported" else 1)
