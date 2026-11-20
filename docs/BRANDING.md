@@ -50,3 +50,13 @@ retain their real names, import namespaces, copyright/license notices and source
 URLs. They are dependencies/services, not former Retrace branding. Renaming them
 would obscure provenance and can break protocol compatibility. Retrace currently
 supports Apple Find My; other ecosystems remain a future direction.
+
+## Project icon
+
+The project owner supplied and selected the Retrace artwork on 2026-11-20.
+The app icon is retrace/icon.png (128px). Custom integration brand icons are
+256px and 512px under custom_components/retrace/brand. Web header/favicon and
+home-screen bookmark PNGs are local static assets. These are resized format
+exports of the supplied artwork, without a redesign or third-party image service.
+App store metadata, integration brand images and the ingress header are separate
+surfaces; the HA sidebar continues to use its configured Material Design icon.

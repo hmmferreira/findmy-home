@@ -1,3 +1,8 @@
+# 0.1.14-dev.1.2 — Retrace artwork
+
+- Add the project owner's icon to the app store, integration branding and web UI.
+- Serve the icon and home-screen bookmark image locally.
+
 # 0.1.12 — Patch HTTP dependency and check published advisories
 
 - Upgrade aiohttp from 3.13.2 to 3.14.5 with reviewed wheel hashes.

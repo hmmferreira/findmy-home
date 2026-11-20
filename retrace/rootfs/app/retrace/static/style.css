@@ -13,3 +13,5 @@ header>div{min-width:0}header h1{overflow-wrap:anywhere}
 .status-chip{border:1px solid var(--border);border-radius:16px;background:var(--surface);padding:7px 11px;font-size:13px;line-height:1.4;overflow-wrap:anywhere}
 .status-chip[data-kind=success]{border-color:#248343}.status-chip[data-kind=warning]{border-color:#b97900}.status-chip[data-kind=error]{border-color:#c62828;font-weight:600}
 @media(max-width:600px){header{flex-direction:column;gap:10px}header h1{font-size:24px}header #health{align-self:flex-start;white-space:normal;max-width:100%}.status-overview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.status-chip{border-radius:8px}nav{margin-top:18px}}
+
+.brand-heading{display:flex;align-items:center;gap:14px}.brand-heading>div{min-width:0}.brand-icon{width:56px;height:56px;flex:0 0 56px;border-radius:14px}
