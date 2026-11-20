@@ -13,8 +13,10 @@ Runs independently of an existing MQTT tracker.
    GPS trackers and last-sighting sensors. HA zones and Recorder handle history.
 6. Open Items for the overview and optional map preview. Add items later in Setup.
 
-Apple polling and key recovery use separate sessions. The wizard exposes
-both; it does not promise one universal login. No Mac needs to stay running.
+The legacy runtime uses separate polling and recovery sessions. Shared Edge
+reuses the main account with a separate trusted-device unlock for key recovery.
+No Mac needs to stay running. Shared Edge still relies on third-party protocol
+code and native components: see [ownership and trust boundaries](docs/DEPENDENCY_BOUNDARY.md).
 
 ## Status and limits
 This is development source, not a published or security-audited release.
