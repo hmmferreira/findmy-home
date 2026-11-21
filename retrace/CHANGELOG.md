@@ -134,3 +134,14 @@
 - Selected-item polling, local helper and owner-only token/key storage.
 - Native companion integration, Beta trackers, last sightings and Repairs.
 - Map overview and item selection; no battery/address fabrication.
+
+## 0.1.14-dev.1.6 — Mac provider candidate
+
+- Preserve the current Apple Music provider and offer an explicit, default-off
+  experimental macOS provider in Setup; no automatic fallback or identity migration.
+- Isolate pinned macOS CoreADI emulation in the restricted worker. Keep provisioning
+  HTTP in the owned parent transport and machine/account state independently encrypted.
+- Use the Mac device ID for Apple account requests and a separate stable UUID for
+  CloudKit. Serialize signing/state updates across item poll processes.
+- Change active polling provider only after the new session is durably saved.
+- Retain upstream GPL source/license notices. Native binaries stay outside Git/images.

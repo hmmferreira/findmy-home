@@ -417,3 +417,21 @@ test("provider selector exposes candidate availability and locks during verifica
     assert.equal(provider.disabled,true);
   }finally{env.close();}
 });
+
+
+test("enabled Mac provider is selectable and sent explicitly without changing default",async()=>{
+  const env=await setup({shared:true,auth:{phase:"idle"}});try{
+    env.data.setup.authentication_providers=[{id:"apple_music",available:true},{id:"macos",available:true}];
+    await env.refresh();
+    const provider=env.document.getElementById("authentication-provider");
+    assert.equal(provider.value,"apple_music");
+    assert.equal(provider.querySelector('option[value="macos"]').disabled,false);
+    provider.value="macos";
+    env.document.querySelector('[name="email"]').value="fixture@example.invalid";
+    env.document.querySelector('[name="password"]').value="synthetic-password";
+    env.document.getElementById("consent").checked=true;
+    env.document.getElementById("login").dispatchEvent(new env.window.Event("submit",{bubbles:true,cancelable:true}));
+    await flush();
+    assert.equal(env.requests.find(call=>call.url==="ui/login").body.provider,"macos");
+  }finally{env.close();}
+});

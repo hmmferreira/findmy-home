@@ -163,10 +163,6 @@ async def check_saved_identity(signing,library,digest):
 
 async def compose_runtime(store,options):
     """Used by server.main only in the explicitly selected shared runtime image."""
-    # Fail before artifact access, provisioning or opening private stores.
-    # Never fall back to Android when an explicitly selected candidate is absent.
-    if options.get("experimental_macos_signer",False):
-        raise RuntimeBlocked("macos_signer_not_available")
     require_shared_backend()
     from .artifact_policy import reviewed_artifact,verify_artifact
     from .native_worker import IsolatedNativeWorker,ProcessOfflineSigner,verify_native_boundary
@@ -187,8 +183,17 @@ async def compose_runtime(store,options):
     check=await check_saved_identity(signing,library,policy.expected_sha256)
     print("Retrace identity check: "+json.dumps(check,separators=(",",":")),flush=True)
     sessions=PrivateSessionStore(store.root,library=library,expected_sha256=policy.expected_sha256)
+    mac=None
+    if options.get('experimental_macos_signer',False):
+        from .macos_runtime import MacRuntime
+        mac=MacRuntime(store.root,options)
+        await mac.prepare()
     lifecycle=asyncio.Lock()
-    async def account_factory():
+    async def account_factory(provider=None):
+        if provider=='macos':
+            if mac is None:raise RuntimeBlocked('macos_signer_not_available')
+            return await mac.account()
+        if provider not in (None,'apple_music'):raise RuntimeBlocked('runtime_options_invalid')
         async with lifecycle:
             if signing.exists():state,serial,identity,ids=await asyncio.to_thread(signing.load)
             else:
@@ -212,6 +217,10 @@ async def compose_runtime(store,options):
             except BaseException:
                 await signer.close();raise
     async def save_account(account):
+        from .macos_provider import MacReportingAccount
+        if isinstance(account,MacReportingAccount):
+            if mac is None:raise RuntimeBlocked('macos_signer_not_available')
+            return await mac.save(account)
         await sessions.save(account)
         # Refresh private machine state without retaining any account password,
         # PET, location tokens or broader recovered Keychain material here.
@@ -221,5 +230,13 @@ async def compose_runtime(store,options):
         state=base64.b64decode(value['prov_data'],validate=True)
         ids={'uid':account.local_user_uuid,'devid':account.device_uuid}
         await _persist(lambda:signing.save(state,value['serial'],value['identity'],ids))
-    return compose_shared_ui(store,account_factory=account_factory,session_writer=save_account,
-                             session_available=lambda:owned_session_available(store.root))
+        await _persist(lambda:atomic_json(store.root/'active-provider.json',{'version':1,'provider':'apple_music'}))
+    def available():
+        from .private_session_store import active_provider
+        root=store.root/'providers'/'macos' if active_provider(store.root)=='macos' else store.root
+        return owned_session_available(root)
+    result=compose_shared_ui(store,account_factory=account_factory,session_writer=save_account,
+                             session_available=available)
+    result[1].macos_available=mac is not None
+    print("Retrace providers: "+json.dumps({"apple_music":True,"macos":mac is not None},separators=(",",":")),flush=True)
+    return result

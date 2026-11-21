@@ -21,6 +21,19 @@ class Core:
     def get_routing(self,ds):return reply(routing=self.routing)
 
 class MemoryCandidateTests(unittest.TestCase):
+    def test_virtual_store_accepts_bounded_metadata_and_empty_lock_files(self):
+        core=Core()
+        core.stubs.files={m.STORE+'adi-000001F5.pb':bytearray(b'synthetic'),
+                          m.STORE+'adi.metadata':bytearray(b'fixture'),m.STORE+'adi.lock':bytearray()}
+        encoded={name[len(m.STORE):]:base64.b64encode(value).decode() for name,value in core.stubs.files.items()}
+        restored=m.MemoryCore(Core(),'a'*32,saved=encoded)
+        self.assertEqual(restored.snapshot(),encoded)
+
+    def test_dispatcher_nonnegative_success_is_not_an_error(self):
+        core=Core()
+        core.initialize=lambda:SimpleNamespace(rc=1,ret=1,outputs={})
+        self.assertEqual(m.MemoryCore(core,'a'*32).phase,'new')
+
     def test_explicit_provision_restore_and_sign_are_separate(self):
         core=Core();adapter=m.MemoryCore(core,'a'*32)
         with self.assertRaises(m.CandidateBlocked):adapter.begin(b'synthetic-spim')

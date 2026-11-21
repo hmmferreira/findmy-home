@@ -58,7 +58,7 @@ ARTIFACT_URL="https://apps.mzstatic.com/content/android-apple-music-apk/applemus
 ESCROW_PATHS=frozenset("/escrowproxy/api/"+path for path in ("get_records","get_club_cert","srp_init","recover"))
 
 def validate_destination(profile,method,url):
-    if profile not in ("account","cloudkit","escrow","provisioning","artifact") or method not in ("GET","POST","PUT"):
+    if profile not in ("account","cloudkit","escrow","provisioning","artifact","mac_artifact") or method not in ("GET","POST","PUT"):
         raise TransportBlocked()
     if not isinstance(url,str) or any(ord(c)<=32 or ord(c)>=127 for c in url) or any(c in url for c in "\\#"):
         raise TransportBlocked()
@@ -73,7 +73,10 @@ def validate_destination(profile,method,url):
         if parsed.query and not (profile=="cloudkit" and parsed.path=="/setup/setup/ck/v1/ckAppInit"
             and parsed.query in ("container=com.apple.icloud.searchparty","container=com.apple.security.keychain")):
             raise TransportBlocked()
-        if profile=="artifact":
+        if profile=="mac_artifact":
+            from .macos_artifact import URL
+            allowed=method=="GET" and url==URL
+        elif profile=="artifact":
             allowed=method=="GET" and url==ARTIFACT_URL
         elif profile=="account":
             allowed=parsed.path in ACCOUNT_PATHS.get(host,()) and (method!="PUT" or (host=="gsa.apple.com" and parsed.path=="/auth/verify/phone"))
@@ -137,7 +140,7 @@ class Response:
 class OwnedHttpSession:
     MAX_BODY=8*1024*1024
     def __init__(self,*,profile="account",timeout=30,verify_tls=True):
-        if profile not in ("account","cloudkit","escrow","provisioning","artifact") or verify_tls is not True:
+        if profile not in ("account","cloudkit","escrow","provisioning","artifact","mac_artifact") or verify_tls is not True:
             raise TransportBlocked("transport_options_blocked")
         if not isinstance(timeout,(int,float)) or isinstance(timeout,bool) or not math.isfinite(timeout) or not 0<timeout<=90:
             raise TransportBlocked("transport_options_blocked")
@@ -161,6 +164,10 @@ class OwnedHttpSession:
         host=validate_destination(self.profile,method,url)
         if set(kwargs)-{"auth","headers","data","json","auto_retry"}:
             raise TransportBlocked("transport_options_blocked")
+        if self.profile=='mac_artifact':
+            from .macos_artifact import OFFSET,LENGTH
+            if set(kwargs)!={'headers'} or kwargs['headers']!={'Range':f'bytes={OFFSET}-{OFFSET+LENGTH-1}','Accept-Encoding':'identity'}:
+                raise TransportBlocked('transport_options_blocked')
         headers=kwargs.get("headers") or {}
         if not hasattr(headers,"items") or any(
             not isinstance(key,str) or not re.fullmatch(r"[!#$%&'*+.^_`|~0-9A-Za-z-]+",key)

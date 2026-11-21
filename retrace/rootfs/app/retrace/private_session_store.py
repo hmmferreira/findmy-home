@@ -84,9 +84,23 @@ class PrivateSessionStore:
                     raise
             await asyncio.to_thread(persist)
 
-async def restore_reporting_account(root):
+def active_provider(root):
+    path=Path(root)/'active-provider.json'
+    if not path.exists() and not path.is_symlink():return 'apple_music'
+    try:
+        value=json.loads(_private_bytes(path,4096),object_pairs_hook=_unique_pairs)
+        if (not isinstance(value,dict) or set(value)!={'version','provider'} or
+                type(value['version']) is not int or value['version']!=1 or
+                value['provider'] not in ('apple_music','macos')):raise ValueError()
+        return value['provider']
+    except Exception:raise SessionBlocked('session_storage_invalid') from None
+
+async def restore_reporting_account(root,*,_mac=False):
     root=Path(root)
     if root.is_symlink():raise SessionBlocked("session_storage_invalid")
+    if not _mac and await asyncio.to_thread(active_provider,root)=='macos':
+        if (root/'providers').is_symlink():raise SessionBlocked('session_storage_invalid')
+        return await restore_reporting_account(root/'providers'/'macos',_mac=True)
     marker=root/MANIFEST
     if not marker.exists() and not marker.is_symlink():
         if os.environ.get("RETRACE_RUNTIME_MODE")=="shared":raise SessionBlocked("reauthentication_required")
@@ -109,7 +123,13 @@ async def restore_reporting_account(root):
         except Exception:raise SessionBlocked("session_storage_invalid") from None
     data,key,policy=await asyncio.to_thread(load)
     options={}
-    if os.environ.get("RETRACE_RUNTIME_MODE")=="shared":
+    if _mac:
+        from .macos_artifact import LIBRARY_SHA
+        from .macos_worker import MacSigner
+        if os.environ.get('RETRACE_PRIVATE_EVALUATION')!='1' or policy.library!='coreadi.bin' or policy.digest!=LIBRARY_SHA:
+            raise SessionBlocked('session_artifact_mismatch')
+        options['signer_factory']=MacSigner
+    elif os.environ.get("RETRACE_RUNTIME_MODE")=="shared":
         from .native_worker import ProcessOfflineSigner
         from .artifact_policy import ArtifactBlocked,reviewed_artifact,verify_artifact
         try:

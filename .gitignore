@@ -18,3 +18,9 @@ account.json
 owned-session.json
 owned-signing.json
 runtime-options.json
+
+*.dmg
+*.x86_64
+machine.json
+active-provider.json
+signer.lock

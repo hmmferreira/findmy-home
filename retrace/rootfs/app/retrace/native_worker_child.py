@@ -66,7 +66,21 @@ def main():
             request=_read()
             if request is None:return
             command=request.get("command")
-            if command=="prepare" and phase=="new":
+            if command=="mac_prepare" and phase=="new":
+                from macos_child import create
+                engine=create(_binary(request.get("artifact"),MAX_ARTIFACT),request.get("host_uuid"),request.get("saved"))
+                phase="mac"
+                send({"ok":True,"phase":engine.phase})
+            elif command=="mac_begin" and phase=="mac":
+                cpim=engine.begin(_binary(request.get("spim"),MAX_FIELD),consent=request.get("consent"))
+                send({"ok":True,"cpim":_encoded(cpim)})
+            elif command=="mac_finish" and phase=="mac":
+                saved=engine.finish(_binary(request.get("ptm"),MAX_FIELD),_binary(request.get("tk"),MAX_FIELD),request.get("routing"))
+                send({"ok":True,"saved":saved});return
+            elif command=="mac_headers" and phase=="mac":
+                headers,saved=engine.headers()
+                send({"ok":True,"headers":headers,"saved":saved});return
+            elif command=="prepare" and phase=="new":
                 from anisette import Anisette
                 from anisette._ani_provider import AnisetteProvider
                 class NoProvisioning:
@@ -124,9 +138,16 @@ def main():
                 headers=engine.get_data()
                 send({"ok":True,"headers":{key:headers[key] for key in ("X-Apple-I-MD","X-Apple-I-MD-M")},"state":snapshot(provider)})
             else:raise ValueError()
-    except BaseException:
-        # Never include native exceptions, paths, headers or state in IPC/logs.
-        try:send({"ok":False,"error":"native_worker_failed"})
+    except BaseException as error:
+        # Fixed public component labels and line numbers only; no exception prose.
+        detail={}
+        frame=error.__traceback__
+        allowed={'macos_child.py','macos_memory.py','adi_run.py','harness.py','stubs.py','macho.py'}
+        while frame is not None:
+            name=Path(frame.tb_frame.f_code.co_filename).name
+            if name in allowed:detail={'component':name,'line':frame.tb_lineno}
+            frame=frame.tb_next
+        try:send({"ok":False,"error":"native_worker_failed",**detail})
         except BaseException:pass
 
 def snapshot(provider):

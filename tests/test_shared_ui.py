@@ -91,6 +91,23 @@ class SharedUI(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(self.ui.auth_task)
         finally:await client.close()
 
+    async def test_enabled_mac_selection_reaches_only_mac_factory(self):
+        self.ui.macos_available=True
+        client=TestClient(TestServer(make_app(self.store,management=True,trusted_peer="127.0.0.1",worker=self.worker,shared_ui=self.ui)))
+        await client.start_server()
+        headers={"X-Remote-User-Id":"owner","X-Remote-User-Groups":"system-admin"}
+        try:
+            state=await (await client.get('/v1/snapshot',headers=headers)).json()
+            self.assertTrue(state['setup']['authentication_providers'][1]['available'])
+            headers['X-CSRF-Token']=state['csrf']
+            response=await client.post('/ui/login',headers=headers,json={
+                'email':'fixture@example.invalid','password':'synthetic-password',
+                'discovery_consent':True,'provider':'macos'})
+            self.assertEqual(response.status,202)
+            await self.ui.auth_task
+            self.worker.account_factory.assert_awaited_once_with('macos')
+        finally:await client.close()
+
     async def test_expired_verification_is_explicit_and_does_not_reuse_credentials(self):
         self.ui.auth_owner="owner"
         self.ui.auth_state={"phase":"verification_code","method":0}

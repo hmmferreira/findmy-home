@@ -22,6 +22,7 @@ with tarfile.open(fileobj=stream,mode='w') as tar:
  tar.add(root/'retrace/requirements.lock',arcname='requirements.lock')
  tar.add(root/'tests/test_shared_discovery.py',arcname='test_shared_discovery.py')
  tar.add(root/'experiments/shared-session/test_controller_protocol.py',arcname='test_controller_protocol.py')
+ tar.add(root/'experiments/shared-session/test_macos_protocol.py',arcname='test_macos_protocol.py')
  for source,prefix in [(backend,'backend'),(root/'retrace/rootfs/app','app')]:
   for path in source.rglob('*'):
    if prefix=='backend' and path.relative_to(source).parts[0] not in ('findmy','tests','pyproject.toml','README.md','LICENSE.md'):continue

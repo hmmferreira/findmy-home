@@ -17,14 +17,6 @@ IDENTITY={key:'synthetic' for key in ('model','os_name','os_version','os_build',
 DIGEST='a'*64
 IDS={'uid':'00000000-0000-4000-8000-000000000001','devid':'00000000-0000-4000-8000-000000000002'}
 
-class MacSignerGateTests(unittest.IsolatedAsyncioTestCase):
-    async def test_candidate_cannot_touch_current_runtime_or_state(self):
-        with patch('retrace.shared_runtime.require_shared_backend') as backend:
-            with self.assertRaises(RuntimeBlocked) as caught:
-                await compose_runtime(None, {'experimental_macos_signer':True})
-            self.assertEqual(caught.exception.code,'macos_signer_not_available')
-            backend.assert_not_called()
-
 class StartupTests(unittest.TestCase):
     def test_macos_feature_flag_is_strict_and_defaults_off(self):
         with tempfile.TemporaryDirectory() as tmp:

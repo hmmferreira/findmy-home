@@ -171,3 +171,25 @@ to applicable law and open-source terms. No broader native-use permission was
 located. This is an observation of the published terms, not a conclusion about
 legal rights or applicability of an exception to this household. Source/sandbox
 verification and this limited technical evaluation are not legal clearance.
+
+
+## Private macOS candidate — 2026-11-21
+
+Default-off experimental provider only. Fixed Apple iTunes12.8.3 installer HTTPS
+range: offset184678769, length3471595. Compressed payload SHA256
+8a6c068c95036326eb2d2885fa60912ed0f7229d0939ae92934a70a3bb6cf025;
+x86_64 CoreADI4.19 SHA256
+2eafc3c79c7f41a8afbfbeaaf23ee5dab5ad5bda55ec8e54dbc0ddf1d20ce630.
+Recipe/source reference: OpenTagViewer05b5d7cb26c9a48925f5fa580f063da4c1bed3b0.
+Project acquisition code uses the owned mac_artifact profile, one exact URL/range,
+TLS verification, no credentials/proxies/redirects, bounded decompression/CPIO
+selection and exact payload/library hashes. Existing/corrupt files are not replaced.
+The privately acquired library was1676560bytes and matched this pin; it initialized
+inside the existing network-disabled restricted worker. It was not committed or
+included in an image. This does not establish permission for public redistribution
+or successful Apple account sign-in. Native-use rights/stable gates remain open.
+
+The engine source is pinned separately in mac_engine/PROVENANCE.json with the
+complete upstream GPL text/source. No new wheel dependency was added; it uses the
+already hash-locked Unicorn2.1.4. Full provenance/license obligations remain separate
+from the technical integrity checks.

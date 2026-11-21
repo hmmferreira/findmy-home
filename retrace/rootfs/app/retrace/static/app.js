@@ -165,6 +165,12 @@ function render(data){
   const shared=Boolean(data.setup?.shared_auth);
   configureLayout(shared);
   $("provider-controls").hidden=!shared;
+  $("provider-current").textContent="Current connection provider: "+(data.setup?.authentication_provider==="macos"?"macOS":"Apple Music");
+  const macAvailable=Boolean(data.setup?.authentication_providers?.find(p=>p.id==="macos")?.available);
+  const macOption=$("authentication-provider").querySelector('option[value="macos"]');
+  macOption.disabled=!macAvailable;
+  macOption.textContent=macAvailable?"macOS provider (experimental)":"macOS provider (experimental — unavailable)";
+  $("provider-help").textContent=macAvailable?"Both use your Apple account and Apple verification. Switching provider creates a separate device identity and needs a new sign-in; the previous provider's saved connection is kept. No automatic fallback.":"Both providers use your Apple account and Apple verification. The experimental macOS provider is not enabled in this build. Your current connection is kept.";
   const providerPending=["working","choose_method","verification_code"].includes(data.auth?.phase);
   $("authentication-provider").disabled=providerPending;
   const connected=Boolean(data.setup?.locations_connected);

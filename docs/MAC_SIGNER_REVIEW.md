@@ -105,3 +105,59 @@ provider-specific encrypted state/session restoration (including Mac device ID
 and separate CloudKit UUID), acquire the reviewed private artifact with explicit
 consent, and run native/isolation tests on HA OS. Only then enable the macOS option.
 Do not wire the UI option to the existing Android factory as a substitute.
+
+
+## Integrated Edge candidate — 2026-11-21
+
+The default-off Supervisor option `experimental_macos_signer` now makes a second
+provider available in the protected Setup UI. The original Apple Music path and
+storage remain intact. Unknown/unavailable provider choices are rejected before
+account creation; there is no automatic fallback. Both use the same Apple account
+and factor UI. Main-account authentication/discovery stays user initiated.
+
+The Mac engine is GPL-2.0-only source, pinned and shipped with its complete license
+and source; see THIRD_PARTY_NOTICES.md. Only its offline emulator/dispatcher files
+are imported, inside the existing restricted process after isolation succeeds.
+The CLI, network client and state manager are excluded. Library bytes are fetched
+from one fixed Apple HTTPS range, bounded/extracted/hash-verified privately; they
+never enter Git/images. The new transport profile cannot carry auth credentials.
+
+State is separate in `providers/macos`: encrypted machine generations, encrypted
+password/PET-free account generations and private library. A cross-process lock
+serializes signing/state publication. Cold native workers are reaped after each
+uncached signing window. Header state is saved before headers return. A separate
+host UUID is used for CloudKit while GrandSlam retains the provisioned Mac device
+ID. Mac sessions are restored through the owned transport and explicit signer;
+there is no SDK deserializer or Android-state migration.
+
+`active-provider.json` changes only after the new account session is durable.
+Failed authentication/session save leaves the previous provider selected. Polling
+uses this pointer and never falls back when selected session data is corrupt.
+Existing item keys/history and entities are shared; this is a provider choice,
+not another set of tracker entities. Returning to Apple Music uses its preserved
+identity and a new explicit login; it does not erase the Mac provider's state.
+
+Actual pinned CoreADI initialization passed in the network-disabled restricted
+worker. A synthetic adapter bug incorrectly rejected a positive initialization
+return; the pinned engine defines nonnegative status as success. Fixed and covered
+by regression. Actual anonymous Apple provisioning/signing was blocked by automatic
+approval review pending the owner's explicit authorization for Apple-side machine
+registration. No account authentication or existing identity reset was performed.
+
+Encrypted machine generations are currently retained (as are account generations).
+This avoids deleting files a concurrent restoring process may still read; bounded
+garbage collection remains a follow-up before stable release. Host/root or complete
+backup compromise is not prevented by keys stored beside ciphertext.
+
+
+### Live anonymous validation completed
+
+Owner explicitly authorized anonymous provisioning as needed after the initial
+approval restriction. The first anonymous exchange reached final native
+provisioning but snapshot validation rejected a virtual metadata filename. The
+store schema now admits bounded, safe virtual basenames and empty lock/metadata
+files, with traversal rejected and aggregate/entry size limits retained. These
+names never become host paths. Added synthetic metadata/empty-lock roundtrip.
+The next live smoke passed anonymous provisioning plus three cold native signing
+and encrypted-machine restoration cycles. Disposable test state was removed;
+no account login, 2FA, household session access or item queries were performed.

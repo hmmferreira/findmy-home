@@ -12,3 +12,10 @@ Original Retrace code is separately copyright Hugo Ferreira. No ownership
 of upstream code or endorsement by upstream authors is claimed. This notice is
 specific to the pinned protocol candidate, not a complete dependency inventory
 or clearance for legacy exporter/helper or Apple native components.
+
+
+Experimental macOS engine: the unchanged GPL-2.0-only Python source from
+parawanderer/os-findmy-e revision 595d39810639d750715babc30b063d4ac8f2c437 is
+included with complete GPL text and per-file hashes in /app/retrace/mac_engine.
+Retrace's MIT license does not replace that component's license. Apple native
+binaries are not included in this image and remain subject to their own terms.

@@ -85,8 +85,9 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
                 data["setup"]["shared_auth"]=True
                 data["setup"]["authentication_providers"]=[
                     {"id":"apple_music","label":"Apple Music provider","available":True},
-                    {"id":"macos","label":"macOS provider (experimental)","available":False}]
-                data["setup"]["authentication_provider"]="apple_music"
+                    {"id":"macos","label":"macOS provider (experimental)","available":bool(getattr(shared_ui,"macos_available",False))}]
+                from .private_session_store import active_provider
+                data["setup"]["authentication_provider"]=await asyncio.to_thread(active_provider,store.root)
                 data["auth"]=shared_ui.auth_visible(owner)
         return web.json_response(data)
 
@@ -117,11 +118,11 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
         if shared_ui is not None:
             if data.get("discovery_consent") is not True:raise ValueError()
             provider=data.get("provider","apple_music")
-            if provider=="macos":
+            if provider=="macos" and not getattr(shared_ui,"macos_available",False):
                 return web.json_response({"error":"provider_unavailable",
                     "message":"The experimental macOS provider is not ready in this build. Your existing connection has not changed."},status=409)
-            if provider!="apple_music":raise ValueError()
-            data=await shared_ui.authenticate(owner,lambda:worker.login(owner,email,password))
+            if provider not in ("apple_music","macos"):raise ValueError()
+            data=await shared_ui.authenticate(owner,lambda:worker.login(owner,email,password,**({"provider":"macos"} if provider=="macos" else {})))
             return web.json_response(data,status=202)
         return web.json_response(await worker.login(owner,email,password))
 

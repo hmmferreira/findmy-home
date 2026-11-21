@@ -10,7 +10,8 @@ COPY backend /review/backend
 COPY app /review/app
 COPY test_shared_discovery.py /review/test_shared_discovery.py
 COPY test_controller_protocol.py /review/test_controller_protocol.py
+COPY test_macos_protocol.py /review/test_macos_protocol.py
 WORKDIR /review/backend
 ENV PYTHONPATH=/review/backend:/review/backend/tests:/review/app
 ENTRYPOINT []
-CMD ["sh","-c","python -m pytest tests -q -p no:cacheprovider && cd /review && python -m pytest test_controller_protocol.py -q -p no:cacheprovider && python -m unittest test_shared_discovery -v"]
+CMD ["sh","-c","python -m pytest tests -q -p no:cacheprovider && cd /review && python -m pytest test_controller_protocol.py -q -p no:cacheprovider && python -m unittest test_shared_discovery test_macos_protocol -v"]
