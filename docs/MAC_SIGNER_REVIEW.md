@@ -184,3 +184,24 @@ shown, select macOS provider (experimental), then connect and complete Apple's
 verification/recovery steps. A new-provider session becomes active for polling
 only after successful durable save. Real-account acceptance and item reporting
 with this provider remain unverified until that test; this is not a stable release.
+
+
+### Owner account validation: macOS succeeds, Apple Music refused
+
+Owner reported experimental macOS authentication succeeded while Apple Music did
+not. Read-only HA logs independently confirm Apple Music init refusal -22410,
+then a macOS login start followed by completed login, trusted-device factor
+request/submission, durable session save and discovery handoff. The Mac session
+save path selects macOS for polling; no later provider login appears in the
+retained auth sequence. This supports a provider-specific acceptance difference
+for this installation, not a wrong password or a universal diagnosis of Apple's
+policy. No additional login, provisioning, restart or configuration change was
+performed during this check.
+
+Latest retained poll summaries:12 selected/completed,0 failed,7 reports received,
+8 items with saved locations, status searching and no error code. Saved location
+count includes earlier sightings; it does not mean all eight were newly located
+in this poll or that every item reports continuously. Account authentication,
+session persistence and discovery handoff are verified; unattended longevity and
+later restart restoration still need observation. Keep macOS selected for now;
+retain the Apple Music path without repeated login attempts.
