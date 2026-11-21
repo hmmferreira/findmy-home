@@ -49,3 +49,15 @@ or validate the account through Apple's web flow; that human check is pending.
 Private signing identity and account session were retained without another login.
 Validation: 280 app regressions, 877 upstream cases, 17 controller cases and
 15 discovery cases passed, along with the isolated worker/report-child smoke.
+
+## Upstream macOS signer lead — 2026-11-21
+
+The latest observed failure remains `apple_step=init`, `apple_code=-22410`.
+OpenTagViewer commit [05b5d7c](https://github.com/parawanderer/OpenTagViewer/commit/05b5d7cb26c9a48925f5fa580f063da4c1bed3b0)
+introduces emulated macOS CoreADI in place of Android-derived signing. Its commit
+explicitly says a real sign-in has not yet been verified. This is a candidate,
+not an established fix. See [the source-only review](MAC_SIGNER_REVIEW.md).
+
+The related `macOS` versus `Mac OS X` client-label change is not sufficient here:
+Retrace's pinned SDK already uses `Mac OS X`. No runtime dependency, native
+artifact, saved identity or session was replaced during this review.
