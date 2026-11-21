@@ -24,10 +24,12 @@ class RuntimeBlocked(RuntimeError):
 def read_options(path=Path('/data/options.json')):
     path=Path(path)
     try:
-        if not path.exists():return {"runtime_mode":"legacy","shared_artifact_id":"applemusic-arm64-v8a","create_new_identity":False,"install_reviewed_component":False,"private_evaluation":False}
+        if not path.exists():return {"runtime_mode":"legacy","shared_artifact_id":"applemusic-arm64-v8a","create_new_identity":False,"install_reviewed_component":False,"private_evaluation":False,"experimental_macos_signer":False}
         if path.is_symlink() or path.stat().st_size>4096:raise ValueError()
         value=json.loads(path.read_text(),object_pairs_hook=_pairs)
-        if not isinstance(value,dict) or set(value)-{"runtime_mode","shared_artifact_id","create_new_identity","install_reviewed_component","private_evaluation"}:raise ValueError()
+        if not isinstance(value,dict) or set(value)-{"runtime_mode","shared_artifact_id","create_new_identity","install_reviewed_component","private_evaluation","experimental_macos_signer"}:raise ValueError()
+        macos=value.get("experimental_macos_signer",False)
+        if type(macos) is not bool:raise ValueError()
         mode=value.get("runtime_mode","legacy")
         artifact=value.get("shared_artifact_id","applemusic-arm64-v8a")
         create=value.get("create_new_identity",False)
@@ -35,7 +37,7 @@ def read_options(path=Path('/data/options.json')):
         private_evaluation=value.get("private_evaluation",False)
         if mode not in ("legacy","shared") or type(create) is not bool or type(install) is not bool or type(private_evaluation) is not bool:raise ValueError()
         if not isinstance(artifact,str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,79}",artifact):raise ValueError()
-        return {"runtime_mode":mode,"shared_artifact_id":artifact,"create_new_identity":create,"install_reviewed_component":install,"private_evaluation":private_evaluation}
+        return {"runtime_mode":mode,"shared_artifact_id":artifact,"create_new_identity":create,"install_reviewed_component":install,"private_evaluation":private_evaluation,"experimental_macos_signer":macos}
     except Exception:raise RuntimeBlocked("runtime_options_invalid") from None
 
 def publish_runtime_options(root,options,*,uid=None,gid=None):
@@ -181,8 +183,17 @@ async def compose_runtime(store,options):
     check=await check_saved_identity(signing,library,policy.expected_sha256)
     print("Retrace identity check: "+json.dumps(check,separators=(",",":")),flush=True)
     sessions=PrivateSessionStore(store.root,library=library,expected_sha256=policy.expected_sha256)
+    mac=None
+    if options.get('experimental_macos_signer',False):
+        from .macos_runtime import MacRuntime
+        mac=MacRuntime(store.root,options)
+        await mac.prepare()
     lifecycle=asyncio.Lock()
-    async def account_factory():
+    async def account_factory(provider=None):
+        if provider=='macos':
+            if mac is None:raise RuntimeBlocked('macos_signer_not_available')
+            return await mac.account()
+        if provider not in (None,'apple_music'):raise RuntimeBlocked('runtime_options_invalid')
         async with lifecycle:
             if signing.exists():state,serial,identity,ids=await asyncio.to_thread(signing.load)
             else:
@@ -206,6 +217,10 @@ async def compose_runtime(store,options):
             except BaseException:
                 await signer.close();raise
     async def save_account(account):
+        from .macos_provider import MacReportingAccount
+        if isinstance(account,MacReportingAccount):
+            if mac is None:raise RuntimeBlocked('macos_signer_not_available')
+            return await mac.save(account)
         await sessions.save(account)
         # Refresh private machine state without retaining any account password,
         # PET, location tokens or broader recovered Keychain material here.
@@ -215,5 +230,13 @@ async def compose_runtime(store,options):
         state=base64.b64decode(value['prov_data'],validate=True)
         ids={'uid':account.local_user_uuid,'devid':account.device_uuid}
         await _persist(lambda:signing.save(state,value['serial'],value['identity'],ids))
-    return compose_shared_ui(store,account_factory=account_factory,session_writer=save_account,
-                             session_available=lambda:owned_session_available(store.root))
+        await _persist(lambda:atomic_json(store.root/'active-provider.json',{'version':1,'provider':'apple_music'}))
+    def available():
+        from .private_session_store import active_provider
+        root=store.root/'providers'/'macos' if active_provider(store.root)=='macos' else store.root
+        return owned_session_available(root)
+    result=compose_shared_ui(store,account_factory=account_factory,session_writer=save_account,
+                             session_available=available)
+    result[1].macos_available=mac is not None
+    print("Retrace providers: "+json.dumps({"apple_music":True,"macos":mac is not None},separators=(",",":")),flush=True)
+    return result

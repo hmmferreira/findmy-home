@@ -164,6 +164,15 @@ function render(data){
   }
   const shared=Boolean(data.setup?.shared_auth);
   configureLayout(shared);
+  $("provider-controls").hidden=!shared;
+  $("provider-current").textContent="Current connection provider: "+(data.setup?.authentication_provider==="macos"?"macOS":"Apple Music");
+  const macAvailable=Boolean(data.setup?.authentication_providers?.find(p=>p.id==="macos")?.available);
+  const macOption=$("authentication-provider").querySelector('option[value="macos"]');
+  macOption.disabled=!macAvailable;
+  macOption.textContent=macAvailable?"macOS provider (experimental)":"macOS provider (experimental — unavailable)";
+  $("provider-help").textContent=macAvailable?"Both use your Apple account and Apple verification. Switching provider creates a separate device identity and needs a new sign-in; the previous provider's saved connection is kept. No automatic fallback.":"Both providers use your Apple account and Apple verification. The experimental macOS provider is not enabled in this build. Your current connection is kept.";
+  const providerPending=["working","choose_method","verification_code"].includes(data.auth?.phase);
+  $("authentication-provider").disabled=providerPending;
   const connected=Boolean(data.setup?.locations_connected);
   $("location-state").textContent=connected?"Connected":"Not connected";
   $("login").hidden=connected&&!reconnecting;$("reconnect").hidden=!connected;
@@ -251,7 +260,7 @@ $("login").onsubmit=event=>{
   const email=form.elements.namedItem("email").value,password=form.elements.namedItem("password").value;
   emailHint=email;$("discovery-email").value=email;
   form.elements.namedItem("password").value="";
-  action(async()=>showFactor(await api("ui/login",{email,password,...(snapshot?.setup?.shared_auth?{discovery_consent:true}:{})})),"Connecting your Apple account…",null,"login-status");
+  action(async()=>showFactor(await api("ui/login",{email,password,...(snapshot?.setup?.shared_auth?{discovery_consent:true,provider:$("authentication-provider").value}:{})})),"Connecting your Apple account…",null,"login-status");
 };
 function showFactor(result){
   result=result||{phase:"idle"};authKey=JSON.stringify(result);

@@ -69,7 +69,7 @@ def _auth_classification(error,stage):
     code=getattr(error,"code",None)
     if isinstance(code,str) and code in {"artifact_unavailable","artifact_digest_mismatch","artifact_review_required","reviewed_artifact_required",
                 "isolated_provisioning_worker_required","worker_boundary_unavailable","explicit_new_identity_required",
-                "signing_identity_missing","signing_identity_invalid"}:
+                "signing_identity_missing","signing_identity_invalid","native_worker_failed","signing_failed","provisioning_failed","provisioning_request_failed","provisioning_endpoints_changed","provisioning_timeout"}:
         return "setup_required",False,"setup"
     return ("verification_rejected" if stage=="2fa_submit" else "code_request_failed" if stage=="2fa_request" else "authentication_failed"),False,"unclassified"
 
@@ -114,10 +114,11 @@ class AppleWorker:
                 for n,method in enumerate(self.methods)]
 
     @staticmethod
-    def _auth_event(stage,event,*,method=None,error=None,kind=None,status=None,reason=None,step=None,apple_step=None,apple_code=None,fault=None,component=None,line=None):
+    def _auth_event(stage,event,*,method=None,error=None,kind=None,status=None,reason=None,step=None,apple_step=None,apple_code=None,fault=None,component=None,line=None,provider=None):
         if stage not in {"login","2fa_request","2fa_submit","session_save","discovery_handoff"}:return
         if event not in {"started","completed","failed","cancelled"}:return
         value={"stage":stage,"event":event}
+        if isinstance(provider,str) and provider in {"apple_music","macos"}:value["provider"]=provider
         if isinstance(method,str) and method in {"sms","trusted_device","unknown"}:value["method"]=method
         if isinstance(error,str) and error in AUTH_ERRORS:value["error"]=error
         if isinstance(kind,str) and kind in {"storage","handoff","verification_refused","verification_code_rejected","network","setup","transport_blocked","service_unavailable","unclassified","apple_refused","credentials_refused","protocol","state"}:value["kind"]=kind
@@ -139,7 +140,7 @@ class AppleWorker:
         print("Retrace auth: "+json.dumps(value,separators=(",",":")),flush=True)
 
     async def _auth_step(self,stage,operation,*,method=None,context=None):
-        self._auth_event(stage,"started",method=method)
+        self._auth_event(stage,"started",method=method,provider=context.get("provider") if isinstance(context,dict) else None)
         try:result=await operation()
         except asyncio.CancelledError:
             self._auth_event(stage,"cancelled",method=method)
@@ -200,15 +201,16 @@ class AppleWorker:
         async with self.lock:
             await self._clear_pending()
 
-    async def login(self, owner, email, password):
+    async def login(self, owner, email, password, *, provider=None):
         from findmy import AsyncAppleAccount, LocalAnisetteProvider, LoginState
         async with self.lock:
             if self.pending:
                 raise ValueError("Finish or cancel the current sign-in")
-            context={"step":"account_setup"}
+            context={"step":"account_setup","provider":provider or "apple_music"}
             async def start():
                 async with asyncio.timeout(90):
-                    account = (await self.account_factory() if self.account_factory is not None else
+                    account = (await self.account_factory(provider) if provider is not None and self.account_factory is not None else
+                               await self.account_factory() if self.account_factory is not None else
                                AsyncAppleAccount(LocalAnisetteProvider(libs_path=str(self.store.root / "ani_libs.bin"))))
                 self.pending, self.owner = account, owner
                 self.auth_task = asyncio.create_task(self._expire())

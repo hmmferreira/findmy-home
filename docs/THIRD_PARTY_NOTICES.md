@@ -61,3 +61,25 @@ over an embedded payment widget on the account UI, so no third-party scripts or
 payment requests run there. Do not send account/item data in that link. No payment
 account URL has been configured. Platform terms and applicable income obligations
 are separate from MIT licensing.
+
+
+## macOS signing engine (experimental Edge)
+
+Source: https://github.com/parawanderer/os-findmy-e at
+`595d39810639d750715babc30b063d4ac8f2c437`.
+The unchanged files `tools/machoadi/{adi_run,harness,stubs,macho}.py` are retained
+under `retrace/rootfs/app/retrace/mac_engine`, with their original comments,
+repository GPL-2.0 license text and per-file SHA-256 provenance manifest.
+The upstream package declares GPL-2.0-only. These files are not covered by the
+Retrace root MIT license. Complete corresponding source for this retained Python
+component accompanies the package and image in the same directory. Preserve the
+GPL text and source on redistribution; process separation is not a general legal
+clearance. Its own references to Dadoum/apple-crates remain intact.
+
+The account parent does not import this engine; the networkless restricted child
+loads it from verified source and brokered library bytes. No upstream HTTP client,
+authentication CLI, filesystem session manager or runtime downloader is used.
+Unicorn remains a separately licensed installed dependency; its notices/metadata
+must also be preserved. Apple's CoreADI binary is acquired separately for explicit
+private evaluation, is not GPL/MIT licensed by this project, and is excluded from
+Git and image build contexts. Stable/native-rights review gates remain unchanged.

@@ -41,7 +41,10 @@ class _NativeChannel:
         value=json.loads(await self._reader.readexactly(size))
         if not isinstance(value,dict) or value.get("ok") is not True:
             code=value.get("error") if isinstance(value,dict) else None
-            raise ProvisioningBlocked(code if code in ("worker_boundary_unavailable","native_worker_failed") else "native_worker_failed")
+            error=ProvisioningBlocked(code if code in ("worker_boundary_unavailable","native_worker_failed") else "native_worker_failed")
+            if isinstance(value,dict) and value.get('component') in {'macos_child.py','macos_memory.py','adi_run.py','harness.py','stubs.py','macho.py'} and type(value.get('line')) is int:
+                error.component=value['component'];error.line=value['line']
+            raise error
         return value
     async def _start(self):
         read_fd,write_fd=os.pipe()

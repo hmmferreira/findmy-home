@@ -1,5 +1,5 @@
 name: Retrace Edge
-version: 0.1.14-dev.1.5
+version: 0.1.14-dev.1.6
 slug: retrace
 description: Location history in Home Assistant with Apple Find My support
 url: https://github.com/hmmferreira/retrace
@@ -26,10 +26,12 @@ options:
   create_new_identity: false
   install_reviewed_component: false
   private_evaluation: false
+  experimental_macos_signer: false
 schema:
   runtime_mode: list(legacy|shared)
   shared_artifact_id: str
   create_new_identity: bool
   install_reviewed_component: bool
   private_evaluation: bool
+  experimental_macos_signer: bool
 stage: experimental

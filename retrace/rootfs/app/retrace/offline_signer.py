@@ -139,7 +139,7 @@ class OfflineSigner:
     async def close(self):
         self._revoke()
 
-def provider_for(signer,*,serial,identity=None):
+def provider_for(signer,*,serial,identity=None,_mac=False):
     """Build the SDK interface around owned offline signing, not SDK networking."""
     from findmy.reports.anisette import BaseAnisetteProvider
     if not isinstance(signer,OfflineSigner) or not signer.ready:
@@ -158,6 +158,9 @@ def provider_for(signer,*,serial,identity=None):
         def otp(self):return self._prepared.get("X-Apple-I-MD","")
         @property
         def machine(self):return self._prepared.get("X-Apple-I-MD-M","")
+        @property
+        def router(self):
+            return self._prepared.get('X-Apple-I-MD-RINFO','') if _mac else super().router
         async def get_headers(self,*args,**kwargs):
             async with self._header_lock:
                 self._prepared=await signer.headers()
@@ -165,7 +168,7 @@ def provider_for(signer,*,serial,identity=None):
                 finally:self._prepared={}
         def to_json(self,dst=None):
             if dst is not None:raise SignerBlocked("use_private_account_store")
-            value={"type":"aniOwnedOffline","serial":self.serial,"library_sha256":signer.digest,
+            value={"type":"aniOwnedMac" if _mac else "aniOwnedOffline","serial":self.serial,"library_sha256":signer.digest,
                 "prov_data":base64.b64encode(signer.snapshot()).decode("ascii")}
             if hasattr(self,"identity"):value["identity"]=self.identity.to_json()
             return value

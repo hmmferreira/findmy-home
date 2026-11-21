@@ -12,3 +12,9 @@
 **/identity.json
 **/.env
 **/runtime-options.json
+
+**/*.dmg
+**/*.x86_64
+**/machine.json
+**/active-provider.json
+**/signer.lock

@@ -62,7 +62,12 @@ def _validate(state,*,saving=False):
         raise SessionBlocked("session_invalid")
     ids=state["ids"]
     if not isinstance(ids,dict) or set(ids)!={"uid","devid"}:raise SessionBlocked("session_invalid")
-    for value in ids.values():uuid.UUID(_text(value,64))
+    mac=state.get('anisette',{}).get('type')=='aniOwnedMac' if isinstance(state.get('anisette'),dict) else False
+    uuid.UUID(_text(ids['uid'],64))
+    if mac:
+        import re
+        if not re.fullmatch('00006000-[A-F0-9]{16}',_text(ids['devid'],64)):raise SessionBlocked('session_identity_invalid')
+    else:uuid.UUID(_text(ids['devid'],64))
     info=state["account"]
     if not isinstance(info,dict) or not {"username","password","info"}<=set(info) or set(info)-{"username","password","info","device_name"}:
         raise SessionBlocked("session_invalid")
@@ -89,7 +94,7 @@ def _validate(state,*,saving=False):
     tokens={key:_text(value,65536) for key,value in tokens.items() if key in _TOKEN_FIELDS}
     login["data"]["mobileme_data"]={"tokens":tokens}
     ani=state["anisette"]
-    if not isinstance(ani,dict) or set(ani)!={"type","serial","library_sha256","prov_data","identity"} or ani["type"]!="aniOwnedOffline":
+    if not isinstance(ani,dict) or set(ani)!={"type","serial","library_sha256","prov_data","identity"} or ani["type"] not in {"aniOwnedOffline","aniOwnedMac"}:
         raise SessionBlocked("session_provider_invalid")
     _text(ani["serial"],128)
     identity=ani["identity"]
@@ -99,6 +104,12 @@ def _validate(state,*,saving=False):
         raise SessionBlocked("session_invalid")
     provision=base64.b64decode(ani["prov_data"],validate=True)
     if not 0<len(provision)<=OfflineSigner.MAX_STATE:raise SessionBlocked("session_invalid")
+    if mac:
+        from .macos_identity import validate_machine
+        machine=validate_machine(json.loads(provision,object_pairs_hook=_pairs))
+        from .macos_provider import IDENTITY
+        if ids!={'uid':machine['uid'],'devid':machine['devid']} or ani['serial']!=machine['serial'] or identity!=IDENTITY:
+            raise SessionBlocked('session_identity_invalid')
     return state,provision
 
 async def snapshot_account(account,*,encryption_key,expires_at,now=None):
@@ -144,6 +155,12 @@ async def restore_account(data,*,encryption_key,library,expected_sha256,now=None
         if not isinstance(factory,type) or not issubclass(factory,OfflineSigner):raise SessionBlocked("owned_signer_required")
         signer=factory(library,provision,expected_sha256)
         await signer.initialize()
+        if state['anisette']['type']=='aniOwnedMac':
+            from .macos_worker import MacSigner
+            if type(signer) is not MacSigner:raise SessionBlocked('session_provider_invalid')
+            from .macos_provider import account_for
+            account=await account_for(signer,state=state)
+            return account
         from .apple import ReportingAccount
         from findmy.reports.anisette import DeviceIdentity
         provider=provider_for(signer,serial=state["anisette"]["serial"],identity=DeviceIdentity(**state["anisette"]["identity"]))
