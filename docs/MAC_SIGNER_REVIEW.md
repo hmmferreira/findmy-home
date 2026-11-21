@@ -67,3 +67,15 @@ Primary sources:
 Do not deploy the upstream CLI unchanged, add a remote signing service, weaken
 worker isolation, or retry household authentication automatically. Existing Edge
 and stable release gates remain in force.
+
+
+## Feature-flag staging
+
+`experimental_macos_signer` is a strictly boolean internal runtime option,
+defaulting to false for both absent settings and existing installations. Current
+implementation is a fail-closed gate only: true returns
+`macos_signer_not_available` before artifact access or private-store operations.
+It is deliberately not exposed in the Supervisor schema yet. It does not claim
+that the Mac adapter exists or is deployable. Existing Android paths and identity
+formats remain unchanged. When the adapter is ready, it must use distinct state
+and explicit provisioning; never convert or replace the existing Android store.

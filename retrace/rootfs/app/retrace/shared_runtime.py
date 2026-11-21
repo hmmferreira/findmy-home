@@ -24,10 +24,12 @@ class RuntimeBlocked(RuntimeError):
 def read_options(path=Path('/data/options.json')):
     path=Path(path)
     try:
-        if not path.exists():return {"runtime_mode":"legacy","shared_artifact_id":"applemusic-arm64-v8a","create_new_identity":False,"install_reviewed_component":False,"private_evaluation":False}
+        if not path.exists():return {"runtime_mode":"legacy","shared_artifact_id":"applemusic-arm64-v8a","create_new_identity":False,"install_reviewed_component":False,"private_evaluation":False,"experimental_macos_signer":False}
         if path.is_symlink() or path.stat().st_size>4096:raise ValueError()
         value=json.loads(path.read_text(),object_pairs_hook=_pairs)
-        if not isinstance(value,dict) or set(value)-{"runtime_mode","shared_artifact_id","create_new_identity","install_reviewed_component","private_evaluation"}:raise ValueError()
+        if not isinstance(value,dict) or set(value)-{"runtime_mode","shared_artifact_id","create_new_identity","install_reviewed_component","private_evaluation","experimental_macos_signer"}:raise ValueError()
+        macos=value.get("experimental_macos_signer",False)
+        if type(macos) is not bool:raise ValueError()
         mode=value.get("runtime_mode","legacy")
         artifact=value.get("shared_artifact_id","applemusic-arm64-v8a")
         create=value.get("create_new_identity",False)
@@ -35,7 +37,7 @@ def read_options(path=Path('/data/options.json')):
         private_evaluation=value.get("private_evaluation",False)
         if mode not in ("legacy","shared") or type(create) is not bool or type(install) is not bool or type(private_evaluation) is not bool:raise ValueError()
         if not isinstance(artifact,str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,79}",artifact):raise ValueError()
-        return {"runtime_mode":mode,"shared_artifact_id":artifact,"create_new_identity":create,"install_reviewed_component":install,"private_evaluation":private_evaluation}
+        return {"runtime_mode":mode,"shared_artifact_id":artifact,"create_new_identity":create,"install_reviewed_component":install,"private_evaluation":private_evaluation,"experimental_macos_signer":macos}
     except Exception:raise RuntimeBlocked("runtime_options_invalid") from None
 
 def publish_runtime_options(root,options,*,uid=None,gid=None):
@@ -161,6 +163,10 @@ async def check_saved_identity(signing,library,digest):
 
 async def compose_runtime(store,options):
     """Used by server.main only in the explicitly selected shared runtime image."""
+    # Fail before artifact access, provisioning or opening private stores.
+    # Never fall back to Android when an explicitly selected candidate is absent.
+    if options.get("experimental_macos_signer",False):
+        raise RuntimeBlocked("macos_signer_not_available")
     require_shared_backend()
     from .artifact_policy import reviewed_artifact,verify_artifact
     from .native_worker import IsolatedNativeWorker,ProcessOfflineSigner,verify_native_boundary
