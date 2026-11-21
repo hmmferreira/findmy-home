@@ -61,3 +61,47 @@ not an established fix. See [the source-only review](MAC_SIGNER_REVIEW.md).
 The related `macOS` versus `Mac OS X` client-label change is not sufficient here:
 Retrace's pinned SDK already uses `Mac OS X`. No runtime dependency, native
 artifact, saved identity or session was replaced during this review.
+
+## Working-versus-failing change audit — 2026-11-21
+
+The owner confirms normal sign-in on Apple's account website succeeds. This
+narrows the problem to this client path; it does not exclude restrictions scoped
+to a client, service or provisioned machine.
+
+Contemporaneous handoff notes recorded successful login, SMS request/submission,
+session save and discovery handoff in the renamed Retrace installation, followed
+by two failed sign-ins before delivery of Edge1.4's typed diagnostics. This places
+both success and failure on Edge0.1.14-dev.1.3 (delivery83decc2). The earlier
+generic errors did not retain an Apple error code; do not retrospectively label
+those failures -22410. The currently retained log confirms init/-22410 on Edge1.5,
+but no longer contains the historical successful sequence or identity-check line.
+
+Read-only Git comparison results:
+
+| Compared artifact | Result |
+| --- | --- |
+| Working Shared source a8c3eff versus current delivery1cae6df: account construction, provisioning, offline signer, HTTP transport, native artifact policy | Identical after namespace/path substitution |
+| Both Python dependency lockfiles across that comparison | Byte-identical |
+| Working shared Dockerfile versus current rendered Dockerfile | Identical after namespace/path/user substitution |
+| Retrace delivery83decc2 versus1cae6df: account construction, provisioning, offline signer, HTTP transport, native artifact policy, private session store and owned session | Byte-identical |
+| Protocol revision/archive pin | Remains 8ecfae6 / 676e871098ec60a9c5e6718ea8cc18215631b036b99117a814ac1eb87d4e99e7 |
+
+Changes after Edge1.3 are error classification/UI diagnostics and an offline
+identity comparison. They postdate the first recorded failures. The rename did
+create fresh storage/identity, as explicitly requested, but the renamed install
+subsequently authenticated successfully. The earlier setup flag mistake was a
+separate local failure and was corrected before that success.
+
+Limits: matching build recipes do not establish identical OS/Python base image
+bytes (base tags and apt packages are not digest-pinned). No historical native
+state snapshot or complete time-stamped success/failure trace is available for
+comparison. We have not established whether Apple's policy, machine acceptance,
+state evolution, timing or another runtime condition changed. A server/client
+acceptance issue is plausible, supported by independent upstream reports, but
+remains a hypothesis. No code regression explaining init/-22410 was identified;
+that is not proof that all possible client defects are excluded.
+
+The audit used source/build comparisons and existing safe diagnostics only. No
+household authentication was replayed, identity regenerated, private state read
+into tools, or app update/restart performed. A rollback is not an established fix
+because the same earlier release already exhibited failed sign-ins.
