@@ -83,6 +83,10 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
                                "discovery_session_saved":(store.root/"export/state/exporter-session.plist").exists()})
             if shared_ui is not None:
                 data["setup"]["shared_auth"]=True
+                data["setup"]["authentication_providers"]=[
+                    {"id":"apple_music","label":"Apple Music provider","available":True},
+                    {"id":"macos","label":"macOS provider (experimental)","available":False}]
+                data["setup"]["authentication_provider"]="apple_music"
                 data["auth"]=shared_ui.auth_visible(owner)
         return web.json_response(data)
 
@@ -112,6 +116,11 @@ def make_app(store, *, management=False, trusted_peer="172.30.32.2", flow=None, 
         owner=request.headers["X-Remote-User-Id"]
         if shared_ui is not None:
             if data.get("discovery_consent") is not True:raise ValueError()
+            provider=data.get("provider","apple_music")
+            if provider=="macos":
+                return web.json_response({"error":"provider_unavailable",
+                    "message":"The experimental macOS provider is not ready in this build. Your existing connection has not changed."},status=409)
+            if provider!="apple_music":raise ValueError()
             data=await shared_ui.authenticate(owner,lambda:worker.login(owner,email,password))
             return web.json_response(data,status=202)
         return web.json_response(await worker.login(owner,email,password))

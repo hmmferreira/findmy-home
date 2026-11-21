@@ -406,3 +406,14 @@ test("Apple pre-password refusal is explained even when an earlier location sess
     assert.equal(env.document.getElementById("message").hidden,true);
   }finally{env.close();}
 });
+
+test("provider selector exposes candidate availability and locks during verification",async()=>{
+  const env=await setup({shared:true,auth:{phase:"idle"}});try{
+    const provider=env.document.getElementById("authentication-provider");
+    assert.equal(env.document.getElementById("provider-controls").hidden,false);
+    assert.equal(provider.value,"apple_music");
+    assert.equal(provider.querySelector('option[value="macos"]').disabled,true);
+    env.data.auth={phase:"verification_code",method:0};await env.refresh();
+    assert.equal(provider.disabled,true);
+  }finally{env.close();}
+});

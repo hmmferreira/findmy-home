@@ -72,6 +72,25 @@ class SharedUI(unittest.IsolatedAsyncioTestCase):
             gate.set();await self.ui.auth_task
         finally:await client.close()
 
+    async def test_unavailable_or_unknown_provider_never_starts_authentication(self):
+        client=TestClient(TestServer(make_app(self.store,management=True,trusted_peer="127.0.0.1",worker=self.worker,shared_ui=self.ui)))
+        await client.start_server()
+        headers={"X-Remote-User-Id":"owner","X-Remote-User-Groups":"system-admin"}
+        try:
+            state=await (await client.get('/v1/snapshot',headers=headers)).json()
+            self.assertEqual(state['setup']['authentication_provider'],'apple_music')
+            self.assertFalse(state['setup']['authentication_providers'][1]['available'])
+            headers['X-CSRF-Token']=state['csrf']
+            for provider,status in [('macos',409),('unknown',400),({},400)]:
+                response=await client.post('/ui/login',headers=headers,json={
+                    'email':'fixture@example.invalid','password':'synthetic-password',
+                    'discovery_consent':True,'provider':provider})
+                self.assertEqual(response.status,status)
+            self.worker.account_factory.assert_not_awaited()
+            self.writer.assert_not_awaited()
+            self.assertIsNone(self.ui.auth_task)
+        finally:await client.close()
+
     async def test_expired_verification_is_explicit_and_does_not_reuse_credentials(self):
         self.ui.auth_owner="owner"
         self.ui.auth_state={"phase":"verification_code","method":0}

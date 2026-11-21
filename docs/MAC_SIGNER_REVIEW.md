@@ -79,3 +79,29 @@ It is deliberately not exposed in the Supervisor schema yet. It does not claim
 that the Mac adapter exists or is deployable. Existing Android paths and identity
 formats remain unchanged. When the adapter is ready, it must use distinct state
 and explicit provisioning; never convert or replace the existing Android store.
+
+## Provider selection and memory adapter staging
+
+Setup now names the current Apple Music provider and the unavailable experimental
+macOS provider. The protected management snapshot publishes only fixed provider
+labels/availability; the selector is locked during authentication. Existing clients
+omitting a provider retain the Apple Music path. Unknown providers are rejected;
+macOS selection is rejected before the account factory is called. No fallback,
+identity conversion or session replacement occurs. This is not a working Mac login
+and has not been deployed as one.
+
+The project-owned experimental `experiments/macos-signer/adapter.py` accepts an
+injected CoreADI interface and keeps the virtual store in memory. It separates
+explicit begin/finish provisioning from restoration and signing; it neither
+imports the upstream CLI nor accesses disk or HTTP. Failed native operations close
+the adapter phase so the operation cannot be replayed. Synthetic tests exercise
+provision/restore/sign, invalid snapshot paths and failure/no-replay. The emulator
+and Apple binary have not been executed by these tests.
+
+Remaining before household testing: construct the pinned CoreADI engine from
+verified bytes inside the restricted child, connect asynchronous framed IPC and
+owned provisioning transport, review upstream licensing/transitive source, add
+provider-specific encrypted state/session restoration (including Mac device ID
+and separate CloudKit UUID), acquire the reviewed private artifact with explicit
+consent, and run native/isolation tests on HA OS. Only then enable the macOS option.
+Do not wire the UI option to the existing Android factory as a substitute.
