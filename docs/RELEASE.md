@@ -1,56 +1,74 @@
-# Side-by-side installation and release gates
+# Release readiness and stable operation
 
-The live Dragon bridge and dashboard remain the baseline. This repository has no
-deployment hook. Nothing is pushed to the homelab main branch.
+Current assessment after the owner macOS provider test, 2026-11-21. Historical
+reviews describe earlier stages; use this checklist with MAC_SIGNER_REVIEW.md.
+There is no approved shared-runtime stable release yet. The workflow and renderer
+intentionally reject that promotion until these gates are satisfied.
 
-## Legacy local Supervisor trial
-Copy retrace to the local-app mount (/local_apps/retrace or /addons/retrace) on the HA host; reload the app store,
-build and install it. Copy custom_components/retrace to the matching directory
-under /config/custom_components, then restart Core. Use supported file/SSH access;
-do not edit .storage. Open the app in ingress, complete setup, choose a small test
-set, and confirm the discovered integration. Both installations have separate
-sessions and IDs. Never copy credentials through Git, chat, options or logs.
+## Verified for the current Edge candidate
 
-Installing a custom integration executes code with Core permissions. Review the
-artifact before installation/restart. Repository Edge is now installed and has partial live validation; see below.
+- Edge0.1.14-dev.1.6 runs protected on Home Assistant OS with the native worker
+  restricted by AppArmor/seccomp; the original provider/identity remains intact.
+- Owner macOS login, trusted-device verification, encrypted session save and
+  discovery handoff completed. Apple Music still returns init/-22410.
+- Latest observed poll completed12 selected items with0 failures and7 reports;
+  8 items have saved locations, including earlier sightings. This does not prove
+  continuous location availability or all-device sightings.
+- 300 app regressions,877 pinned SDK cases,17 controller cases and16 discovery/Mac
+  adapter cases passed. Real anonymous provisioning and three cold native signing
+  and machine-restoration cycles passed in disposable containers.
+- Shared image build, worker isolation and report-child smoke passed. Apple
+  binaries and private state stay outside Git and published image contexts.
 
-## Comparison
-Verify discovery, factor choice, recovery consent/passcodes, item rediscovery,
-disabled items and stable IDs. Privately compare Apple timestamps, accuracy and
-locations with the baseline. Test two successful polls, expiry -> Repairs -> login,
-app/Core restarts, network loss/backoff, and Recorder history. Check phone and
-desktop layouts. A missing report must keep its timestamp, not appear fresh.
-Edge trackers must remain separate from existing MQTT entities/person bindings.
+## Remaining gates for the first release
 
-Rollback: stop/disable the Edge app and integration. Keep private state until the
-user chooses deletion. Review and back up before removing integration entities.
+1. **Operational recovery on the installed app.** Observe unattended macOS polling,
+   deliberately restart the app and verify session reuse without login, verify
+   selected items and history remain intact, and finish expiry/reauthentication,
+   network interruption/backoff and recovery checks. Synthetic encryption/native
+   restoration is not proof of target-host Supervisor backup/restore. Sensitive
+   interactions remain in protected ingress. Keep the existing working installation
+   available throughout validation; do not delete it to prepare a release.
+2. **Security, provenance and licensing closure for the actual shared runtime.**
+   Finish the credential-path/transitive review and notices/source inventory for
+   FindMy.py, the GPL Mac engine/emulator and the Apple native component. Current
+   Apple component use is explicit private evaluation; separate local download
+   is not an established public-release clearance. The absent Rust exporter does
+   not block this runtime; it remains relevant only to legacy packaging. Fix any
+   material findings and document the precise supported scope and remaining risks.
+   Bound/clean retained encrypted machine generations safely and finish release
+   supply-chain metadata/advisory checks. No independent-security-audit claim.
+3. **Immutable stable delivery.** Package the shared runtime explicitly, choose a
+   versioned released macOS provider default after validation, and add the reviewed
+   stable workflow/renderer path with app/integration compatibility tests. Publish
+   a matching companion integration release and immutable source/version metadata.
+   Keep stable updates deliberate and Edge independent. Do not enable private
+   evaluation by default or remove the current stable gate to bypass item2.
+4. **Safe everyday/Edge coexistence and transition.** Stable and Edge repository
+   URLs produce separate app/data/instance IDs. Validate separate entities and
+   histories, one-time protected setup, a rollback procedure and the transition
+   from Edge without losing existing history. Cross-volume secret migration is
+   not implemented. A fresh stable installation has different entity identities;
+   old Recorder history is not automatically reassigned. Prefer keeping the old
+   entities/history intact until an explicit migration plan is verified.
 
-## Community release gates
-Repository channel delivery is prepared; no stable release is approved. FindMy.py is MIT licensed. The pinned
-findmy-export checkout has no obvious LICENSE or Cargo license field: resolve
-redistribution rights before publishing its binary or sources. Review rustpush,
-Apple-private API dependencies and anisette independently. Preserve required
-notices and publish corresponding source where required. Apple compatibility is
-unofficial and no endorsement is implied. Native tests against Home Assistant 2026.9.3 and hassfest now gate channel
-publication. Python wheel locks are enforced. Live browser/restore checks,
-AppArmor, SBOM, licensing and signing still remain. The evidence inventory is
-[THIRD_PARTY_REVIEW.md](THIRD_PARTY_REVIEW.md).
+## Companion integration boundary
 
-## Repository channel delivery
+Both app instances currently use one `custom_components/retrace` package in Core.
+Separate app volumes do not isolate integration code versions. For everyday use,
+pin that package to a compatible released version and test Edge app API changes
+against it. Testing incompatible Edge integration code needs a separate HA test
+instance or a separately designed domain; installing prerelease integration code
+in the same Core can affect stable app entities too.
 
-See CHANNELS.md. Edge is automatically tested and published from main. Stable
-requires explicit workflow promotion after the comparison checklist above.
-For now builds happen in Supervisor on Install/Update; public prebuilt images
-remain gated on dependency redistribution review. No manual package copying is
-needed after the one-time repository app setup.
+## Release acceptance and limitations
 
-## Current live evidence — 2026-11-16
+A first0.x release may disclose sparse reports, missing battery/street address,
+Recorder retention behavior, amd64-only support and unofficial Apple compatibility.
+It must not claim unresolved native-use rights or unperformed recovery checks are
+cleared. A successful login is necessary evidence, not a complete release audit.
 
-Two companion entries are loaded and Edge now receives real reports. Repeated
-polls initially yielded reports for three of five selected items; two timed out.
-The first bounded-search Edge poll completed all five without failures, with
-three sightings and two continuing older-key searches. This is partial live
-validation, not completion of the checklist. See
-KNOWN_LIMITATIONS.md before deciding between an official preview and Stable.
-The user asked what the limitations are; the release choice remains open.
-No stable_verified assertion or Stable promotion has been made.
+App installation/update remains through the repository UI. Public prebuilt images
+remain gated by their component/distribution review. See CHANNELS.md for channel
+mechanics and MAC_SIGNER_REVIEW.md for source/build/live evidence. No new household
+restart, authentication, backup or migration was performed for this assessment.
