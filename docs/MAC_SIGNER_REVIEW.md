@@ -161,3 +161,26 @@ names never become host paths. Added synthetic metadata/empty-lock roundtrip.
 The next live smoke passed anonymous provisioning plus three cold native signing
 and encrypted-machine restoration cycles. Disposable test state was removed;
 no account login, 2FA, household session access or item queries were performed.
+
+
+### Edge0.1.14-dev.1.6 deployed and ready for owner account test
+
+Source8dcf198, delivery45c5668. Validation:300 app tests (including provider UI,
+strict artifact transport, independent encrypted state and cross-process signing),
+877 pinned SDK cases,17 controller cases and16 discovery/Mac protocol cases passed.
+Shared image build and native-boundary/report-child smoke passed. After owner
+approval, anonymous provisioning and three cold signing/restoration cycles passed.
+
+Home Assistant MCP verified version0.1.14-dev.1.6 started/protected with custom
+AppArmor, experimental_macos_signer true, and readinessHTTP200. Startup emitted
+both provider availability booleans true. Original saved identity comparison was
+consistent (all three checks true). Enabling the provider acquires/verifies only
+the private library; household account sign-in and first machine provisioning
+remain owner initiated through protected Setup. No account credentials supplied
+through tools, original identity reset, item/history deletion or Core restart.
+
+Owner test: reload Retrace Edge, open Setup, choose Reconnect Apple account if
+shown, select macOS provider (experimental), then connect and complete Apple's
+verification/recovery steps. A new-provider session becomes active for polling
+only after successful durable save. Real-account acceptance and item reporting
+with this provider remain unverified until that test; this is not a stable release.
